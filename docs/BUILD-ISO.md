@@ -54,10 +54,10 @@ sudo KEEP_CHROOT=1 BUILD_MODE=full ./scripts/build/build-iso.sh
    - Установка MATE (minimal/standard) и необходимого набора приложений.
    - Применение cleanup-скриптов (`scripts/base/cleanup.sh`) и базового брендинга.
 3. **Подготовка SquashFS и структуры ISO (live-режим):**
-   - `mksquashfs "$CHROOT_DIR" "$IMAGE_DIR"/live/filesystem.squashfs`.
+   - `mksquashfs "$CHROOT_DIR" "$IMAGE_DIR"/casper/filesystem.squashfs`.
    - Копирование ядра, initrd и конфигурации загрузчика в структуру вида:
      - `$IMAGE_DIR/boot/...`
-     - `$IMAGE_DIR/live/filesystem.squashfs`
+     - `$IMAGE_DIR/casper/filesystem.squashfs`
      - служебные файлы для live-сессии (аналогично стандартной разметке Ubuntu LiveCD).
 4. **Создание ISO:**
    - `grub-mkrescue -o "$ISO_OUTPUT" "$IMAGE_DIR"`.

@@ -11,12 +11,12 @@
 
 План:
 
-1. Скрипт `scripts/setup-shell.sh`:
+1. Скрипт `scripts/dev/setup-shell.sh`:
    - Устанавливает Zsh, Oh My Zsh, Starship.
-   - Кладёт готовый `.zshrc` и конфиги Starship.
-2. Скрипт `scripts/setup-terminal.sh`:
+   - Кладёт базовый `.zshrc` и подключает Starship.
+2. Скрипт `scripts/dev/setup-terminal.sh`:
    - Устанавливает Kitty.
-   - Копирует базовые конфиги в `~/.config/kitty`.
+   - (в будущем) копирует базовые конфиги в `~/.config/kitty`.
 
 ---
 
@@ -28,7 +28,7 @@
 - **Go:** последняя стабильная версия из оф. репозитория.
 - **Java/Kotlin:** `SDKMAN!` для управления JDK и связанными инструментами.
 
-Планируется скрипт `scripts/setup-langs.sh`, который:
+Планируется скрипт `scripts/dev/setup-langs.sh`, который:
 
 1. Устанавливает менеджеры версий (`pyenv`, `nvm`, `rustup`, `sdkman` и т.д.).
 2. Ставит минимальный набор версий для комфортной разработки «из коробки».
@@ -76,7 +76,7 @@
   - Добавление текущего пользователя в группу `docker`.
   - Базовый smoke‑тест `docker run hello-world`.
 
-Планируется скрипт `scripts/setup-devtools.sh`, который:
+Планируется скрипт `scripts/dev/setup-devtools.sh`, который:
 
 1. Ставит Git (если необходимо) и `lazygit`.
 2. Устанавливает Docker и Docker Compose.
@@ -89,7 +89,7 @@
 Итоговая цель — возможность выполнить один из следующих сценариев:
 
 - Полная настройка dev‑среды:  
-  `./scripts/setup-dev-env.sh`  
+  `sudo ./scripts/dev/setup-dev-env.sh`  
   (агрегирует `setup-shell`, `setup-terminal`, `setup-langs`, `setup-devtools`).
 
 - Частичная настройка (по блокам), если пользователь хочет выбирать компоненты.
