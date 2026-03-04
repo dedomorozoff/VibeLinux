@@ -21,7 +21,7 @@ jobs:
       - name: Set up build dependencies (draft)
         run: |
           sudo apt-get update
-          sudo apt-get install -y debootstrap squashfs-tools xorriso grub-pc-bin grub-efi-amd64-bin
+          sudo apt-get install -y debootstrap squashfs-tools xorriso grub-pc-bin grub-efi-amd64-bin mtools
 
       - name: Make build script executable
         run: |
@@ -37,7 +37,7 @@ jobs:
         run: |
           bash -n scripts/base/base-packages.sh
           bash -n scripts/base/cleanup.sh
-          bash -n scripts/desktop/install-plasma.sh
+          bash -n scripts/desktop/install-mate.sh
           bash -n scripts/drivers/install-nvidia.sh
           bash -n scripts/build/build-iso.sh
 
@@ -46,7 +46,7 @@ jobs:
           if command -v shellcheck >/dev/null 2>&1; then
             shellcheck scripts/base/base-packages.sh
             shellcheck scripts/base/cleanup.sh
-            shellcheck scripts/desktop/install-plasma.sh
+            shellcheck scripts/desktop/install-mate.sh
             shellcheck scripts/drivers/install-nvidia.sh
             shellcheck scripts/build/build-iso.sh
           else

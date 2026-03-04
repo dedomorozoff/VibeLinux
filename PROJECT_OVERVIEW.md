@@ -50,3 +50,25 @@
 
 Эта структура будет уточняться по мере развития проекта и прохождения фаз из `roadmap.md`.
 
+### Core OS / alpha ISO — статус
+
+- [x] Выбран стек сборки ISO (debootstrap + SquashFS + GRUB).
+- [x] Спроектированы и реализованы базовые скрипты Core OS:
+  - scripts/base/* (base-packages, cleanup)
+  - scripts/desktop/install-mate.sh (MATE + LightDM)
+  - scripts/drivers/install-nvidia.sh (post-install NVIDIA)
+  - scripts/build/build-iso.sh (dry-run + full)
+- [x] Описаны пакеты и стратегия драйверов:
+  - docs/CORE-OS-PACKAGES.md
+  - docs/DRIVERS-NVIDIA.md
+- [ ] Стабильно собрать vibecode-alpha.iso на целевой машине и прогнать smoke-тесты:
+  - Загрузка live MATE в VM
+  - Проверка сети и браузера
+  - Ручной запуск ключевых скриптов dev/ai (при появлении)
+
+Команда для сборки на Ubuntu:
+
+sudo apt install -y debootstrap squashfs-tools xorriso grub-pc-bin grub-efi-amd64-bin
+git clone <repo-url> VibeLinux
+cd VibeLinux
+sudo BUILD_MODE=full ./scripts/build/build-iso.sh

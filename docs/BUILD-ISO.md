@@ -12,6 +12,7 @@
   - `squashfs-tools` (`mksquashfs`) — упаковка rootfs в SquashFS.
   - `xorriso` — подготовка образа.
   - `grub-mkrescue` (пакеты `grub-pc-bin`, `grub-efi-amd64-bin`) — создание загрузочного ISO.
+  - `mtools` (`mformat` и др.) — вспомогательные утилиты, которые использует `grub-mkrescue`.
 - **Причины выбора:**
   - Хорошо подходит для автоматизации и CI (GitHub Actions).
   - Не требует графического окружения на машине сборки.
@@ -32,8 +33,11 @@
 # Локальная проверка стека и окружения
 BUILD_MODE=dry-run ./scripts/build/build-iso.sh
 
-# В будущем, при готовности полного пайплайна
+# Полная сборка alpha-ISO (создаст/пересоберёт chroot и ISO)
 sudo BUILD_MODE=full ./scripts/build/build-iso.sh
+
+# Повторная сборка ISO без пересоздания chroot (экономия трафика)
+sudo KEEP_CHROOT=1 BUILD_MODE=full ./scripts/build/build-iso.sh
 ```
 
 ---

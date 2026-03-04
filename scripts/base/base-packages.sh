@@ -15,8 +15,6 @@ apt-get update -y
 echo "[base-packages] Установка базовых утилит..."
 DEBIAN_FRONTEND=noninteractive apt-get install -y \
   htop \
-  neofetch \
-  btop \
   curl \
   wget \
   unzip \
@@ -24,6 +22,10 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y \
   build-essential \
   ca-certificates \
   software-properties-common
+
+echo "[base-packages] Опциональные \"nice-to-have\" утилиты (можно доставить позже вручную):"
+echo "  - neofetch"
+echo "  - btop"
 
 echo "[base-packages] Готово."
 
