@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Простой CLI-скрипт для общения с локальным Ollama из терминала.
+# Требует установленного и запущенного Ollama.
+
+MODEL="${MODEL:-llama3}"
+
+if ! command -v ollama >/dev/null 2>&1; then
+  echo "[ai-chat] Команда 'ollama' не найдена. Установите и запустите Ollama."
+  exit 1
+fi
+
+if [[ $# -gt 0 ]]; then
+  PROMPT="$*"
+else
+  echo "[ai-chat] Введите запрос (Ctrl+D для завершения ввода):"
+  PROMPT="$(cat)"
+fi
+
+if [[ -z "${PROMPT}" ]]; then
+  echo "[ai-chat] Пустой запрос, нечего отправлять модели."
+  exit 0
+fi
+
+echo "[ai-chat] Отправка запроса модели '${MODEL}'..."
+ollama run "${MODEL}" "${PROMPT}"
+

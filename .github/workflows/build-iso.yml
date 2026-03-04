@@ -1,0 +1,33 @@
+name: Build VibeCode OS ISO (draft)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - "scripts/**"
+      - ".github/workflows/build-iso.yml"
+
+jobs:
+  build-iso:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up build dependencies (draft)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y debootstrap squashfs-tools xorriso grub-pc-bin grub-efi-amd64-bin
+
+      - name: Make build script executable
+        run: |
+          chmod +x scripts/build/build-iso.sh
+
+      - name: Build ISO (draft)
+        run: |
+          ./scripts/build/build-iso.sh
+
