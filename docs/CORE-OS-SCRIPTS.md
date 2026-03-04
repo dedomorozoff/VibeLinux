@@ -7,7 +7,7 @@
 ### 1. Основные каталоги
 
 - `scripts/base/` — базовые пакеты, cleanup, системные настройки.
-- `scripts/desktop/` — установка и настройка KDE Plasma и графического стека.
+- `scripts/desktop/` — установка и настройка MATE и графического стека.
 - `scripts/drivers/` — установка проприетарных драйверов (в первую очередь NVIDIA).
 - `scripts/build/` — сборка ISO (debootstrap + SquashFS + GRUB, интеграция с CI).
 
@@ -34,13 +34,13 @@ Dev- и AI-скрипты вынесены отдельно и описаны в
 
 ### 3. Слой Desktop (`scripts/desktop/`)
 
-- `scripts/desktop/install-plasma.sh`
-  - Устанавливает KDE Plasma и дисплей-менеджер SDDM.
+- `scripts/desktop/install-mate.sh`
+  - Устанавливает MATE и дисплей-менеджер LightDM.
   - Режим выбирается переменной `PROFILE`:
-    - `PROFILE=minimal` — на базе `kde-plasma-desktop` (минимальная среда).
-    - `PROFILE=standard` (по умолчанию) — на базе `kde-standard` (сбалансированный набор).
-  - Настраивает SDDM как дисплей-менеджер по умолчанию, когда это уместно.
-  - В будущем будет адаптирован для работы внутри chroot при сборке ISO.
+    - `PROFILE=minimal` — на базе `mate-desktop-environment` (чистый MATE).
+    - `PROFILE=standard` (по умолчанию) — на базе `ubuntu-mate-desktop` (стек Ubuntu MATE).
+  - Настраивает LightDM как дисплей-менеджер по умолчанию, когда это уместно.
+  - Может работать как внутри chroot при сборке ISO, так и на установленной системе.
 
 ---
 

@@ -10,7 +10,7 @@
 Планируемая структура:
 
 - `scripts/base/` — базовые пакеты, cleanup, системные настройки.
-- `scripts/desktop/` — установка и настройка KDE Plasma и графического стека.
+- `scripts/desktop/` — установка и настройка MATE и графического стека.
 - `scripts/drivers/` — установка проприетарных драйверов (в первую очередь NVIDIA).
 - `scripts/dev/` — языки, IDE, терминал, Docker, Git‑инструменты.
 - `scripts/ai/` — Ollama, GUI‑клиенты, терминальные и редакторные интеграции.
@@ -25,17 +25,17 @@
 - **Точка входа сборки ISO:**
   - `scripts/build/build-iso.sh` — оркестратор сборки образа:
     - `BUILD_MODE=dry-run` — проверка стека (используется в GitHub Actions).
-    - `BUILD_MODE=full` — зарезервировано под полноценный пайплайн сборки alpha-ISO.
+    - `BUILD_MODE=full` — полноценный пайплайн сборки alpha-ISO.
 
 - **Базовые пакеты и очистка:**
   - `scripts/base/base-packages.sh` — установка базовых CLI‑утилит (htop, neofetch/btop, curl, wget, unzip, git, build-essential и т.д.).
   - `scripts/base/cleanup.sh` — удаление типичных предустановленных пакетов и `autoremove` (черновой список, будет уточняться).
 
 - **Графическая среда:**
-  - `scripts/desktop/install-plasma.sh` (план) — установка KDE Plasma и связанного стека (SDDM и базовые приложения) в chroot/на систему.
+  - `scripts/desktop/install-mate.sh` — установка MATE (minimal/standard) и связанного стека (LightDM и базовые приложения) в chroot/на систему.
 
 - **Драйверы:**
-  - `scripts/drivers/install-nvidia.sh` (план) — установка и базовая настройка проприетарных драйверов NVIDIA (варианты профилей desktop/AI).
+  - `scripts/drivers/install-nvidia.sh` — установка и базовая настройка проприетарных драйверов NVIDIA (варианты профилей desktop/AI).
 
-Подробности по пайплайну сборки ISO и пакетам см. в `docs/BUILD-ISO.md` и документе о пакетах Core OS (будет добавлен).
+Подробности по пайплайну сборки ISO и пакетам см. в `docs/BUILD-ISO.md`, `docs/CORE-OS-SCRIPTS.md` и `docs/CORE-OS-PACKAGES.md`.
 
