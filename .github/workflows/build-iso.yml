@@ -27,7 +27,9 @@ jobs:
         run: |
           chmod +x scripts/build/build-iso.sh
 
-      - name: Build ISO (draft)
+      - name: Build ISO (draft dry-run)
+        env:
+          BUILD_MODE: dry-run
         run: |
           ./scripts/build/build-iso.sh
 
