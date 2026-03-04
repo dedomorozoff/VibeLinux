@@ -45,10 +45,10 @@
 В качестве части визуального стиля для редакторов планируются:
 
 - Темы для VSCodium:
+  - Kilo Code (основная дефолтная тема),
+  - OpenCode,
   - Catppuccin,
   - Tokyo Night,
-  - Kilo Code,
-  - OpenCode,
   - фирменная тема VibeCode.
 - Набор редакторов:
   - VSCodium — основной GUI‑редактор.

@@ -49,10 +49,10 @@
   - Rust‑поддержка,
   - поддержка Go.
 - Темы:
+  - Kilo Code (тема по умолчанию),
+  - OpenCode,
   - Catppuccin,
   - Tokyo Night,
-  - Kilo Code,
-  - OpenCode,
   - фирменная тема VibeCode (когда будет готова).
 
 **Neovim**
