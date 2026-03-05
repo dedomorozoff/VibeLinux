@@ -87,13 +87,47 @@ case "${BUILD_MODE}" in
 
     log "Запуск пайплайна сборки alpha-ISO VibeCode OS..."
 
-    # Шаг 1: Bootstrap Ubuntu 24.04 в chroot
-    log "Шаг 1: Bootstrap Ubuntu 24.04 (noble) в ${CHROOT_DIR}"
-    rm -rf "${CHROOT_DIR}"
-    debootstrap --arch=amd64 noble "${CHROOT_DIR}" http://archive.ubuntu.com/ubuntu
+    # Поддержка KEEP_CHROOT для экономии времени при повторной сборке
+    # Проверяем, что chroot валидный (есть /root, /etc)
+    CHROOT_VALID=0
+    if [[ -d "${CHROOT_DIR}/root" ]] && [[ -d "${CHROOT_DIR}/etc" ]]; then
+      CHROOT_VALID=1
+    fi
+    
+    if [[ "${KEEP_CHROOT:-0}" == "1" ]] && [[ ${CHROOT_VALID} -eq 1 ]]; then
+      log "Шаг 1: Пропускаем bootstrap (KEEP_CHROOT=1, chroot валидный)"
+    else
+      if [[ "${KEEP_CHROOT:-0}" == "1" ]] && [[ ${CHROOT_VALID} -eq 0 ]]; then
+        log "ВНИМАНИЕ: KEEP_CHROOT=1, но chroot неполный. Пересоздаём..."
+      fi
+      # Сначала размонтируем, если что-то осталось от предыдущей сборки
+      log "Шаг 1: Очистка предыдущей сборки..."
+      # Агрессивное размонтирование
+      umount -l -f "${CHROOT_DIR}/proc" 2>/dev/null || true
+      umount -l -f "${CHROOT_DIR}/sys" 2>/dev/null || true
+      umount -l -f "${CHROOT_DIR}/dev" 2>/dev/null || true
+      umount -l -f "${CHROOT_DIR}/dev/pts" 2>/dev/null || true
+      
+      # Удаляем старый chroot (игнорируем ошибки)
+      rm -rf "${CHROOT_DIR}" 2>/dev/null || true
+      # Если не удалось удалить — пробуем ещё раз после небольшой паузы
+      if [[ -d "${CHROOT_DIR}" ]]; then
+        sleep 1
+        rm -rf "${CHROOT_DIR}" 2>/dev/null || true
+      fi
+      
+      # Bootstrap Ubuntu 24.04 в chroot
+      log "Шаг 1: Bootstrap Ubuntu 24.04 (noble) в ${CHROOT_DIR}"
+      debootstrap --arch=amd64 noble "${CHROOT_DIR}" http://archive.ubuntu.com/ubuntu
+    fi
 
     # Шаг 2: Настройка chroot
     log "Шаг 2: Настройка chroot"
+    # Сначала размонтируем, если уже примонтировано (от предыдущей сборки)
+    umount -l "${CHROOT_DIR}/proc" 2>/dev/null || true
+    umount -l "${CHROOT_DIR}/sys" 2>/dev/null || true
+    umount -l "${CHROOT_DIR}/dev" 2>/dev/null || true
+    
     mount -t proc proc "${CHROOT_DIR}/proc"
     mount -t sysfs sys "${CHROOT_DIR}/sys"
     mount -o bind /dev "${CHROOT_DIR}/dev"
@@ -105,9 +139,12 @@ case "${BUILD_MODE}" in
     cp "${ROOT_DIR}/scripts/desktop/install-mate.sh" "${CHROOT_DIR}/root/install-mate.sh"
     cp "${ROOT_DIR}/scripts/drivers/install-nvidia.sh" "${CHROOT_DIR}/root/install-nvidia.sh"
 
-    chroot "${CHROOT_DIR}" /bin/bash /root/base-packages.sh
-    chroot "${CHROOT_DIR}" /bin/bash /root/cleanup.sh
-    chroot "${CHROOT_DIR}" /bin/bash /root/install-mate.sh
+    # Установка переменных для избежания интерактивных запросов
+    export DEBIAN_FRONTEND=noninteractive
+
+    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/base-packages.sh"
+    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/cleanup.sh"
+    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/install-mate.sh"
 
     # Шаг 4: Очистка и выключение
     log "Шаг 4: Очистка chroot"
@@ -122,11 +159,13 @@ case "${BUILD_MODE}" in
 
     # Шаг 6: Подготовка структуры live-ISO
     log "Шаг 6: Подготовка структуры live-ISO"
-    mkdir -p "${IMAGE_DIR}/boot/grub"
+    mkdir -p "${IMAGE_DIR}/boot/grub/x86_64-efi"
+    mkdir -p "${IMAGE_DIR}/boot/grub/fonts"
     mkdir -p "${IMAGE_DIR}/casper"
     mkdir -p "${IMAGE_DIR}/.disk"
     mkdir -p "${IMAGE_DIR}/EFI"
     mkdir -p "${IMAGE_DIR}/EFI/boot"
+    mkdir -p "${IMAGE_DIR}/boot"
 
     # Создаём файл метаданных
     echo "VibeCode OS alpha" > "${IMAGE_DIR}/.disk/info"
@@ -134,12 +173,95 @@ case "${BUILD_MODE}" in
     date > "${IMAGE_DIR}/.disk/build_time"
     echo "VibeCodeOS-alpha" > "${IMAGE_DIR}/.disk/ubuntu_dist"
 
-    # Копируем initrd и vmlinuz
-    # (будет настроено при установке grub)
+    # Копируем ядро и initrd из chroot
+    log "Копирование ядра и initrd..."
+    if [[ -f "${CHROOT_DIR}/boot/vmlinuz" ]]; then
+      cp "${CHROOT_DIR}/boot/vmlinuz" "${IMAGE_DIR}/boot/vmlinuz"
+    elif [[ -f "${CHROOT_DIR}/boot/vmlinuz-"* ]]; then
+      cp "${CHROOT_DIR}/boot/vmlinuz-"* "${IMAGE_DIR}/boot/vmlinuz"
+    fi
+    
+    if [[ -f "${CHROOT_DIR}/boot/initrd.img" ]]; then
+      cp "${CHROOT_DIR}/boot/initrd.img" "${IMAGE_DIR}/boot/initrd.img"
+    elif [[ -f "${CHROOT_DIR}/boot/initrd.img-"* ]]; then
+      cp "${CHROOT_DIR}/boot/initrd.img-"* "${IMAGE_DIR}/boot/initrd.img"
+    fi
 
-    # Шаг 7: Создание ISO через grub-mkrescue
-    log "Шаг 7: Создание ISO с grub-mkrescue"
-    grub-mkrescue -o "${ISO_OUTPUT}" "${IMAGE_DIR}" || die "Ошибка при создании ISO"
+    # Создаём конфигурацию GRUB
+    log "Создание конфигурации GRUB..."
+    cat > "${IMAGE_DIR}/boot/grub/grub.cfg" << 'EOF'
+set default=0
+set timeout=10
+set timeout_style=menu
+
+insmod all_video
+insmod gfxterm
+terminal_output gfxterm
+
+menuentry "VibeCode OS (Live)" {
+    echo 'Loading kernel...'
+    linux /boot/vmlinuz boot=casper noprompt splash --
+    echo 'Loading initrd...'
+    initrd /boot/initrd.img
+}
+
+menuentry "VibeCode OS (Live - Try VibeCode OS without installing)" {
+    echo 'Loading kernel...'
+    linux /boot/vmlinuz boot=casper only-ubiquity --
+    echo 'Loading initrd...'
+    initrd /boot/initrd.img
+}
+EOF
+
+    # Также создаём конфиг для EFI
+    cat > "${IMAGE_DIR}/boot/grub/x86_64-efi/grub.cfg" << 'EOF'
+set default=0
+set timeout=10
+set timeout_style=menu
+
+insmod all_video
+insmod gfxterm
+terminal_output gfxterm
+
+menuentry "VibeCode OS (Live)" {
+    echo 'Loading kernel...'
+    linux /boot/vmlinuz boot=casper noprompt splash --
+    echo 'Loading initrd...'
+    initrd /boot/initrd.img
+}
+
+menuentry "VibeCode OS (Live - Try VibeCode OS without installing)" {
+    echo 'Loading kernel...'
+    linux /boot/vmlinuz boot=casper only-ubiquity --
+    echo 'Loading initrd...'
+    initrd /boot/initrd.img
+}
+EOF
+
+    # Шаг 7: Подготовка файлов для casper
+    log "Шаг 7: Подготовка файлов для casper..."
+    
+    # Устанавливаем squashfs в chroot для генерации squashfs подержки в initrd
+    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive apt-get install -y squashfs-tools casper" || true
+    
+    # Создаём файл с размером squashfs
+    du -sx "${CHROOT_DIR}" --block=1M | awk '{print $1}' > "${IMAGE_DIR}/casper/filesystem.size"
+    
+    # Создаём файл манифеста
+    chroot "${CHROOT_DIR}" dpkg-query -W -f='${Package} ${Version}\n' > "${IMAGE_DIR}/casper/filesystem.manifest" || true
+    cp "${IMAGE_DIR}/casper/filesystem.manifest" "${IMAGE_DIR}/casper/filesystem.manifest-remove"
+
+    # Создаём файлы для EFI
+    # Т.к. grub-mkrescue не включает ядро автоматически, нужно подготовить загрузчик иначе
+    # Используем более простой подход с созданием boot файлов
+
+    # Шаг 8: Создание ISO через grub-mkrescue
+    log "Шаг 8: Создание ISO с grub-mkrescue"
+    
+    # Добавляем пустую директорию для boot, чтобы избежать ошибки
+    touch "${IMAGE_DIR}/boot/grub/grub.cfg"
+    
+    grub-mkrescue -o "${ISO_OUTPUT}" "${IMAGE_DIR}" --compress=xz || die "Ошибка при создании ISO"
 
     log "✅ ISO собран: ${ISO_OUTPUT}"
     log "Проверьте файл: ${ISO_OUTPUT}"

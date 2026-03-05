@@ -21,7 +21,15 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y \
   git \
   build-essential \
   ca-certificates \
-  software-properties-common
+  software-properties-common \
+  linux-image-generic \
+  linux-headers-generic \
+  initramfs-tools \
+  squashfs-tools \
+  casper
+
+echo "[base-packages] Обновление initramfs для live-boot..."
+update-initramfs -u
 
 echo "[base-packages] Опциональные \"nice-to-have\" утилиты (можно доставить позже вручную):"
 echo "  - neofetch"

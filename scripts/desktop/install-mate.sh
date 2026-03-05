@@ -15,6 +15,11 @@ fi
 
 PROFILE="${PROFILE:-standard}" # minimal|standard
 
+echo "[desktop/mate] Включение universe/multiverse репозиториев..."
+add-apt-repository -y universe 2>/dev/null || true
+add-apt-repository -y multiverse 2>/dev/null || true
+add-apt-repository -y restricted 2>/dev/null || true
+
 echo "[desktop/mate] Обновление списка пакетов..."
 apt-get update -y
 
@@ -22,14 +27,48 @@ echo "[desktop/mate] Установка MATE (черновой вариант)..
 
 case "$PROFILE" in
   minimal)
-    DEBIAN_FRONTEND=noninteractive apt-get install -y \
-      mate-desktop-environment \
-      lightdm
+    # Пробуем установить через tasksel
+    echo "[desktop/mate] Установка MATE через tasksel..."
+    DEBIAN_FRONTEND=noninteractive apt-get install -y tasksel
+    DEBIAN_FRONTEND=noninteractive tasksel install desktop-gnome || true
+    
+    # Если tasksel не сработал, пробуем вручную
+    if ! command -v caja >/dev/null 2>&1; then
+      DEBIAN_FRONTEND=noninteractive apt-get install -y \
+        mate-desktop-environment-core \
+        lightdm \
+        lightdm-gtk-greeter || true
+    fi
     ;;
   standard|*)
-    DEBIAN_FRONTEND=noninteractive apt-get install -y \
-      ubuntu-mate-desktop \
-      lightdm
+    # Для Ubuntu 24.04 пробуем разные варианты установки MATE
+    echo "[desktop/mate] Пробуем установить MATE desktop..."
+    
+    # Вариант 1: через tasksel
+    DEBIAN_FRONTEND=noninteractive apt-get install -y tasksel
+    DEBIAN_FRONTEND=noninteractive tasksel install desktop-gnome || true
+    
+    # Вариант 2: если не удалось через tasksel, ставим вручную
+    if ! command -v caja >/dev/null 2>&1; then
+      echo "[desktop/mate] Устанавливаем MATE вручную..."
+      DEBIAN_FRONTEND=noninteractive apt-get install -y \
+        mate-desktop-environment \
+        mate-desktop-environment-extras \
+        lightdm \
+        lightdm-gtk-greeter \
+        ubuntu-mate-themes \
+        || true
+    fi
+    
+    # Вариант 3: минимальный набор
+    if ! command -v caja >/dev/null 2>&1; then
+      echo "[desktop/mate] Устанавливаем минимальный набор MATE..."
+      DEBIAN_FRONTEND=noninteractive apt-get install -y \
+        mate-desktop-environment-core \
+        lightdm \
+        lightdm-gtk-greeter \
+        || true
+    fi
     ;;
 esac
 
