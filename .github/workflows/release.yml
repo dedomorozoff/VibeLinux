@@ -68,10 +68,11 @@ jobs:
 
       - name: Generate checksums
         run: |
-          cd build
           VERSION="${{ steps.version.outputs.version }}"
-          sha256sum "VibeCodeOS-${VERSION}.iso" > "VibeCodeOS-${VERSION}.iso.sha256"
-          md5sum "VibeCodeOS-${VERSION}.iso" > "VibeCodeOS-${VERSION}.iso.md5"
+          cd build
+          sha256sum "VibeCodeOS-${VERSION}.iso" | tee "VibeCodeOS-${VERSION}.iso.sha256"
+          md5sum "VibeCodeOS-${VERSION}.iso" | tee "VibeCodeOS-${VERSION}.iso.md5"
+          echo "SHA256:"
           cat "VibeCodeOS-${VERSION}.iso.sha256"
 
       - name: Generate release notes

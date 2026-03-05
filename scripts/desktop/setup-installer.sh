@@ -31,16 +31,21 @@ Name=Установить VibeCode OS
 Name[en]=Install VibeCode OS
 Comment=Установить систему на жёсткий диск
 Comment[en]=Install the system to hard disk
-Exec=ubiquity gtk_ui
+Exec=pkexec env DISPLAY=$DISPLAY XAUTHORITY=$XAUTHORITY ubiquity gtk_ui
 Icon=system-software-install
 Terminal=false
 Type=Application
 Categories=System;Settings;
 StartupNotify=true
+X-MATE-Autostart-enabled=true
 EOF
 
-# Делаем ярлык исполняемым и доверенным
+# Делаем ярлык исполняемым
 chmod +x /home/vibecode/Desktop/ubiquity.desktop
+chmod 755 /home/vibecode/Desktop/ubiquity.desktop
+
+# Помечаем как доверенный (для MATE/Caja)
+gio set /home/vibecode/Desktop/ubiquity.desktop metadata::trusted true 2>/dev/null || true
 
 # Устанавливаем права
 chown -R vibecode:vibecode /home/vibecode/Desktop

@@ -48,11 +48,151 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y \
   arc-theme \
   papirus-icon-theme \
   materia-gtk-theme \
+  dconf-cli \
   || true
 
-# Создаём скрипт автонастройки темы при первом входе
+# Применяем настройки напрямую через dconf (для Live-сессии)
+echo "[branding] Применение настроек темы для пользователя ${TARGET_USER}..."
+
+# Создаём dconf профиль пользователя
+mkdir -p "/home/${TARGET_USER}/.config/dconf"
+
+# Применяем настройки через dconf dump/load
+cat > "/tmp/vibecodeos-settings.ini" << 'DCONFEOF'
+[org/mate/desktop/interface]
+gtk-theme='Arc-Dark'
+icon-theme='Papirus-Dark'
+monospace-font-name='JetBrains Mono 11'
+
+[org/mate/desktop/background]
+picture-filename='/usr/share/backgrounds/vibecode-dark.svg'
+picture-options='zoom'
+primary-color='#0B1020'
+secondary-color='#0B1020'
+
+[org/mate/terminal/profiles/default]
+use-system-font=false
+font='JetBrains Mono 11'
+use-theme-colors=false
+background-color='#0B1020'
+foreground-color='#4CC9F0'
+palette='#0B1020:#FF6B6B:#4CC9F0:#FFE066:#7209B7:#F72585:#2EC4B6:#FFFFFF:#0B1020:#FF6B6B:#4CC9F0:#FFE066:#7209B7:#F72585:#2EC4B6:#FFFFFF'
+DCONFEOF
+
+# Загружаем настройки в dconf базу пользователя
+# Это будет работать для Live-сессии
+su - "${TARGET_USER}" -c "dconf load / < /tmp/vibecodeos-settings.ini" 2>/dev/null || true
+
+# Также создаём скрипт автонастройки на случай, если dconf не сработает
 cat > "/usr/local/bin/vibecodeos-theme-setup.sh" << 'THEMEEOF'
 #!/usr/bin/env bash
+# Скрипт настройки темы VibeCode OS при первом входе
+
+MARKER="$HOME/.config/vibecodeos-theme-configured"
+if [[ -f "$MARKER" ]]; then
+  exit 0
+fi
+
+# Ждём загрузки MATE
+sleep 2
+
+# Настраиваем тему GTK
+gsettings set org.mate.interface gtk-theme 'Arc-Dark' 2>/dev/null || true
+gsettings set org.mate.interface icon-theme 'Papirus-Dark' 2>/dev/null || true
+
+# Настраиваем обои
+WALLPAPER="/usr/share/backgrounds/vibecode-dark.svg"
+if [[ -f "$WALLPAPER" ]]; then
+  gsettings set org.mate.background picture-filename "$WALLPAPER" 2>/dev/null || true
+  gsettings set org.mate.background picture-options 'zoom' 2>/dev/null || true
+  gsettings set org.mate.background primary-color '#0B1020' 2>/dev/null || true
+fi
+
+# Настраиваем шрифты
+gsettings set org.mate.interface monospace-font-name 'JetBrains Mono 11' 2>/dev/null || true
+
+# Настраиваем терминал
+gsettings set org.mate.terminal.profile:/org/mate/terminal/profiles/default/ use-system-font false 2>/dev/null || true
+gsettings set org.mate.terminal.profile:/org/mate/terminal/profiles/default/ font 'JetBrains Mono 11' 2>/dev/null || true
+gsettings set org.mate.terminal.profile:/org/mate/terminal/profiles/default/ use-theme-colors false 2>/dev/null || true
+gsettings set org.mate.terminal.profile:/org/mate/terminal/profiles/default/ background-color '#0B1020' 2>/dev/null || true
+gsettings set org.mate.terminal.profile:/org/mate/terminal/profiles/default/ foreground-color '#4CC9F0' 2>/dev/null || true
+
+# Отмечаем, что настройка выполнена
+touch "$MARKER"
+THEMEEOF
+
+chmod +x "/usr/local/bin/vibecodeos-theme-setup.sh"
+
+# Добавляем автозапуск настройки темы
+mkdir -p "/home/${TARGET_USER}/.config/autostart"
+cat > "/home/${TARGET_USER}/.config/autostart/vibecodeos-theme.desktop" << 'EOF'
+[Desktop Entry]
+Type=Application
+Name=VibeCode OS Theme Setup
+Exec=/usr/local/bin/vibecodeos-theme-setup.sh
+Hidden=false
+NoDisplay=true
+X-MATE-Autostart-enabled=true
+EOF
+
+# Настройка neofetch для показа ASCII-логотипа
+if [[ -f "${BRANDING_DIR}/logos/ascii-logo.txt" ]]; then
+  echo "[branding] Настройка neofetch..."
+  mkdir -p "/home/${TARGET_USER}/.config/neofetch"
+  
+  cat > "/home/${TARGET_USER}/.config/neofetch/config.conf" << 'NEOFETCHEOF'
+print_info() {
+    info title
+    info underline
+    info "OS" distro
+    info "Host" model
+    info "Kernel" kernel
+    info "Uptime" uptime
+    info "Packages" packages
+    info "Shell" shell
+    info "Resolution" resolution
+    info "DE" de
+    info "WM" wm
+    info "Terminal" term
+    info "CPU" cpu
+    info "GPU" gpu
+    info "Memory" memory
+    info cols
+}
+
+# Настройки ASCII-арта
+image_backend="ascii"
+ascii_distro="auto"
+ascii_colors=(6 7 1 8 3 2)
+ascii_bold="on"
+
+# Цвета
+colors=(6 7 7 6 7 7)
+NEOFETCHEOF
+fi
+
+# Создаём приветственное сообщение в .bashrc
+if [[ ! -f "/home/${TARGET_USER}/.bashrc" ]]; then
+  touch "/home/${TARGET_USER}/.bashrc"
+fi
+
+# Проверяем, не добавлено ли уже
+if ! grep -q "VibeCode OS приветствие" "/home/${TARGET_USER}/.bashrc"; then
+  cat >> "/home/${TARGET_USER}/.bashrc" << 'BASHEOF'
+
+# VibeCode OS приветствие
+if [[ -f /usr/share/pixmaps/vibecodeos/ascii-logo.txt ]]; then
+  cat /usr/share/pixmaps/vibecodeos/ascii-logo.txt
+  echo ""
+fi
+BASHEOF
+fi
+
+# Устанавливаем права
+chown -R "${TARGET_USER}:${TARGET_USER}" "/home/${TARGET_USER}"
+
+echo "[branding] Брендинг применён."
 # Скрипт настройки темы VibeCode OS при первом входе
 
 MARKER="$HOME/.config/vibecodeos-theme-configured"

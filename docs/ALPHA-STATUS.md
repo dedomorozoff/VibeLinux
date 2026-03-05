@@ -139,6 +139,10 @@ sudo KEEP_CHROOT=1 BUILD_MODE=full ./scripts/build-iso.sh
 # Проверка зависимостей
 BUILD_MODE=dry-run ./scripts/build-iso.sh
 
+# Проверка содержимого образа (после сборки)
+chmod +x scripts/verify-build.sh
+sudo ./scripts/verify-build.sh build/chroot
+
 # Тестирование в QEMU (после сборки)
 qemu-system-x86_64 -cdrom build/VibeCodeOS-alpha.iso -m 2048 -enable-kvm
 ```
