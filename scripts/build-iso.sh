@@ -7,7 +7,27 @@ set -euo pipefail
 # В CI (GitHub Actions) скрипт запускается в режиме dry-run, чтобы проверять
 # наличие инструментов и базовую структуру репозитория.
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# Определяем ROOT_DIR:
+# 1. Если скрипт в scripts/build-iso.sh (родитель — scripts, родитель — корень)
+# 2. Если скрипт в корне (родитель — корень)
+if [[ -f "scripts/build-iso.sh" ]]; then
+  # Сценарий: ./build-iso.sh (скрипт в корне)
+  ROOT_DIR="$(pwd)"
+elif [[ -f "build-iso.sh" ]]; then
+  # Сценарий: ./scripts/build-iso.sh (скрипт в scripts/)
+  ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+else
+  # Сценарий: запуск из любой директории, ищем репозиторий
+  # Ищем папку, где лежат docs/, scripts/, .github/
+  if [[ -f "./scripts/build-iso.sh" ]]; then
+    ROOT_DIR="$(pwd)"
+  elif [[ -f "./build-iso.sh" ]]; then
+    ROOT_DIR="$(pwd)"
+  else
+    # Ищем вверх, пока не найдём репозиторий
+    ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+  fi
+fi
 
 BUILD_MODE="${BUILD_MODE:-dry-run}" # dry-run|full
 WORK_DIR="${WORK_DIR:-${ROOT_DIR}/build}"
