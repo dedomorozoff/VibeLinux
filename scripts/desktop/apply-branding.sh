@@ -79,16 +79,20 @@ foreground-color='#4CC9F0'
 palette='#0B1020:#FF6B6B:#4CC9F0:#FFE066:#7209B7:#F72585:#2EC4B6:#FFFFFF:#0B1020:#FF6B6B:#4CC9F0:#FFE066:#7209B7:#F72585:#2EC4B6:#FFFFFF'
 DCONFEOF
 
-# Загружаем настройки в dconf базу пользователя
-# Это будет работать для Live-сессии
-su - "${TARGET_USER}" -c "dconf load / < /tmp/vibecodeos-settings.ini" 2>/dev/null || true
+# Копируем настройки в домашнюю директорию пользователя для применения при первом входе
+cp /tmp/vibecodeos-settings.ini "/home/${TARGET_USER}/.vibecodeos-settings.ini"
+chown "${TARGET_USER}:${TARGET_USER}" "/home/${TARGET_USER}/.vibecodeos-settings.ini"
 
-# Также создаём скрипт автонастройки на случай, если dconf не сработает
+# Создаём скрипт автонастройки темы при первом входе
 cat > "/usr/local/bin/vibecodeos-theme-setup.sh" << 'THEMEEOF'
 #!/usr/bin/env bash
 # Скрипт настройки темы VibeCode OS при первом входе
 
 MARKER="$HOME/.config/vibecodeos-theme-configured"
+
+# Создаём директорию .config если её нет
+mkdir -p "$HOME/.config"
+
 if [[ -f "$MARKER" ]]; then
   exit 0
 fi
@@ -96,7 +100,12 @@ fi
 # Ждём загрузки MATE
 sleep 2
 
-# Настраиваем тему GTK
+# Применяем настройки через dconf если файл существует
+if [[ -f "$HOME/.vibecodeos-settings.ini" ]]; then
+  dconf load / < "$HOME/.vibecodeos-settings.ini" 2>/dev/null || true
+fi
+
+# Настраиваем тему GTK (fallback если dconf не сработал)
 gsettings set org.mate.interface gtk-theme 'Arc-Dark' 2>/dev/null || true
 gsettings set org.mate.interface icon-theme 'Papirus-Dark' 2>/dev/null || true
 
