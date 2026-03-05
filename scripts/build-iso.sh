@@ -155,6 +155,9 @@ case "${BUILD_MODE}" in
       log "Копирование брендинга в chroot..."
       cp -r "${ROOT_DIR}/branding" "${CHROOT_DIR}/root/"
     fi
+    
+    # Делаем скрипты исполняемыми
+    chmod +x "${CHROOT_DIR}/root"/*.sh
 
     # На всякий случай нормализуем окончания строк у скриптов в chroot (убираем CRLF),
     # чтобы избежать '/usr/bin/env: bash\r' даже если где-то просочился Windows-формат
