@@ -42,11 +42,11 @@ need_cmd() {
 }
 need_file() {
   local path="$1"
-  [[ -f "$path" ]] || die "Не найден файл: ${path#$ROOT_DIR/}"
+  [[ -f "$path" ]] || die "Не найден файл: ${path#"$ROOT_DIR"/}"
 }
 need_dir() {
   local path="$1"
-  [[ -d "$path" ]] || die "Не найден каталог: ${path#$ROOT_DIR/}"
+  [[ -d "$path" ]] || die "Не найден каталог: ${path#"$ROOT_DIR"/}"
 }
 
 mkdir -p "${WORK_DIR}"
@@ -315,14 +315,26 @@ THEMEEOF
     log "Копирование ядра и initrd..."
     if [[ -f "${CHROOT_DIR}/boot/vmlinuz" ]]; then
       cp "${CHROOT_DIR}/boot/vmlinuz" "${IMAGE_DIR}/boot/vmlinuz"
-    elif [[ -f "${CHROOT_DIR}/boot/vmlinuz-"* ]]; then
-      cp "${CHROOT_DIR}/boot/vmlinuz-"* "${IMAGE_DIR}/boot/vmlinuz"
+    else
+      # Ищем первое подходящее ядро по шаблону vmlinuz-*
+      kernel_candidates=( "${CHROOT_DIR}"/boot/vmlinuz-* )
+      if [[ -n "${kernel_candidates[0]:-}" && -f "${kernel_candidates[0]}" ]]; then
+        cp "${kernel_candidates[0]}" "${IMAGE_DIR}/boot/vmlinuz"
+      else
+        die "Не удалось найти ядро vmlinuz в chroot/boot"
+      fi
     fi
     
     if [[ -f "${CHROOT_DIR}/boot/initrd.img" ]]; then
       cp "${CHROOT_DIR}/boot/initrd.img" "${IMAGE_DIR}/boot/initrd.img"
-    elif [[ -f "${CHROOT_DIR}/boot/initrd.img-"* ]]; then
-      cp "${CHROOT_DIR}/boot/initrd.img-"* "${IMAGE_DIR}/boot/initrd.img"
+    else
+      # Ищем первое подходящее initrd по шаблону initrd.img-*
+      initrd_candidates=( "${CHROOT_DIR}"/boot/initrd.img-* )
+      if [[ -n "${initrd_candidates[0]:-}" && -f "${initrd_candidates[0]}" ]]; then
+        cp "${initrd_candidates[0]}" "${IMAGE_DIR}/boot/initrd.img"
+      else
+        die "Не удалось найти initrd в chroot/boot"
+      fi
     fi
 
     # Создаём конфигурацию GRUB (чисто текстовый режим для максимальной совместимости)
@@ -374,6 +386,7 @@ EOF
     du -sx "${CHROOT_DIR}" --block=1M | awk '{print $1}' > "${IMAGE_DIR}/casper/filesystem.size"
     
     # Создаём файл манифеста
+    # shellcheck disable=SC2016  # шаблон формата обрабатывается dpkg-query, а не shell
     chroot "${CHROOT_DIR}" dpkg-query -W -f='${Package} ${Version}\n' > "${IMAGE_DIR}/casper/filesystem.manifest" || true
     cp "${IMAGE_DIR}/casper/filesystem.manifest" "${IMAGE_DIR}/casper/filesystem.manifest-remove"
 
