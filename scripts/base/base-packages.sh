@@ -9,10 +9,15 @@ if [[ $EUID -ne 0 ]]; then
   exit 1
 fi
 
+echo "[base-packages] Включение universe/multiverse в sources.list (если ещё не включены)..."
+if [[ -f /etc/apt/sources.list ]]; then
+  sed -i 's/^\(deb .*main\)\(.*\)$/\1 universe multiverse restricted\2/' /etc/apt/sources.list || true
+fi
+
 echo "[base-packages] Обновление списка пакетов..."
 apt-get update -y
 
-echo "[base-packages] Установка базовых утилит..."
+echo "[base-packages] Установка базовых утилит + VirtualBox guest + шрифты..."
 DEBIAN_FRONTEND=noninteractive apt-get install -y \
   htop \
   curl \

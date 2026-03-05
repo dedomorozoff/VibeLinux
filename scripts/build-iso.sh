@@ -139,6 +139,16 @@ case "${BUILD_MODE}" in
     cp "${ROOT_DIR}/scripts/desktop/install-mate.sh" "${CHROOT_DIR}/root/install-mate.sh"
     cp "${ROOT_DIR}/scripts/drivers/install-nvidia.sh" "${CHROOT_DIR}/root/install-nvidia.sh"
 
+    # На всякий случай нормализуем окончания строк у скриптов в chroot (убираем CRLF),
+    # чтобы избежать '/usr/bin/env: bash\r' даже если где-то просочился Windows-формат
+    chroot "${CHROOT_DIR}" /bin/bash -c "
+      if command -v sed >/dev/null 2>&1; then
+        for f in /root/*.sh; do
+          [ -f \"\$f\" ] && sed -i 's/\r$//' \"\$f\" || true
+        done
+      fi
+    "
+
     # Установка переменных для избежания интерактивных запросов
     export DEBIAN_FRONTEND=noninteractive
 
@@ -315,24 +325,13 @@ THEMEEOF
       cp "${CHROOT_DIR}/boot/initrd.img-"* "${IMAGE_DIR}/boot/initrd.img"
     fi
 
-    # Создаём конфигурацию GRUB (текстовый режим для совместимости)
+    # Создаём конфигурацию GRUB (чисто текстовый режим для максимальной совместимости)
     log "Создание конфигурации GRUB..."
     cat > "${IMAGE_DIR}/boot/grub/grub.cfg" << 'GRUBEOF'
 set default=0
 set timeout=10
 set timeout_style=menu
-insmod all_video
-insmod gfxterm
-insmod vbe
-insmod png
-insmod tga
-terminal_output gfxterm
-if [ -f /boot/grub/fonts/DejaVuSans.pf2 ]; then
-  loadfont /boot/grub/fonts/DejaVuSans.pf2
-fi
-if [ -d /boot/grub/themes/vibecode ]; then
-  set theme=/boot/grub/themes/vibecode/theme.txt
-fi
+terminal_output console
 menuentry "VibeCode OS (Live)" {
     echo "Loading kernel..."
     linux /boot/vmlinuz boot=casper noprompt splash --
@@ -347,26 +346,12 @@ menuentry "VibeCode OS Live Try" {
 }
 GRUBEOF
 
-    # Конфиг для EFI
+    # Конфиг для EFI (также в текстовом режиме)
     cat > "${IMAGE_DIR}/boot/grub/x86_64-efi/grub.cfg" << 'EOF'
 set default=0
 set timeout=10
 set timeout_style=menu
-
-insmod all_video
-insmod gfxterm
-insmod vbe
-insmod png
-insmod tga
-terminal_output gfxterm
-
-if [ -f /boot/grub/fonts/DejaVuSans.pf2 ]; then
-  loadfont /boot/grub/fonts/DejaVuSans.pf2
-fi
-
-if [ -d /boot/grub/themes/vibecode ]; then
-  set theme=/boot/grub/themes/vibecode/theme.txt
-fi
+terminal_output console
 
 menuentry "VibeCode OS (Live)" {
     linux /boot/vmlinuz boot=casper noprompt splash --
