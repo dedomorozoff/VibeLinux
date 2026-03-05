@@ -58,38 +58,7 @@
     - `scripts/base/*` (base-packages, cleanup)
     - `scripts/desktop/install-mate.sh` (MATE + LightDM)
     - `scripts/drivers/install-nvidia.sh` (post-install NVIDIA)
-    - `scripts/build/build-iso.sh` (`dry-run` + `full` + `KEEP_CHROOT=1`).
-  - [x] Описаны пакеты и стратегия драйверов:
-    - `docs/CORE-OS-PACKAGES.md`
-    - `docs/DRIVERS-NVIDIA.md`
-  - [x] Собирается `vibecode-alpha.iso` на целевой машине, ISO содержит:
-    - `boot/vmlinuz`, `boot/initrd.img`
-    - `casper/filesystem.squashfs`
-    - EFI-загрузчик.
-
-- **Текущее состояние загрузки ISO:**
-  - Ядро и initramfs стартуют, casper видит ISO и `casper/filesystem.squashfs`.
-  - При обычной загрузке после init возникает `Kernel panic - not syncing: Attempted to kill init` — т.е. init/casper падает на раннем этапе (live-сессия MATE пока не поднимается).
-
-- **Следующие шаги по Core OS / alpha ISO:**
-  - [ ] Додебажить падение init/casper до рабочей live-сессии MATE.
-  - [ ] После успешной загрузки прогнать smoke-тесты:
-    - Загрузка live MATE в VM.
-    - Проверка сети и браузера.
-    - Ручной запуск ключевых скриптов dev/ai (по мере появления).
-
-**Команда для сборки на Ubuntu (хост):**
-
-```bash
-sudo apt install -y debootstrap squashfs-tools xorriso grub-pc-bin grub-efi-amd64-bin mtools
-git clone <repo-url> VibeLinux
-cd VibeLinux
-sudo BUILD_MODE=full ./scripts/build/build-iso.sh
-```
-
-**Быстрая пересборка ISO без пересоздания chroot:**
-
-```bash
-cd VibeLinux
-sudo KEEP_CHROOT=1 BUILD_MODE=full ./scripts/build/build-iso.sh
+    - `scripts/build-iso.sh` (`dry-run` + `full` + `KEEP_CHROOT=1`).
+sudo BUILD_MODE=full ./scripts/build-iso.sh
+sudo KEEP_CHROOT=1 BUILD_MODE=full ./scripts/build-iso.sh
 ```

@@ -23,7 +23,7 @@
 ### Core OS / базовая система
 
 - **Точка входа сборки ISO:**
-  - `scripts/build/build-iso.sh` — оркестратор сборки образа:
+  - `scripts/build-iso.sh` — оркестратор сборки образа:
     - `BUILD_MODE=dry-run` — проверка стека (используется в GitHub Actions).
     - `BUILD_MODE=full` — полноценный пайплайн сборки alpha-ISO.
 

@@ -61,7 +61,7 @@ Dev- и AI-скрипты вынесены отдельно и описаны в
 
 ### 5. Слой Build (`scripts/build/`)
 
-- `scripts/build/build-iso.sh`
+- `scripts/build-iso.sh`
   - Оркестратор сборки ISO на основе:
     - `debootstrap` (rootfs Ubuntu 24.04),
     - `squashfs-tools` (`mksquashfs`),

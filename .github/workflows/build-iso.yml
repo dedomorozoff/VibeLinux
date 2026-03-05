@@ -25,13 +25,13 @@ jobs:
 
       - name: Make build script executable
         run: |
-          chmod +x scripts/build/build-iso.sh
+          chmod +x scripts/build-iso.sh
 
       - name: Build ISO (draft dry-run)
         env:
           BUILD_MODE: dry-run
         run: |
-          ./scripts/build/build-iso.sh
+          ./scripts/build-iso.sh
 
       - name: Basic script syntax check
         run: |
@@ -39,7 +39,7 @@ jobs:
           bash -n scripts/base/cleanup.sh
           bash -n scripts/desktop/install-mate.sh
           bash -n scripts/drivers/install-nvidia.sh
-          bash -n scripts/build/build-iso.sh
+          bash -n scripts/build-iso.sh
 
       - name: Optional shellcheck (if available)
         run: |
@@ -48,7 +48,7 @@ jobs:
             shellcheck scripts/base/cleanup.sh
             shellcheck scripts/desktop/install-mate.sh
             shellcheck scripts/drivers/install-nvidia.sh
-            shellcheck scripts/build/build-iso.sh
+            shellcheck scripts/build-iso.sh
           else
             echo "shellcheck not installed, skipping static analysis."
           fi

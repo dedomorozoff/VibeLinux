@@ -22,7 +22,7 @@
 
 ### 2. Точка входа сборки
 
-- Основной скрипт сборки: `scripts/build/build-iso.sh`.
+- Основной скрипт сборки: `scripts/build-iso.sh`.
 - Управление режимом работы — через переменную окружения `BUILD_MODE`:
   - `dry-run` (по умолчанию) — проверка зависимостей и структуры, без реальной сборки ISO.
   - `full` — зарезервировано под полноценную сборку alpha-ISO (будет реализовано после фиксации пакетных списков и слоёв Core OS).
@@ -31,13 +31,9 @@
 
 ```bash
 # Локальная проверка стека и окружения
-BUILD_MODE=dry-run ./scripts/build/build-iso.sh
-
-# Полная сборка alpha-ISO (создаст/пересоберёт chroot и ISO)
-sudo BUILD_MODE=full ./scripts/build/build-iso.sh
-
-# Повторная сборка ISO без пересоздания chroot (экономия трафика)
-sudo KEEP_CHROOT=1 BUILD_MODE=full ./scripts/build/build-iso.sh
+BUILD_MODE=dry-run ./scripts/build-iso.sh
+sudo BUILD_MODE=full ./scripts/build-iso.sh
+sudo KEEP_CHROOT=1 BUILD_MODE=full ./scripts/build-iso.sh
 ```
 
 ---
@@ -85,7 +81,7 @@ sudo KEEP_CHROOT=1 BUILD_MODE=full ./scripts/build/build-iso.sh
 - Workflow: `.github/workflows/build-iso.yml`.
 - Текущая логика:
   - Установка зависимостей: `debootstrap`, `squashfs-tools`, `xorriso`, `grub-pc-bin`, `grub-efi-amd64-bin`.
-  - Запуск `scripts/build/build-iso.sh` в режиме `dry-run`, чтобы:
+  - Запуск `scripts/build-iso.sh` в режиме `dry-run`, чтобы:
     - гарантировать наличие всех CLI-инструментов;
     - проверить, что скрипт сборки не падает и готов к дальнейшему развитию.
 

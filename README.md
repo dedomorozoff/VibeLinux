@@ -44,7 +44,7 @@
   - `scripts/ai/start-sd.sh` — запуск Stable Diffusion через ComfyUI.
 
 - Сборка:
-  - `scripts/build/build-iso.sh` — каркас скрипта сборки ISO (пока без реализации).
+  - `scripts/build-iso.sh` — каркас скрипта сборки ISO (пока без реализации).
 
 ---
 
@@ -53,7 +53,7 @@
 Репозиторий подготовлен к инициализации в Git:
 
 - `.gitignore` настроен под типичные артефакты (venv, node_modules, образы ISO и т.п.).
-- Workflow `build-iso` собирает ISO в черновом виде, вызывая `scripts/build/build-iso.sh`.
+- Workflow `build-iso` собирает ISO в черновом виде, вызывая `scripts/build-iso.sh`.
 
 Следующие шаги:
 
