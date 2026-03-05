@@ -20,15 +20,47 @@ sudo BUILD_MODE=full ./scripts/build-iso.sh
 
 ### ✨ Что включено
 
-- **Ubuntu 24.04 LTS** — стабильная база
-- **MATE Desktop** — лёгкое и продуктивное окружение
-- **Брендинг VibeCode OS** — темы, обои, шрифты для кодинга
-- **Установщик из коробки** — Ubiquity для установки на диск
-- **Базовые утилиты** — git, vim, firefox, network-manager и др.
+**Базовая система:**
+- Ubuntu 24.04 LTS — стабильная база
+- MATE Desktop — лёгкое окружение
+- Брендинг VibeCode OS — темы, обои, шрифты
+- Установщик Ubiquity
+
+**Dev-стек:**
+- Терминал: Kitty + Zsh + Starship
+- Языки: Python (pyenv), Node.js (nvm), Rust, Go, Java
+- Редакторы: VSCodium, Neovim (AstroNvim), Zed
+- Инструменты: Git, Docker, lazygit
+
+**AI-стек:**
+- Ollama — локальные LLM
+- Open WebUI — веб-интерфейс для моделей
+- ai-chat — терминальный AI-чат
+- Python AI: PyTorch, Transformers, LangChain, LlamaIndex
+- ComfyUI — генерация изображений через Stable Diffusion
 
 ---
 
 ### 🚀 Быстрый старт
+
+#### Установка Dev-стека
+
+```bash
+sudo ./scripts/dev/setup-dev-env.sh
+```
+
+#### Установка AI-стека
+
+```bash
+sudo ./scripts/ai/setup-ai-stack.sh
+sudo ./scripts/ai/install-ollama-models.sh
+```
+
+Использование AI:
+- Open WebUI: http://localhost:3000
+- Terminal: `ai-chat`
+- Python: `ai-env` (активация окружения)
+- ComfyUI: `sudo bash scripts/ai/start-sd.sh`
 
 #### Сборка ISO
 
@@ -83,34 +115,34 @@ git push origin v0.1.0-alpha
 
 ---
 
-### Черновые скрипты
+### 📦 Скрипты
 
-Все скрипты рассчитаны на выполнение в среде Ubuntu (например, 24.04) и требуют прав `sudo`/root.
+**База:**
+- `scripts/base/base-packages.sh` — базовые утилиты
+- `scripts/base/setup-distro-info.sh` — брендинг системы
+- `scripts/base/setup-bootloader.sh` — GRUB и Plymouth
+- `scripts/base/cleanup.sh` — очистка
 
-- База:
-  - `scripts/base/base-packages.sh` — установка базовых утилит.
-  - `scripts/base/cleanup.sh` — удаление типичных предустановленных пакетов.
+**Dev-стек:**
+- `scripts/dev/setup-dev-env.sh` — полная установка dev-окружения
+- `scripts/dev/setup-shell.sh` — Zsh + Oh My Zsh + Starship
+- `scripts/dev/setup-terminal.sh` — Kitty
+- `scripts/dev/setup-langs.sh` — Python, Node.js, Rust, Go, Java
+- `scripts/dev/setup-devtools.sh` — Git, Docker, lazygit
+- `scripts/dev/setup-editors.sh` — VSCodium, Neovim, Zed
 
-- Dev‑стек:
-  - `scripts/dev/setup-shell.sh` — Zsh + Oh My Zsh + Starship.
-  - `scripts/dev/setup-terminal.sh` — Kitty.
-  - `scripts/dev/setup-langs.sh` — pyenv, nvm, rustup, SDKMAN!.
-  - `scripts/dev/setup-devtools.sh` — Git, lazygit, Docker, Docker Compose.
-  - `scripts/dev/setup-dev-env.sh` — агрегирующий скрипт для dev‑окружения.
-  - (в дальнейшем сюда может быть добавлен отдельный скрипт установки Zed и преднастроенных тем Kilo Code / OpenCode для VSCodium).
+**AI-стек:**
+- `scripts/ai/setup-ai-stack.sh` — полная установка AI-стека
+- `scripts/ai/install-ollama.sh` — Ollama
+- `scripts/ai/install-ollama-models.sh` — загрузка моделей
+- `scripts/ai/install-open-webui.sh` — Open WebUI
+- `scripts/ai/setup-python-ai-stack.sh` — Python AI-библиотеки
+- `scripts/ai/setup-comfyui.sh` — ComfyUI
+- `scripts/ai/ai-chat` — терминальный AI-чат
+- `scripts/ai/start-sd.sh` — запуск ComfyUI
 
-- AI‑стек:
-  - `scripts/ai/install-ollama.sh` — установка Ollama и запуск сервиса.
-  - `scripts/ai/install-ollama-models.sh` — загрузка базовых моделей Ollama.
-  - `scripts/ai/install-open-webui.sh` — запуск Open WebUI (GUI) в Docker.
-  - `scripts/ai/install-terminal-ai.sh` — установка `ai-chat` в PATH.
-  - `scripts/ai/setup-python-ai-stack.sh` — Python‑библиотеки (torch CPU, transformers, langchain, llama-index и т.д.).
-  - `scripts/ai/ai-chat` — простой CLI‑чат с локальным Ollama.
-  - `scripts/ai/setup-comfyui.sh` — установка ComfyUI.
-  - `scripts/ai/start-sd.sh` — запуск Stable Diffusion через ComfyUI.
-
-- Сборка:
-  - `scripts/build-iso.sh` — каркас скрипта сборки ISO (пока без реализации).
+**Сборка:**
+- `scripts/build-iso.sh` — сборка ISO-образа
 
 ---
 

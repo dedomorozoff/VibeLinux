@@ -71,6 +71,7 @@ case "${BUILD_MODE}" in
     need_file "${ROOT_DIR}/scripts/base/base-packages.sh"
     need_file "${ROOT_DIR}/scripts/base/cleanup.sh"
     need_file "${ROOT_DIR}/scripts/base/setup-distro-info.sh"
+    need_file "${ROOT_DIR}/scripts/base/setup-bootloader.sh"
     need_file "${ROOT_DIR}/scripts/desktop/install-mate.sh"
     need_file "${ROOT_DIR}/scripts/desktop/configure-mate-panel.sh"
     need_file "${ROOT_DIR}/scripts/desktop/setup-installer.sh"
@@ -144,6 +145,7 @@ case "${BUILD_MODE}" in
     cp "${ROOT_DIR}/scripts/base/base-packages.sh" "${CHROOT_DIR}/root/base-packages.sh"
     cp "${ROOT_DIR}/scripts/base/cleanup.sh" "${CHROOT_DIR}/root/cleanup.sh"
     cp "${ROOT_DIR}/scripts/base/setup-distro-info.sh" "${CHROOT_DIR}/root/setup-distro-info.sh"
+    cp "${ROOT_DIR}/scripts/base/setup-bootloader.sh" "${CHROOT_DIR}/root/setup-bootloader.sh"
     cp "${ROOT_DIR}/scripts/desktop/install-mate.sh" "${CHROOT_DIR}/root/install-mate.sh"
     cp "${ROOT_DIR}/scripts/desktop/configure-mate-panel.sh" "${CHROOT_DIR}/root/configure-mate-panel.sh"
     cp "${ROOT_DIR}/scripts/desktop/setup-installer.sh" "${CHROOT_DIR}/root/setup-installer.sh"
@@ -174,6 +176,7 @@ case "${BUILD_MODE}" in
 
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/base-packages.sh"
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/setup-distro-info.sh"
+    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/setup-bootloader.sh"
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/cleanup.sh"
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/install-mate.sh"
     

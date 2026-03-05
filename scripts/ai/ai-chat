@@ -1,28 +1,70 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Простой CLI-скрипт для общения с локальным Ollama из терминала.
-# Требует установленного и запущенного Ollama.
+# CLI-скрипт для общения с локальным Ollama из терминала.
+# Использование:
+#   ai-chat "ваш вопрос"           - одиночный запрос
+#   ai-chat                        - интерактивный режим
+#   MODEL=codellama ai-chat        - выбор модели
 
-MODEL="${MODEL:-llama3}"
+MODEL="${MODEL:-llama3.2}"
 
 if ! command -v ollama >/dev/null 2>&1; then
   echo "[ai-chat] Команда 'ollama' не найдена. Установите и запустите Ollama."
   exit 1
 fi
 
-if [[ $# -gt 0 ]]; then
-  PROMPT="$*"
-else
-  echo "[ai-chat] Введите запрос (Ctrl+D для завершения ввода):"
-  PROMPT="$(cat)"
+# Проверка что Ollama запущена
+if ! curl -s http://localhost:11434/api/tags >/dev/null 2>&1; then
+  echo "[ai-chat] Ollama не запущена. Запустите: sudo systemctl start ollama"
+  exit 1
 fi
 
-if [[ -z "${PROMPT}" ]]; then
-  echo "[ai-chat] Пустой запрос, нечего отправлять модели."
+# Одиночный запрос
+if [[ $# -gt 0 ]]; then
+  PROMPT="$*"
+  echo "[ai-chat] Модель: ${MODEL}"
+  echo ""
+  ollama run "${MODEL}" "${PROMPT}"
   exit 0
 fi
 
-echo "[ai-chat] Отправка запроса модели '${MODEL}'..."
-ollama run "${MODEL}" "${PROMPT}"
+# Интерактивный режим
+echo "╔════════════════════════════════════════╗"
+echo "║     AI Chat (Ollama)                   ║"
+echo "║     Модель: ${MODEL}                   ║"
+echo "║     Команды: /exit, /clear, /models    ║"
+echo "╚════════════════════════════════════════╝"
+echo ""
+
+while true; do
+  echo -n "You> "
+  read -r input
+  
+  case "$input" in
+    /exit|/quit)
+      echo "Пока!"
+      exit 0
+      ;;
+    /clear)
+      clear
+      echo "История очищена"
+      continue
+      ;;
+    /models)
+      echo "Доступные модели:"
+      ollama list
+      continue
+      ;;
+    "")
+      continue
+      ;;
+    *)
+      echo ""
+      echo "AI> "
+      ollama run "${MODEL}" "${input}"
+      echo ""
+      ;;
+  esac
+done
 

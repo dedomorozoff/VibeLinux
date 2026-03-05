@@ -26,5 +26,8 @@ bash "${ROOT_DIR}/scripts/dev/setup-langs.sh"
 echo "[setup-dev-env] Установка dev-инструментов (Git, Docker, lazygit)..."
 bash "${ROOT_DIR}/scripts/dev/setup-devtools.sh"
 
-echo "[setup-dev-env] Dev-среда (черновой вариант) настроена."
+echo "[setup-dev-env] Установка редакторов (VSCodium, Neovim, Zed)..."
+bash "${ROOT_DIR}/scripts/dev/setup-editors.sh"
+
+echo "[setup-dev-env] Dev-среда настроена."
 

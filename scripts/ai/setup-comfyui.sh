@@ -34,9 +34,26 @@ echo "[setup-comfyui] Создание venv и установка зависим
 python3 -m venv "${INSTALL_DIR}/.venv"
 "${INSTALL_DIR}/.venv/bin/python" -m pip install --upgrade pip setuptools wheel
 
+# Устанавливаем PyTorch CPU по умолчанию (для GPU пользователь переустановит)
+"${INSTALL_DIR}/.venv/bin/pip" install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+
 if [[ -f "${INSTALL_DIR}/requirements.txt" ]]; then
   "${INSTALL_DIR}/.venv/bin/pip" install -r "${INSTALL_DIR}/requirements.txt"
 fi
 
-echo "[setup-comfyui] Готово. Модели кладите в ${INSTALL_DIR}/models (см. документацию ComfyUI)."
+# Создаём директории для моделей
+mkdir -p "${INSTALL_DIR}/models/checkpoints"
+mkdir -p "${INSTALL_DIR}/models/vae"
+mkdir -p "${INSTALL_DIR}/models/loras"
+
+echo ""
+echo "[setup-comfyui] ✓ ComfyUI установлен в ${INSTALL_DIR}"
+echo ""
+echo "Для запуска: sudo bash scripts/ai/start-sd.sh"
+echo "Модели кладите в: ${INSTALL_DIR}/models/"
+echo ""
+echo "Для GPU поддержки:"
+echo "  cd ${INSTALL_DIR}"
+echo "  source .venv/bin/activate"
+echo "  pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121"
 

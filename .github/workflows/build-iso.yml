@@ -112,10 +112,12 @@ jobs:
       - name: Generate checksums
         run: |
           cd build
-          sha256sum VibeCodeOS-alpha.iso | tee VibeCodeOS-alpha.iso.sha256
-          md5sum VibeCodeOS-alpha.iso | tee VibeCodeOS-alpha.iso.md5
+          sha256sum VibeCodeOS-alpha.iso > VibeCodeOS-alpha.iso.sha256
+          md5sum VibeCodeOS-alpha.iso > VibeCodeOS-alpha.iso.md5
           echo "SHA256:"
           cat VibeCodeOS-alpha.iso.sha256
+          echo "MD5:"
+          cat VibeCodeOS-alpha.iso.md5
 
       - name: Upload ISO artifact
         uses: actions/upload-artifact@v4
