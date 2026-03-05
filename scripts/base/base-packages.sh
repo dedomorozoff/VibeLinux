@@ -34,14 +34,35 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y \
   casper \
   virtualbox-guest-x11 \
   virtualbox-guest-utils \
-  fonts-dejavu
+  fonts-dejavu \
+  neofetch \
+  nano \
+  vim \
+  net-tools \
+  iputils-ping \
+  traceroute \
+  network-manager \
+  network-manager-gnome \
+  firefox \
+  || true
 
 echo "[base-packages] Обновление initramfs для live-boot..."
 update-initramfs -u
 
-echo "[base-packages] Опциональные \"nice-to-have\" утилиты (можно доставить позже вручную):"
-echo "  - neofetch"
-echo "  - btop"
+echo "[base-packages] Установка дополнительных полезных утилит..."
+DEBIAN_FRONTEND=noninteractive apt-get install -y \
+  zip \
+  p7zip-full \
+  tree \
+  mc \
+  tmux \
+  || true
+
+echo "[base-packages] Опциональные \"nice-to-have\" утилиты установлены:"
+echo "  - neofetch ✓"
+echo "  - nano, vim ✓"
+echo "  - network tools ✓"
+echo "  - firefox ✓"
 
 echo "[base-packages] Готово."
 

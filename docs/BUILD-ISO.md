@@ -79,11 +79,20 @@ sudo KEEP_CHROOT=1 BUILD_MODE=full ./scripts/build-iso.sh
 ### 4. Интеграция с GitHub Actions
 
 - Workflow: `.github/workflows/build-iso.yml`.
-- Текущая логика:
-  - Установка зависимостей: `debootstrap`, `squashfs-tools`, `xorriso`, `grub-pc-bin`, `grub-efi-amd64-bin`.
-  - Запуск `scripts/build-iso.sh` в режиме `dry-run`, чтобы:
-    - гарантировать наличие всех CLI-инструментов;
-    - проверить, что скрипт сборки не падает и готов к дальнейшему развитию.
+- **Джобы:**
+  1. **lint** - проверка синтаксиса bash + shellcheck
+  2. **dry-run** - проверка зависимостей и структуры
+  3. **build-iso** - полная сборка ISO (только main/master или manual trigger)
 
-По мере развития пайплайна full-сборка может быть вынесена в отдельный job/workflow, чтобы не ломать быстрые smoke-тесты.
+- **Артефакты сборки:**
+  - `VibeCodeOS-alpha.iso` - готовый образ
+  - SHA256 и MD5 чексуммы
+  - Build info с датой и коммитом
+  - Хранятся 30 дней
+
+- **Автоматические релизы:** `.github/workflows/release.yml`
+  - Триггер: Git теги `v*.*.*` или manual
+  - Создаёт GitHub Release с ISO и чексуммами
+  - Подробнее: `docs/RELEASE.md`
+
 

@@ -70,8 +70,15 @@ case "${BUILD_MODE}" in
     need_dir "${ROOT_DIR}/scripts"
     need_file "${ROOT_DIR}/scripts/base/base-packages.sh"
     need_file "${ROOT_DIR}/scripts/base/cleanup.sh"
+    need_file "${ROOT_DIR}/scripts/base/setup-distro-info.sh"
     need_file "${ROOT_DIR}/scripts/desktop/install-mate.sh"
+    need_file "${ROOT_DIR}/scripts/desktop/configure-mate-panel.sh"
+    need_file "${ROOT_DIR}/scripts/desktop/setup-installer.sh"
+    need_file "${ROOT_DIR}/scripts/desktop/apply-branding.sh"
     need_file "${ROOT_DIR}/scripts/drivers/install-nvidia.sh"
+    
+    # Брендинг
+    need_dir "${ROOT_DIR}/branding"
 
     # Документация/CI точка опоры (чтобы не разъехалось)
     need_file "${ROOT_DIR}/docs/BUILD-ISO.md"
@@ -136,8 +143,18 @@ case "${BUILD_MODE}" in
     log "Шаг 3: Установка базовых пакетов"
     cp "${ROOT_DIR}/scripts/base/base-packages.sh" "${CHROOT_DIR}/root/base-packages.sh"
     cp "${ROOT_DIR}/scripts/base/cleanup.sh" "${CHROOT_DIR}/root/cleanup.sh"
+    cp "${ROOT_DIR}/scripts/base/setup-distro-info.sh" "${CHROOT_DIR}/root/setup-distro-info.sh"
     cp "${ROOT_DIR}/scripts/desktop/install-mate.sh" "${CHROOT_DIR}/root/install-mate.sh"
+    cp "${ROOT_DIR}/scripts/desktop/configure-mate-panel.sh" "${CHROOT_DIR}/root/configure-mate-panel.sh"
+    cp "${ROOT_DIR}/scripts/desktop/setup-installer.sh" "${CHROOT_DIR}/root/setup-installer.sh"
+    cp "${ROOT_DIR}/scripts/desktop/apply-branding.sh" "${CHROOT_DIR}/root/apply-branding.sh"
     cp "${ROOT_DIR}/scripts/drivers/install-nvidia.sh" "${CHROOT_DIR}/root/install-nvidia.sh"
+    
+    # Копируем брендинг
+    if [[ -d "${ROOT_DIR}/branding" ]]; then
+      log "Копирование брендинга в chroot..."
+      cp -r "${ROOT_DIR}/branding" "${CHROOT_DIR}/root/"
+    fi
 
     # На всякий случай нормализуем окончания строк у скриптов в chroot (убираем CRLF),
     # чтобы избежать '/usr/bin/env: bash\r' даже если где-то просочился Windows-формат
@@ -153,9 +170,10 @@ case "${BUILD_MODE}" in
     export DEBIAN_FRONTEND=noninteractive
 
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/base-packages.sh"
+    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/setup-distro-info.sh"
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/cleanup.sh"
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/install-mate.sh"
-
+    
     # Настройка autologin для live сессии
     log "Настройка autologin и локали..."
     
@@ -220,6 +238,18 @@ MATEPANELEOF
     chroot "${CHROOT_DIR}" /bin/bash -c '
       chown -R vibecode:vibecode /home/vibecode
     '
+    
+    # Настройка панели MATE
+    log "Настройка панели MATE..."
+    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/configure-mate-panel.sh vibecode"
+    
+    # Установка и настройка установщика
+    log "Установка установщика (ubiquity)..."
+    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/setup-installer.sh"
+    
+    # Применение брендинга
+    log "Применение брендинга VibeCode OS..."
+    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/apply-branding.sh /root/branding vibecode"
 
     # Шаг 4: Очистка и выключение
     log "Шаг 4: Очистка chroot"

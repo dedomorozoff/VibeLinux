@@ -4,6 +4,36 @@
 
 ---
 
+### **Быстрый старт**
+
+#### Сборка ISO
+
+```bash
+# Проверка зависимостей
+BUILD_MODE=dry-run ./scripts/build-iso.sh
+
+# Полная сборка (требует root)
+sudo BUILD_MODE=full ./scripts/build-iso.sh
+
+# Быстрая пересборка (сохраняет chroot)
+sudo KEEP_CHROOT=1 BUILD_MODE=full ./scripts/build-iso.sh
+```
+
+Готовый ISO будет в `build/VibeCodeOS-alpha.iso`
+
+#### Тестирование
+
+```bash
+# В QEMU
+qemu-system-x86_64 -cdrom build/VibeCodeOS-alpha.iso -m 2048 -enable-kvm
+
+# В VirtualBox (см. docs/TESTING.md)
+```
+
+Подробнее: `docs/BUILD-ISO.md`, `docs/TESTING.md`
+
+---
+
 ### **Целевая аудитория**
 
 1. Разработчики на **Python / JavaScript / TypeScript / Rust / Go**.
@@ -53,12 +83,21 @@
 ### Core OS / alpha ISO — статус
 
 - **Сделано:**
-  - [x] Выбран стек сборки ISO (debootstrap + SquashFS + GRUB + casper).
-  - [x] Спроектированы и реализованы базовые скрипты Core OS:
-    - `scripts/base/*` (base-packages, cleanup)
-    - `scripts/desktop/install-mate.sh` (MATE + LightDM)
-    - `scripts/drivers/install-nvidia.sh` (post-install NVIDIA)
-    - `scripts/build-iso.sh` (`dry-run` + `full` + `KEEP_CHROOT=1`).
+  - [x] Выбран стек сборки ISO (debootstrap + SquashFS + GRUB + casper)
+  - [x] Спроектированы и реализованы базовые скрипты Core OS
+  - [x] MATE desktop с автологином
+  - [x] Установщик (ubiquity) с ярлыком на рабочем столе
+  - [x] Базовый брендинг (логотип, обои, темы, шрифты)
+  - [x] Расширенный набор утилит (neofetch, firefox, network-manager и др.)
+  - [x] Информация о дистрибутиве (lsb-release, os-release)
+
+- **Команды сборки:**
+```bash
+# Полная сборка
 sudo BUILD_MODE=full ./scripts/build-iso.sh
+
+# Быстрая пересборка
 sudo KEEP_CHROOT=1 BUILD_MODE=full ./scripts/build-iso.sh
 ```
+
+- **Следующие шаги:** Тестирование Live-образа и установщика (см. `docs/ALPHA-STATUS.md`)

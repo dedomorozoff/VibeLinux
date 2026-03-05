@@ -1,0 +1,169 @@
+name: Release VibeCode OS
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Триггер на теги типа v1.0.0, v0.1.0-alpha и т.д.
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v1.0.0-alpha)'
+        required: true
+        type: string
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Для создания релизов
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/}"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building version: $VERSION"
+
+      - name: Free up disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          sudo apt-get clean
+          df -h
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            debootstrap \
+            squashfs-tools \
+            xorriso \
+            grub-pc-bin \
+            grub-efi-amd64-bin \
+            mtools \
+            genisoimage
+
+      - name: Build ISO
+        env:
+          BUILD_MODE: full
+        run: |
+          chmod +x scripts/build-iso.sh
+          sudo BUILD_MODE=full ./scripts/build-iso.sh
+
+      - name: Rename ISO with version
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          mv build/VibeCodeOS-alpha.iso "build/VibeCodeOS-${VERSION}.iso"
+          ls -lh build/
+
+      - name: Generate checksums
+        run: |
+          cd build
+          VERSION="${{ steps.version.outputs.version }}"
+          sha256sum "VibeCodeOS-${VERSION}.iso" > "VibeCodeOS-${VERSION}.iso.sha256"
+          md5sum "VibeCodeOS-${VERSION}.iso" > "VibeCodeOS-${VERSION}.iso.md5"
+          cat "VibeCodeOS-${VERSION}.iso.sha256"
+
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          cat > release-notes.md << EOF
+          ## VibeCode OS ${VERSION}
+          
+          ### 🎉 Что нового
+          
+          - Ubuntu 24.04 LTS (Noble Numbat) база
+          - MATE Desktop Environment с автологином
+          - Установщик Ubiquity из коробки
+          - Брендинг VibeCode OS (темы, обои, шрифты)
+          - Базовый набор утилит для разработки
+          
+          ### 📦 Что включено
+          
+          **Desktop Environment:**
+          - MATE Desktop с темой Arc-Dark
+          - Иконки Papirus-Dark
+          - Шрифты: JetBrains Mono, Fira Code
+          
+          **Утилиты:**
+          - Firefox, Network Manager
+          - Git, curl, wget, vim, nano
+          - neofetch, htop, tree, mc, tmux
+          
+          **Драйверы:**
+          - VirtualBox Guest Additions
+          - NVIDIA драйверы (установка через скрипт)
+          
+          ### 📥 Установка
+          
+          1. Скачайте ISO файл
+          2. Создайте загрузочную флешку (Rufus/Etcher/dd)
+          3. Загрузитесь с флешки
+          4. Запустите установщик с рабочего стола
+          
+          ### ✅ Проверка целостности
+          
+          \`\`\`bash
+          sha256sum -c VibeCodeOS-${VERSION}.iso.sha256
+          \`\`\`
+          
+          ### 📚 Документация
+          
+          - [Руководство по сборке](docs/BUILD-ISO.md)
+          - [Руководство по тестированию](docs/TESTING.md)
+          - [Статус разработки](docs/ALPHA-STATUS.md)
+          
+          ### 🐛 Известные проблемы
+          
+          - Это alpha-версия, возможны баги
+          - Полный список: [docs/ALPHA-STATUS.md](docs/ALPHA-STATUS.md)
+          
+          ### 💬 Обратная связь
+          
+          Нашли баг? [Создайте issue](https://github.com/\${{ github.repository }}/issues)
+          
+          ---
+          
+          **Build Info:**
+          - Commit: \`${{ github.sha }}\`
+          - Build Date: \`$(date -u +"%Y-%m-%d %H:%M:%S UTC")\`
+          - Workflow: \`${{ github.run_number }}\`
+          EOF
+          
+          cat release-notes.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: VibeCode OS ${{ steps.version.outputs.version }}
+          body_path: release-notes.md
+          draft: false
+          prerelease: ${{ contains(steps.version.outputs.version, 'alpha') || contains(steps.version.outputs.version, 'beta') }}
+          files: |
+            build/VibeCodeOS-${{ steps.version.outputs.version }}.iso
+            build/VibeCodeOS-${{ steps.version.outputs.version }}.iso.sha256
+            build/VibeCodeOS-${{ steps.version.outputs.version }}.iso.md5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload build artifacts (backup)
+        uses: actions/upload-artifact@v4
+        with:
+          name: VibeCodeOS-${{ steps.version.outputs.version }}
+          path: |
+            build/VibeCodeOS-${{ steps.version.outputs.version }}.iso
+            build/VibeCodeOS-${{ steps.version.outputs.version }}.iso.sha256
+            build/VibeCodeOS-${{ steps.version.outputs.version }}.iso.md5
+          retention-days: 90

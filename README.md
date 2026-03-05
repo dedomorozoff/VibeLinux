@@ -1,19 +1,85 @@
-### VibeCode OS (черновой README)
+### VibeCode OS
 
-**VibeCode OS** — дистрибутив Linux для «вайбкодинга» и AI‑разработки из коробки.  
-Более подробный стратегический план см. в `roadmap.md` и `PROJECT_OVERVIEW.md`.
+**VibeCode OS** — дистрибутив Linux для «вайбкодинга» и AI‑разработки из коробки.
+
+[![Build ISO](https://github.com/yourusername/vibecodeos/actions/workflows/build-iso.yml/badge.svg)](https://github.com/yourusername/vibecodeos/actions/workflows/build-iso.yml)
+[![Release](https://github.com/yourusername/vibecodeos/actions/workflows/release.yml/badge.svg)](https://github.com/yourusername/vibecodeos/actions/workflows/release.yml)
 
 ---
 
-### Быстрый обзор структуры
+### 📥 Скачать
 
-- `PROJECT_OVERVIEW.md` — миссия, ЦА и ключевые решения.
-- `BRANDING.md` — брендинг, цвета, шрифты, UX‑принципы.
-- `AGENTS.md` — ожидания от AI‑агента при работе над проектом.
-- `docs/DEVSTACK.md` — dev‑стек (языки, IDE, терминал, Docker и т.д.).
-- `docs/AI-STACK.md` — AI‑стек (Ollama, GUI, терминал, редакторы, SD).
-- `scripts/` — скрипты настройки и сборки (черновые).
-- `.github/workflows/build-iso.yml` — CI для сборки ISO (черновой).
+**Последний релиз:** [Releases](https://github.com/yourusername/vibecodeos/releases)
+
+Или собрать самостоятельно:
+```bash
+sudo BUILD_MODE=full ./scripts/build-iso.sh
+```
+
+---
+
+### ✨ Что включено
+
+- **Ubuntu 24.04 LTS** — стабильная база
+- **MATE Desktop** — лёгкое и продуктивное окружение
+- **Брендинг VibeCode OS** — темы, обои, шрифты для кодинга
+- **Установщик из коробки** — Ubiquity для установки на диск
+- **Базовые утилиты** — git, vim, firefox, network-manager и др.
+
+---
+
+### 🚀 Быстрый старт
+
+#### Сборка ISO
+
+```bash
+# Проверка зависимостей
+BUILD_MODE=dry-run ./scripts/build-iso.sh
+
+# Полная сборка
+sudo BUILD_MODE=full ./scripts/build-iso.sh
+
+# Быстрая пересборка (сохраняет chroot)
+sudo KEEP_CHROOT=1 BUILD_MODE=full ./scripts/build-iso.sh
+```
+
+#### Тестирование
+
+```bash
+# В QEMU
+qemu-system-x86_64 -cdrom build/VibeCodeOS-alpha.iso -m 2048 -enable-kvm
+
+# В VirtualBox (см. docs/TESTING.md)
+```
+
+#### Создание релиза
+
+```bash
+# Через Git тег
+git tag v0.1.0-alpha
+git push origin v0.1.0-alpha
+
+# Или через GitHub UI: Actions → Release VibeCode OS → Run workflow
+```
+
+Подробнее: [docs/RELEASE.md](docs/RELEASE.md)
+
+---
+
+### 📚 Документация
+
+- [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md) — миссия, ЦА и ключевые решения
+- [roadmap.md](roadmap.md) — стратегический план развития
+- [BRANDING.md](BRANDING.md) — брендинг, цвета, шрифты, UX‑принципы
+- [AGENTS.md](AGENTS.md) — ожидания от AI‑агента при работе над проектом
+
+**Технические документы:**
+- [docs/BUILD-ISO.md](docs/BUILD-ISO.md) — процесс сборки ISO
+- [docs/TESTING.md](docs/TESTING.md) — руководство по тестированию
+- [docs/RELEASE.md](docs/RELEASE.md) — процесс создания релизов
+- [docs/ALPHA-STATUS.md](docs/ALPHA-STATUS.md) — текущий статус разработки
+- [docs/DEVSTACK.md](docs/DEVSTACK.md) — dev‑стек (языки, IDE, терминал)
+- [docs/AI-STACK.md](docs/AI-STACK.md) — AI‑стек (Ollama, GUI, SD)
 
 ---
 

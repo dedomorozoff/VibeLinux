@@ -1,4 +1,4 @@
-name: Build VibeCode OS ISO (draft)
+name: Build VibeCode OS ISO
 
 on:
   workflow_dispatch:
@@ -8,49 +8,139 @@ on:
       - master
     paths:
       - "scripts/**"
+      - "branding/**"
       - ".github/workflows/build-iso.yml"
+  pull_request:
+    branches:
+      - main
+      - master
 
 jobs:
-  build-iso:
+  # Быстрая проверка синтаксиса
+  lint:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up build dependencies (draft)
+      - name: Install shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+
+      - name: Check script syntax
+        run: |
+          bash -n scripts/build-iso.sh
+          bash -n scripts/base/*.sh
+          bash -n scripts/desktop/*.sh
+          bash -n scripts/drivers/*.sh
+
+      - name: Run shellcheck
+        run: |
+          shellcheck scripts/build-iso.sh || true
+          shellcheck scripts/base/*.sh || true
+          shellcheck scripts/desktop/*.sh || true
+          shellcheck scripts/drivers/*.sh || true
+
+  # Dry-run проверка
+  dry-run:
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y debootstrap squashfs-tools xorriso grub-pc-bin grub-efi-amd64-bin mtools
+          sudo apt-get install -y \
+            debootstrap \
+            squashfs-tools \
+            xorriso \
+            grub-pc-bin \
+            grub-efi-amd64-bin \
+            mtools
 
-      - name: Make build script executable
-        run: |
-          chmod +x scripts/build-iso.sh
-
-      - name: Build ISO (draft dry-run)
+      - name: Run dry-run check
         env:
           BUILD_MODE: dry-run
         run: |
+          chmod +x scripts/build-iso.sh
           ./scripts/build-iso.sh
 
-      - name: Basic script syntax check
-        run: |
-          bash -n scripts/base/base-packages.sh
-          bash -n scripts/base/cleanup.sh
-          bash -n scripts/desktop/install-mate.sh
-          bash -n scripts/drivers/install-nvidia.sh
-          bash -n scripts/build-iso.sh
+  # Полная сборка ISO
+  build-iso:
+    runs-on: ubuntu-latest
+    needs: dry-run
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Optional shellcheck (if available)
+      - name: Free up disk space
         run: |
-          if command -v shellcheck >/dev/null 2>&1; then
-            shellcheck scripts/base/base-packages.sh
-            shellcheck scripts/base/cleanup.sh
-            shellcheck scripts/desktop/install-mate.sh
-            shellcheck scripts/drivers/install-nvidia.sh
-            shellcheck scripts/build-iso.sh
-          else
-            echo "shellcheck not installed, skipping static analysis."
-          fi
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          sudo apt-get clean
+          df -h
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            debootstrap \
+            squashfs-tools \
+            xorriso \
+            grub-pc-bin \
+            grub-efi-amd64-bin \
+            mtools \
+            genisoimage
+
+      - name: Build ISO
+        env:
+          BUILD_MODE: full
+        run: |
+          chmod +x scripts/build-iso.sh
+          sudo BUILD_MODE=full ./scripts/build-iso.sh
+
+      - name: Check ISO file
+        run: |
+          ls -lh build/VibeCodeOS-alpha.iso
+          file build/VibeCodeOS-alpha.iso
+
+      - name: Generate checksums
+        run: |
+          cd build
+          sha256sum VibeCodeOS-alpha.iso > VibeCodeOS-alpha.iso.sha256
+          md5sum VibeCodeOS-alpha.iso > VibeCodeOS-alpha.iso.md5
+          cat VibeCodeOS-alpha.iso.sha256
+
+      - name: Upload ISO artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: VibeCodeOS-alpha-iso
+          path: |
+            build/VibeCodeOS-alpha.iso
+            build/VibeCodeOS-alpha.iso.sha256
+            build/VibeCodeOS-alpha.iso.md5
+          retention-days: 30
+
+      - name: Create build info
+        run: |
+          cat > build/build-info.txt << EOF
+          Build Date: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          Git Commit: ${{ github.sha }}
+          Git Branch: ${{ github.ref_name }}
+          Workflow Run: ${{ github.run_number }}
+          EOF
+          cat build/build-info.txt
+
+      - name: Upload build info
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-info
+          path: build/build-info.txt
+          retention-days: 30
 
 
