@@ -77,5 +77,10 @@ if command -v debconf-set-selections >/dev/null 2>&1; then
   echo "lightdm shared/default-x-display-manager select lightdm" | debconf-set-selections || true
 fi
 
+echo "[desktop/mate] Установка русской локали..."
+DEBIAN_FRONTEND=noninteractive apt-get install -y language-pack-ru-base
+locale-gen ru_RU.UTF-8 || true
+update-locale LANG=ru_RU.UTF-8 || true
+
 echo "[desktop/mate] Готово. Список пакетов и конфигурация будут уточняться по мере развития alpha-образа."
 

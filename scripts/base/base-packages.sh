@@ -26,7 +26,10 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y \
   linux-headers-generic \
   initramfs-tools \
   squashfs-tools \
-  casper
+  casper \
+  virtualbox-guest-x11 \
+  virtualbox-guest-utils \
+  fonts-dejavu
 
 echo "[base-packages] Обновление initramfs для live-boot..."
 update-initramfs -u

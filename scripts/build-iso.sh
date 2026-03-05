@@ -146,6 +146,71 @@ case "${BUILD_MODE}" in
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/cleanup.sh"
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/install-mate.sh"
 
+    # Настройка autologin для live сессии
+    log "Настройка autologin и локали..."
+    
+    # Устанавливаем русскую локаль
+    chroot "${CHROOT_DIR}" /bin/bash -c '
+      DEBIAN_FRONTEND=noninteractive apt-get install -y language-pack-ru-base
+      locale-gen ru_RU.UTF-8
+    '
+    
+    # Настройка системной локали по умолчанию
+    echo "LANG=ru_RU.UTF-8" > "${CHROOT_DIR}/etc/default/locale"
+    echo "LANGUAGE=ru_RU.UTF-8" >> "${CHROOT_DIR}/etc/default/locale"
+    
+    # Создаём пользователя vibecode если его нет
+    chroot "${CHROOT_DIR}" /bin/bash -c '
+      if ! id "vibecode" &>/dev/null; then
+        useradd -m -s /bin/bash vibecode
+        echo "vibecode:vibecode" | chpasswd
+        usermod -a -G sudo vibecode 2>/dev/null || true
+      fi
+    '
+    
+    # Настройка LightDM для autologin - полное отключение greeter
+    mkdir -p "${CHROOT_DIR}/etc/lightdm"
+    cat > "${CHROOT_DIR}/etc/lightdm/lightdm.conf" << 'LIGHTDMEOF'
+[Seat:*]
+autologin-user=vibecode
+autologin-user-timeout=0
+autologin-guest=false
+allow-guest=false
+greeter-session=
+user-session=mate
+LIGHTDMEOF
+    
+    # Настройка пользовательских настроек MATE
+    log "Настройка MATE панели..."
+    
+    # Создаём директорию для настроек
+    mkdir -p "${CHROOT_DIR}/home/vibecode/.config/mate-panel"
+    mkdir -p "${CHROOT_DIR}/home/vibecode/.config/dconf"
+    
+    # Dconf настройки для MATE - часы с датой (пропускаем, настроим позже)
+    # Настройки панели будут применены при первом входе пользователя
+    
+    # Создаём backup настроек панели
+    cat > "${CHROOT_DIR}/home/vibecode/.config/mate-panel/default-layout" << 'MATEPANELEOF'
+[top]
+orientation=bottom
+size=24
+expand=true
+auto-hide=false
+
+[Object:clock]
+applet-iid=ClockAppletFactory::ClockApplet
+toplevel=top
+position=1000
+clock-format=24h
+clock-show-date=true
+MATEPANELEOF
+
+    # Устанавливаем права на файлы настроек
+    chroot "${CHROOT_DIR}" /bin/bash -c '
+      chown -R vibecode:vibecode /home/vibecode
+    '
+
     # Шаг 4: Очистка и выключение
     log "Шаг 4: Очистка chroot"
     umount "${CHROOT_DIR}/proc"
@@ -161,11 +226,74 @@ case "${BUILD_MODE}" in
     log "Шаг 6: Подготовка структуры live-ISO"
     mkdir -p "${IMAGE_DIR}/boot/grub/x86_64-efi"
     mkdir -p "${IMAGE_DIR}/boot/grub/fonts"
+    mkdir -p "${IMAGE_DIR}/boot/grub/i386-pc"
     mkdir -p "${IMAGE_DIR}/casper"
     mkdir -p "${IMAGE_DIR}/.disk"
     mkdir -p "${IMAGE_DIR}/EFI"
     mkdir -p "${IMAGE_DIR}/EFI/boot"
     mkdir -p "${IMAGE_DIR}/boot"
+    
+    # Копируем модули GRUB для графики
+    log "Копирование модулей GRUB..."
+    if [[ -d "/usr/lib/grub/x86_64-efi" ]]; then
+      cp -r /usr/lib/grub/x86_64-efi/*.mod "${IMAGE_DIR}/boot/grub/x86_64-efi/" 2>/dev/null || true
+    fi
+    if [[ -d "/usr/lib/grub/i386-pc" ]]; then
+      cp -r /usr/lib/grub/i386-pc/*.mod "${IMAGE_DIR}/boot/grub/i386-pc/" 2>/dev/null || true
+    fi
+    
+    # Устанавливаем темы GRUB
+    log "Установка тем GRUB..."
+    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive apt-get install -y grub2-themes-" 2>/dev/null || true
+    
+    # Создаём шрифт для GRUB
+    log "Создание шрифта GRUB..."
+    if command -v grub-mkfont >/dev/null 2>&1; then
+      # Пробуем разные источники шрифтов
+      if [[ -f /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf ]]; then
+        grub-mkfont -o "${IMAGE_DIR}/boot/grub/fonts/DejaVuSans.pf2" -s 16 /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf 2>/dev/null || true
+      fi
+      if [[ -f /usr/share/grub/unicode.pf2 ]]; then
+        cp /usr/share/grub/unicode.pf2 "${IMAGE_DIR}/boot/grub/fonts/" 2>/dev/null || true
+      fi
+    fi
+    
+    # Создаём графическую тему для GRUB
+    log "Создание темы GRUB..."
+    mkdir -p "${IMAGE_DIR}/boot/grub/themes/vibecode"
+    
+    # Простой theme.txt для GRUB
+    cat > "${IMAGE_DIR}/boot/grub/themes/vibecode/theme.txt" << 'THEMEEOF'
+title-text: ""
+title-color: "#ffffff"
+message-font: "DejaVu Sans:16"
+message-color: "#ffffff"
++ boot_menu {
+    left = 20%
+    top = 20%
+    width = 60%
+    height = 60%
+    item_height = 30px
+    padding = 20px
+    border = 0
+    border_color = "#2c3e50"
+    
+    item_color = "#ffffff"
+    selected_item_color = "#3498db"
+    selected_item_pixmap = "selected.png"
+    
+    item_font = "DejaVu Sans:16"
+    selected_item_font = "DejaVu Sans:bold:16"
+}
+THEMEEOF
+
+    # Создаём простой pixmap для выбранного элемента (чёрный прямоугольник)
+    mkdir -p "${IMAGE_DIR}/boot/grub/themes/vibecode"
+    
+    # Копируем стандартные изображения если есть
+    if [[ -d "/usr/share/grub/themes" ]]; then
+      cp -r /usr/share/grub/themes/* "${IMAGE_DIR}/boot/grub/themes/" 2>/dev/null || true
+    fi
 
     # Создаём файл метаданных
     echo "VibeCode OS alpha" > "${IMAGE_DIR}/.disk/info"
@@ -187,33 +315,39 @@ case "${BUILD_MODE}" in
       cp "${CHROOT_DIR}/boot/initrd.img-"* "${IMAGE_DIR}/boot/initrd.img"
     fi
 
-    # Создаём конфигурацию GRUB
+    # Создаём конфигурацию GRUB (текстовый режим для совместимости)
     log "Создание конфигурации GRUB..."
-    cat > "${IMAGE_DIR}/boot/grub/grub.cfg" << 'EOF'
+    cat > "${IMAGE_DIR}/boot/grub/grub.cfg" << 'GRUBEOF'
 set default=0
 set timeout=10
 set timeout_style=menu
-
 insmod all_video
 insmod gfxterm
+insmod vbe
+insmod png
+insmod tga
 terminal_output gfxterm
-
+if [ -f /boot/grub/fonts/DejaVuSans.pf2 ]; then
+  loadfont /boot/grub/fonts/DejaVuSans.pf2
+fi
+if [ -d /boot/grub/themes/vibecode ]; then
+  set theme=/boot/grub/themes/vibecode/theme.txt
+fi
 menuentry "VibeCode OS (Live)" {
-    echo 'Loading kernel...'
+    echo "Loading kernel..."
     linux /boot/vmlinuz boot=casper noprompt splash --
-    echo 'Loading initrd...'
+    echo "Loading initrd..."
     initrd /boot/initrd.img
 }
-
-menuentry "VibeCode OS (Live - Try VibeCode OS without installing)" {
-    echo 'Loading kernel...'
+menuentry "VibeCode OS Live Try" {
+    echo "Loading kernel..."
     linux /boot/vmlinuz boot=casper only-ubiquity --
-    echo 'Loading initrd...'
+    echo "Loading initrd..."
     initrd /boot/initrd.img
 }
-EOF
+GRUBEOF
 
-    # Также создаём конфиг для EFI
+    # Конфиг для EFI
     cat > "${IMAGE_DIR}/boot/grub/x86_64-efi/grub.cfg" << 'EOF'
 set default=0
 set timeout=10
@@ -221,19 +355,26 @@ set timeout_style=menu
 
 insmod all_video
 insmod gfxterm
+insmod vbe
+insmod png
+insmod tga
 terminal_output gfxterm
 
+if [ -f /boot/grub/fonts/DejaVuSans.pf2 ]; then
+  loadfont /boot/grub/fonts/DejaVuSans.pf2
+fi
+
+if [ -d /boot/grub/themes/vibecode ]; then
+  set theme=/boot/grub/themes/vibecode/theme.txt
+fi
+
 menuentry "VibeCode OS (Live)" {
-    echo 'Loading kernel...'
     linux /boot/vmlinuz boot=casper noprompt splash --
-    echo 'Loading initrd...'
     initrd /boot/initrd.img
 }
 
 menuentry "VibeCode OS (Live - Try VibeCode OS without installing)" {
-    echo 'Loading kernel...'
     linux /boot/vmlinuz boot=casper only-ubiquity --
-    echo 'Loading initrd...'
     initrd /boot/initrd.img
 }
 EOF
