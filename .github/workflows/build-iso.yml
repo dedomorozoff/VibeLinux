@@ -111,6 +111,7 @@ jobs:
 
       - name: Generate checksums
         run: |
+          sudo chown -R $USER:$USER build/
           cd build
           sha256sum VibeCodeOS-alpha.iso > VibeCodeOS-alpha.iso.sha256
           md5sum VibeCodeOS-alpha.iso > VibeCodeOS-alpha.iso.md5
