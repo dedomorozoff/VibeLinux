@@ -49,7 +49,9 @@ apt-get remove --purge -y \
   simple-scan \
   yelp \
   2>/dev/null || true
-apt-get autoremove -y
+
+# Не запускаем autoremove сразу — сначала установим MATE, потом очистим
+# autoremove может удалить Firefox, если он считается ненужным
 
 echo "[desktop/mate] Установка MATE (черновой вариант)..."
 
@@ -84,6 +86,9 @@ echo "[desktop/mate] Установка русской локали..."
 DEBIAN_FRONTEND=noninteractive apt-get install -y language-pack-ru-base
 locale-gen ru_RU.UTF-8 || true
 update-locale LANG=ru_RU.UTF-8 || true
+
+echo "[desktop/mate] Очистка ненужных пакетов..."
+apt-get autoremove -y
 
 echo "[desktop/mate] Готово. Список пакетов и конфигурация будут уточняться по мере развития alpha-образа."
 

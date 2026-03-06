@@ -1,4 +1,4 @@
-### **Dev‑стек VibeCode OS (черновик)**
+### **Dev‑стек VibeCode OS**
 
 Этот документ фиксирует целевой стек инструментов разработки и базовые принципы его установки/настройки. Реализация будет постепенно автоматизироваться скриптами в каталоге `scripts/`.
 
@@ -14,9 +14,11 @@
 1. Скрипт `scripts/dev/setup-shell.sh`:
    - Устанавливает Zsh, Oh My Zsh, Starship.
    - Кладёт базовый `.zshrc` и подключает Starship.
+   - Копирует конфиги из `scripts/dev/configs/`.
 2. Скрипт `scripts/dev/setup-terminal.sh`:
    - Устанавливает Kitty.
-   - (в будущем) копирует базовые конфиги в `~/.config/kitty`.
+   - Копирует конфиги в `~/.config/kitty`.
+   - Устанавливает шрифты для кодинга (JetBrains Mono, Fira Code, Cascadia Code).
 
 ---
 
@@ -41,8 +43,10 @@
 
 - Open Source аналог VS Code
 - Установка через официальный репозиторий
-- Базовые расширения (добавятся позже):
+- Базовые расширения (автоматически устанавливаются):
   - GitLens, Docker, Python, ESLint/Prettier, Rust, Go
+  - Темы (Catppuccin, Tokyo Night, Kilo Code)
+  - Continue (для AI-интеграции)
 
 **Neovim + AstroNvim**
 
@@ -56,7 +60,7 @@
 - Установка через официальный скрипт
 - Фокус на скорость и коллаборацию
 
-Скрипт `scripts/dev/setup-editors.sh` устанавливает все три редактора.
+Скрипт `scripts/dev/setup-editors.sh` устанавливает все три редактора и расширения VSCodium.
 
 ---
 
@@ -89,4 +93,67 @@ sudo ./scripts/dev/setup-dev-env.sh
 - `setup-editors.sh` — VSCodium, Neovim, Zed
 
 Можно запускать скрипты по отдельности для частичной настройки.
+
+---
+
+### **Утилиты**
+
+**check-install.sh** — проверка установки компонентов:
+```bash
+sudo ./scripts/dev/utils/check-install.sh
+```
+
+**validate-env.sh** — валидация dev-среды:
+```bash
+sudo ./scripts/dev/utils/validate-env.sh
+```
+
+**install-vscodium-extensions.sh** — установка расширений VSCodium:
+```bash
+sudo ./scripts/dev/utils/install-vscodium-extensions.sh
+```
+
+---
+
+### **Конфигурация**
+
+Конфиги находятся в `scripts/dev/configs/`:
+
+- `.zshrc` — настройки Zsh с инициализацией всех менеджеров версий
+- `starship.toml` — настройки промпта
+- `kitty.conf` — настройки терминала
+- `vscodium-extensions.txt` — список расширений VSCodium
+
+---
+
+### **Troubleshooting**
+
+**Проблема:** Zsh не запускается
+
+**Решение:** Убедитесь, что Zsh установлен и установлен как shell по умолчанию:
+```bash
+chsh -s $(which zsh)
+```
+
+**Проблема:** Starship не отображается
+
+**Решение:** Убедитесь, что Starship установлен и добавлен в `.zshrc`:
+```bash
+eval "$(starship init zsh)"
+```
+
+**Проблема:** Docker не запускается
+
+**Решение:** Добавьте пользователя в группу docker и перезапустите сервис:
+```bash
+sudo usermod -aG docker $USER
+sudo systemctl restart docker
+```
+
+**Проблема:** Расширения VSCodium не устанавливаются
+
+**Решение:** Запустите скрипт установки вручную:
+```bash
+sudo ./scripts/dev/utils/install-vscodium-extensions.sh
+```
 

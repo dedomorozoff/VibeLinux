@@ -29,5 +29,11 @@ bash "${ROOT_DIR}/scripts/dev/setup-devtools.sh"
 echo "[setup-dev-env] Установка редакторов (VSCodium, Neovim, Zed)..."
 bash "${ROOT_DIR}/scripts/dev/setup-editors.sh"
 
+echo "[setup-dev-env] Проверка установки..."
+bash "${ROOT_DIR}/scripts/dev/utils/check-install.sh"
+
+echo "[setup-dev-env] Валидация среды..."
+bash "${ROOT_DIR}/scripts/dev/utils/validate-env.sh"
+
 echo "[setup-dev-env] Dev-среда настроена."
 

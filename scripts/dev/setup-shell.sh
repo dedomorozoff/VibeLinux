@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Черновой скрипт настройки оболочки Zsh + Oh My Zsh + Starship.
+# Скрипт настройки оболочки Zsh + Oh My Zsh + Starship для VibeCode OS.
 
 if [[ $EUID -ne 0 ]]; then
   echo "Пожалуйста, запустите этот скрипт с sudo или от root (для установки пакетов)."
@@ -10,6 +10,8 @@ fi
 
 USER_NAME="${SUDO_USER:-$USER}"
 USER_HOME="$(getent passwd "$USER_NAME" | cut -d: -f6)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 echo "[setup-shell] Установка Zsh..."
 apt-get update -y
@@ -25,6 +27,22 @@ sudo -u "$USER_NAME" sh -c '
 
 echo "[setup-shell] Установка Starship..."
 curl -fsSL https://starship.rs/install.sh | bash -s -- -y
+
+echo "[setup-shell] Копирование конфигов..."
+# Копируем шаблон .zshrc
+if [[ -f "${ROOT_DIR}/scripts/dev/configs/zshrc.template" ]]; then
+  cp "${ROOT_DIR}/scripts/dev/configs/zshrc.template" "${USER_HOME}/.zshrc"
+  chown "$USER_NAME:$USER_NAME" "${USER_HOME}/.zshrc"
+  echo "[setup-shell] .zshrc скопирован"
+fi
+
+# Копируем конфиг Starship
+if [[ -f "${ROOT_DIR}/scripts/dev/configs/starship.toml" ]]; then
+  mkdir -p "${USER_HOME}/.config"
+  cp "${ROOT_DIR}/scripts/dev/configs/starship.toml" "${USER_HOME}/.config/starship.toml"
+  chown -R "$USER_NAME:$USER_NAME" "${USER_HOME}/.config"
+  echo "[setup-shell] starship.toml скопирован"
+fi
 
 ZSHRC="${USER_HOME}/.zshrc"
 if ! grep -q "eval \"\$(starship init zsh)\"" "$ZSHRC" 2>/dev/null; then

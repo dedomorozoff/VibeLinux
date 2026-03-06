@@ -1,0 +1,94 @@
+# Starship configuration for VibeCode OS
+
+format = """
+[┌](bold purple)
+[│](bold purple)
+$os
+$username
+$hostname
+$directory
+$git_branch
+$git_state
+$git_status
+$cmd_duration
+$line_break
+$python
+$nodejs
+$rust
+$golang
+$java
+$docker
+$package
+$line_break
+[└](bold purple)
+$character"""
+
+[character]
+success_symbol = "[>](bold green)"
+error_symbol = "[>](bold red)"
+
+[directory]
+truncation_length = 3
+truncate_to_repo = true
+style = "bold purple"
+format = "[$path](bold purple) [$read_only](bold red)"
+
+[git_branch]
+symbol = "🌱 "
+style = "bold purple"
+format = "[$symbol$branch](bold purple) "
+
+[git_status]
+style = "bold red"
+format = '[$all_status$ahead_behind](bold red)'
+
+[cmd_duration]
+min_time = 500
+format = "took [$duration]"
+
+[python]
+symbol = "🐍 "
+style = "bold yellow"
+format = "[$symbol$version](bold yellow)"
+
+[nodejs]
+symbol = "🪶 "
+style = "bold green"
+format = "[$symbol$version](bold green)"
+
+[rust]
+symbol = "🦀 "
+style = "bold red"
+format = "[$symbol$version](bold red)"
+
+[golang]
+symbol = "🐹 "
+style = "bold cyan"
+format = "[$symbol$version](bold cyan)"
+
+[java]
+symbol = "☕ "
+style = "bold red"
+format = "[$symbol$version](bold red)"
+
+[docker]
+symbol = "🐳 "
+style = "bold blue"
+format = "[$symbol$version](bold blue)"
+
+[package]
+symbol = "📦 "
+style = "bold 150"
+format = "[$symbol$version](bold 150)"
+
+[os]
+style = "bold purple"
+format = "[$symbol$edition](bold purple)"
+
+[os.symbols]
+Ubuntu = "Ubuntu "
+Debian = "Debian "
+Fedora = "Fedora "
+Arch = "Arch "
+Windows = "Windows "
+Darwin = "macOS "

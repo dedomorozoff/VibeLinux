@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Установка редакторов: VSCodium, Neovim, Zed
+# Скрипт установки редакторов: VSCodium, Neovim, Zed для VibeCode OS.
 
 if [[ $EUID -ne 0 ]]; then
   echo "Пожалуйста, запустите этот скрипт с sudo или от root."
@@ -10,6 +10,8 @@ fi
 
 USER_NAME="${SUDO_USER:-$USER}"
 USER_HOME="$(getent passwd "$USER_NAME" | cut -d: -f6)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 echo "[setup-editors] Установка VSCodium..."
 # Добавляем репозиторий VSCodium
@@ -41,5 +43,8 @@ sudo -u "$USER_NAME" bash -lc '
     curl -f https://zed.dev/install.sh | sh
   fi
 '
+
+echo "[setup-editors] Установка расширений VSCodium..."
+bash "${ROOT_DIR}/scripts/dev/utils/install-vscodium-extensions.sh"
 
 echo "[setup-editors] Готово."

@@ -42,7 +42,7 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y \
   iputils-ping \
   traceroute \
   network-manager \
-  chromium-browser \
+  firefox \
   || true
 
 echo "[base-packages] Обновление initramfs для live-boot..."
@@ -61,7 +61,10 @@ echo "[base-packages] Опциональные \"nice-to-have\" утилиты �
 echo "  - neofetch ✓"
 echo "  - nano, vim ✓"
 echo "  - network tools ✓"
-echo "  - chromium-browser ✓"
+echo "  - firefox ✓"
+echo "  - mate-core, mate-desktop-environment ✓"
+echo "  - lightdm, themes ✓"
+echo "  - caja, atril, eom ✓"
 
 echo "[base-packages] Готово."
 
