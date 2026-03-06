@@ -40,25 +40,27 @@ if [[ -f "$MARKER" ]]; then
 fi
 
 # Ждём, пока панель полностью загрузится
-sleep 3
+sleep 5
 
 # Сбрасываем настройки панели к дефолтным
-dconf reset -f /org/mate/panel/
+dconf reset -f /org/mate/panel/ 2>/dev/null || true
 
 # Настраиваем часы на панели
-dconf write /org/mate/panel/objects/clock/prefs/format "'24-hour'"
-dconf write /org/mate/panel/objects/clock/prefs/show-date true
-dconf write /org/mate/panel/objects/clock/prefs/show-seconds false
-dconf write /org/mate/panel/objects/clock/prefs/show-weather false
+dconf write /org/mate/panel/objects/clock/prefs/format "'24-hour'" 2>/dev/null || true
+dconf write /org/mate/panel/objects/clock/prefs/show-date true 2>/dev/null || true
+dconf write /org/mate/panel/objects/clock/prefs/show-seconds false 2>/dev/null || true
+dconf write /org/mate/panel/objects/clock/prefs/show-weather false 2>/dev/null || true
 
 # Перезапускаем панель
+pkill mate-panel || true
+sleep 1
 mate-panel --replace &
 
 # Отмечаем, что настройка выполнена
 touch "$MARKER"
 
 # Удаляем автозапуск этого скрипта
-rm -f "$HOME/.config/autostart/mate-panel-setup.desktop"
+rm -f "$HOME/.config/autostart/mate-panel-setup.desktop" 2>/dev/null || true
 SETUPEOF
 
 chmod +x "/usr/local/bin/mate-panel-first-run.sh"

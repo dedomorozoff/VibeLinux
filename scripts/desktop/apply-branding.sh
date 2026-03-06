@@ -57,31 +57,32 @@ echo "[branding] Применение настроек темы для поль�
 # Создаём dconf профиль пользователя
 mkdir -p "/home/${TARGET_USER}/.config/dconf"
 
-# Применяем настройки через dconf dump/load
-cat > "/tmp/vibecodeos-settings.ini" << 'DCONFEOF'
-[org/mate/desktop/interface]
-gtk-theme='Arc-Dark'
-icon-theme='Papirus-Dark'
-monospace-font-name='JetBrains Mono 11'
+# Создаём скрипт с настройками dconf
+cat > "/home/${TARGET_USER}/.config/vibecodeos-dconf.sh" << 'DCONFEOF'
+#!/usr/bin/env bash
+# Применение настроек dconf для VibeCode OS
 
-[org/mate/desktop/background]
-picture-filename='/usr/share/backgrounds/vibecode-dark.svg'
-picture-options='zoom'
-primary-color='#0B1020'
-secondary-color='#0B1020'
+# Интерфейс MATE
+dconf write /org/mate/desktop/interface/gtk-theme "'Arc-Dark'"
+dconf write /org/mate/desktop/interface/icon-theme "'Papirus-Dark'"
+dconf write /org/mate/desktop/interface/monospace-font-name "'JetBrains Mono 11'"
 
-[org/mate/terminal/profiles/default]
-use-system-font=false
-font='JetBrains Mono 11'
-use-theme-colors=false
-background-color='#0B1020'
-foreground-color='#4CC9F0'
-palette='#0B1020:#FF6B6B:#4CC9F0:#FFE066:#7209B7:#F72585:#2EC4B6:#FFFFFF:#0B1020:#FF6B6B:#4CC9F0:#FFE066:#7209B7:#F72585:#2EC4B6:#FFFFFF'
+# Обои
+dconf write /org/mate/desktop/background/picture-filename "'/usr/share/backgrounds/vibecode-dark.svg'"
+dconf write /org/mate/desktop/background/picture-options "'zoom'"
+dconf write /org/mate/desktop/background/primary-color "'#0B1020'"
+dconf write /org/mate/desktop/background/secondary-color "'#0B1020'"
+
+# Терминал
+dconf write /org/mate/terminal/profiles/default/use-system-font false
+dconf write /org/mate/terminal/profiles/default/font "'JetBrains Mono 11'"
+dconf write /org/mate/terminal/profiles/default/use-theme-colors false
+dconf write /org/mate/terminal/profiles/default/background-color "'#0B1020'"
+dconf write /org/mate/terminal/profiles/default/foreground-color "'#4CC9F0'"
 DCONFEOF
 
-# Копируем настройки в домашнюю директорию пользователя для применения при первом входе
-cp /tmp/vibecodeos-settings.ini "/home/${TARGET_USER}/.vibecodeos-settings.ini"
-chown "${TARGET_USER}:${TARGET_USER}" "/home/${TARGET_USER}/.vibecodeos-settings.ini"
+chmod +x "/home/${TARGET_USER}/.config/vibecodeos-dconf.sh"
+chown "${TARGET_USER}:${TARGET_USER}" "/home/${TARGET_USER}/.config/vibecodeos-dconf.sh"
 
 # Создаём скрипт автонастройки темы при первом входе
 cat > "/usr/local/bin/vibecodeos-theme-setup.sh" << 'THEMEEOF'
@@ -98,34 +99,34 @@ if [[ -f "$MARKER" ]]; then
 fi
 
 # Ждём загрузки MATE
-sleep 2
+sleep 3
 
 # Применяем настройки через dconf если файл существует
-if [[ -f "$HOME/.vibecodeos-settings.ini" ]]; then
-  dconf load / < "$HOME/.vibecodeos-settings.ini" 2>/dev/null || true
+if [[ -f "$HOME/.config/vibecodeos-dconf.sh" ]]; then
+  bash "$HOME/.config/vibecodeos-dconf.sh" 2>/dev/null || true
 fi
 
 # Настраиваем тему GTK (fallback если dconf не сработал)
-gsettings set org.mate.interface gtk-theme 'Arc-Dark' 2>/dev/null || true
-gsettings set org.mate.interface icon-theme 'Papirus-Dark' 2>/dev/null || true
+su - "$USER" -c "gsettings set org.mate.interface gtk-theme 'Arc-Dark'" 2>/dev/null || true
+su - "$USER" -c "gsettings set org.mate.interface icon-theme 'Papirus-Dark'" 2>/dev/null || true
 
 # Настраиваем обои
 WALLPAPER="/usr/share/backgrounds/vibecode-dark.svg"
 if [[ -f "$WALLPAPER" ]]; then
-  gsettings set org.mate.background picture-filename "$WALLPAPER" 2>/dev/null || true
-  gsettings set org.mate.background picture-options 'zoom' 2>/dev/null || true
-  gsettings set org.mate.background primary-color '#0B1020' 2>/dev/null || true
+  su - "$USER" -c "gsettings set org.mate.background picture-filename '$WALLPAPER'" 2>/dev/null || true
+  su - "$USER" -c "gsettings set org.mate.background picture-options 'zoom'" 2>/dev/null || true
+  su - "$USER" -c "gsettings set org.mate.background primary-color '#0B1020'" 2>/dev/null || true
 fi
 
 # Настраиваем шрифты
-gsettings set org.mate.interface monospace-font-name 'JetBrains Mono 11' 2>/dev/null || true
+su - "$USER" -c "gsettings set org.mate.interface monospace-font-name 'JetBrains Mono 11'" 2>/dev/null || true
 
 # Настраиваем терминал
-gsettings set org.mate.terminal.profile:/org/mate/terminal/profiles/default/ use-system-font false 2>/dev/null || true
-gsettings set org.mate.terminal.profile:/org/mate/terminal/profiles/default/ font 'JetBrains Mono 11' 2>/dev/null || true
-gsettings set org.mate.terminal.profile:/org/mate/terminal/profiles/default/ use-theme-colors false 2>/dev/null || true
-gsettings set org.mate.terminal.profile:/org/mate/terminal/profiles/default/ background-color '#0B1020' 2>/dev/null || true
-gsettings set org.mate.terminal.profile:/org/mate/terminal/profiles/default/ foreground-color '#4CC9F0' 2>/dev/null || true
+su - "$USER" -c "gsettings set org.mate.terminal.profile:/org/mate/terminal/profiles/default/ use-system-font false" 2>/dev/null || true
+su - "$USER" -c "gsettings set org.mate.terminal.profile:/org/mate/terminal/profiles/default/ font 'JetBrains Mono 11'" 2>/dev/null || true
+su - "$USER" -c "gsettings set org.mate.terminal.profile:/org/mate/terminal/profiles/default/ use-theme-colors false" 2>/dev/null || true
+su - "$USER" -c "gsettings set org.mate.terminal.profile:/org/mate/terminal/profiles/default/ background-color '#0B1020'" 2>/dev/null || true
+su - "$USER" -c "gsettings set org.mate.terminal.profile:/org/mate/terminal/profiles/default/ foreground-color '#4CC9F0'" 2>/dev/null || true
 
 # Отмечаем, что настройка выполнена
 touch "$MARKER"

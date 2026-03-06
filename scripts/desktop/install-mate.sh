@@ -27,48 +27,23 @@ echo "[desktop/mate] Установка MATE (черновой вариант)..
 
 case "$PROFILE" in
   minimal)
-    # Пробуем установить через tasksel
-    echo "[desktop/mate] Установка MATE через tasksel..."
-    DEBIAN_FRONTEND=noninteractive apt-get install -y tasksel
-    DEBIAN_FRONTEND=noninteractive tasksel install desktop-gnome || true
-    
-    # Если tasksel не сработал, пробуем вручную
-    if ! command -v caja >/dev/null 2>&1; then
-      DEBIAN_FRONTEND=noninteractive apt-get install -y \
-        mate-desktop-environment-core \
-        lightdm \
-        lightdm-gtk-greeter || true
-    fi
+    echo "[desktop/mate] Установка минимального MATE..."
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
+      mate-desktop-environment-core \
+      lightdm \
+      lightdm-gtk-greeter \
+      || true
     ;;
   standard|*)
-    # Для Ubuntu 24.04 пробуем разные варианты установки MATE
-    echo "[desktop/mate] Пробуем установить MATE desktop..."
-    
-    # Вариант 1: через tasksel
-    DEBIAN_FRONTEND=noninteractive apt-get install -y tasksel
-    DEBIAN_FRONTEND=noninteractive tasksel install desktop-gnome || true
-    
-    # Вариант 2: если не удалось через tasksel, ставим вручную
-    if ! command -v caja >/dev/null 2>&1; then
-      echo "[desktop/mate] Устанавливаем MATE вручную..."
-      DEBIAN_FRONTEND=noninteractive apt-get install -y \
-        mate-desktop-environment \
-        mate-desktop-environment-extras \
-        lightdm \
-        lightdm-gtk-greeter \
-        ubuntu-mate-themes \
-        || true
-    fi
-    
-    # Вариант 3: минимальный набор
-    if ! command -v caja >/dev/null 2>&1; then
-      echo "[desktop/mate] Устанавливаем минимальный набор MATE..."
-      DEBIAN_FRONTEND=noninteractive apt-get install -y \
-        mate-desktop-environment-core \
-        lightdm \
-        lightdm-gtk-greeter \
-        || true
-    fi
+    echo "[desktop/mate] Установка полного MATE desktop..."
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
+      mate-desktop-environment \
+      mate-desktop-environment-extras \
+      lightdm \
+      lightdm-gtk-greeter \
+      ubuntu-mate-themes \
+      mate-themes \
+      || true
     ;;
 esac
 
