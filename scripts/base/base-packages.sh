@@ -42,8 +42,7 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y \
   iputils-ping \
   traceroute \
   network-manager \
-  network-manager-gnome \
-  firefox \
+  firefox-esr \
   || true
 
 echo "[base-packages] Обновление initramfs для live-boot..."
@@ -62,7 +61,7 @@ echo "[base-packages] Опциональные \"nice-to-have\" утилиты �
 echo "  - neofetch ✓"
 echo "  - nano, vim ✓"
 echo "  - network tools ✓"
-echo "  - firefox ✓"
+echo "  - firefox-esr ✓"
 
 echo "[base-packages] Готово."
 

@@ -256,6 +256,10 @@ MATEPANELEOF
     # Применение брендинга
     log "Применение брендинга VibeCode OS..."
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/apply-branding.sh /root/branding vibecode"
+    
+    # Обновляем dconf базу для применения системных настроек
+    log "Обновление dconf базы..."
+    chroot "${CHROOT_DIR}" /bin/bash -c "dconf update"
 
     # Шаг 4: Очистка и выключение
     log "Шаг 4: Очистка chroot"

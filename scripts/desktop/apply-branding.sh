@@ -31,6 +31,12 @@ if [[ -d "${BRANDING_DIR}/wallpapers" ]]; then
   echo "[branding] Копирование обоев..."
   cp -r "${BRANDING_DIR}/wallpapers"/* "/home/${TARGET_USER}/.local/share/backgrounds/" 2>/dev/null || true
   cp -r "${BRANDING_DIR}/wallpapers"/* /usr/share/backgrounds/ 2>/dev/null || true
+  # Убедимся что файл называется правильно для dconf
+  if [[ -f /usr/share/backgrounds/vibecode-dark.svg ]]; then
+    : # already copied
+  elif [[ -f /usr/share/backgrounds/*.svg ]]; then
+    cp /usr/share/backgrounds/*.svg /usr/share/backgrounds/vibecode-dark.svg 2>/dev/null || true
+  fi
 fi
 
 # Копируем логотипы
@@ -49,7 +55,17 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y \
   papirus-icon-theme \
   materia-gtk-theme \
   dconf-cli \
+  plymouth-theme-script \
   || true
+
+# Настройка Plymouth темы загрузки
+echo "[branding] Настройка Plymouth темы загрузки..."
+if [[ -d "${BRANDING_DIR}/plymouth" ]]; then
+  cp -r "${BRANDING_DIR}/plymouth"/* /usr/share/plymouth/themes/ 2>/dev/null || true
+  update-alternatives --install /usr/share/plymouth/themes/default.plymouth default.plymouth /usr/share/plymouth/themes/vibecode/vibecode.plymouth 100 2>/dev/null || true
+  update-alternatives --set default.plymouth /usr/share/plymouth/themes/vibecode/vibecode.plymouth 2>/dev/null || true
+  plymouth-set-default-theme vibecode 2>/dev/null || true
+fi
 
 # Применяем настройки напрямую через dconf (для Live-сессии)
 echo "[branding] Применение настроек темы для пользователя ${TARGET_USER}..."
@@ -106,33 +122,87 @@ if [[ -f "$HOME/.config/vibecodeos-dconf.sh" ]]; then
   bash "$HOME/.config/vibecodeos-dconf.sh" 2>/dev/null || true
 fi
 
-# Настраиваем тему GTK (fallback если dconf не сработал)
-su - "$USER" -c "gsettings set org.mate.interface gtk-theme 'Arc-Dark'" 2>/dev/null || true
-su - "$USER" -c "gsettings set org.mate.interface icon-theme 'Papirus-Dark'" 2>/dev/null || true
+# Настраиваем тему GTK через gsettings (работает в live сессии)
+export DISPLAY=:0
+export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+
+gsettings set org.mate.interface gtk-theme 'Arc-Dark' 2>/dev/null || true
+gsettings set org.mate.interface icon-theme 'Papirus-Dark' 2>/dev/null || true
 
 # Настраиваем обои
 WALLPAPER="/usr/share/backgrounds/vibecode-dark.svg"
 if [[ -f "$WALLPAPER" ]]; then
-  su - "$USER" -c "gsettings set org.mate.background picture-filename '$WALLPAPER'" 2>/dev/null || true
-  su - "$USER" -c "gsettings set org.mate.background picture-options 'zoom'" 2>/dev/null || true
-  su - "$USER" -c "gsettings set org.mate.background primary-color '#0B1020'" 2>/dev/null || true
+  gsettings set org.mate.background picture-filename "$WALLPAPER" 2>/dev/null || true
+  gsettings set org.mate.background picture-options 'zoom' 2>/dev/null || true
+  gsettings set org.mate.background primary-color '#0B1020' 2>/dev/null || true
 fi
 
 # Настраиваем шрифты
-su - "$USER" -c "gsettings set org.mate.interface monospace-font-name 'JetBrains Mono 11'" 2>/dev/null || true
+gsettings set org.mate.interface monospace-font-name 'JetBrains Mono 11' 2>/dev/null || true
 
 # Настраиваем терминал
-su - "$USER" -c "gsettings set org.mate.terminal.profile:/org/mate/terminal/profiles/default/ use-system-font false" 2>/dev/null || true
-su - "$USER" -c "gsettings set org.mate.terminal.profile:/org/mate/terminal/profiles/default/ font 'JetBrains Mono 11'" 2>/dev/null || true
-su - "$USER" -c "gsettings set org.mate.terminal.profile:/org/mate/terminal/profiles/default/ use-theme-colors false" 2>/dev/null || true
-su - "$USER" -c "gsettings set org.mate.terminal.profile:/org/mate/terminal/profiles/default/ background-color '#0B1020'" 2>/dev/null || true
-su - "$USER" -c "gsettings set org.mate.terminal.profile:/org/mate/terminal/profiles/default/ foreground-color '#4CC9F0'" 2>/dev/null || true
+gsettings set org.mate.terminal.profile:/org/mate/terminal/profiles/default/ use-system-font false 2>/dev/null || true
+gsettings set org.mate.terminal.profile:/org/mate/terminal/profiles/default/ font 'JetBrains Mono 11' 2>/dev/null || true
+gsettings set org.mate.terminal.profile:/org/mate/terminal/profiles/default/ use-theme-colors false 2>/dev/null || true
+gsettings set org.mate.terminal.profile:/org/mate/terminal/profiles/default/ background-color '#0B1020' 2>/dev/null || true
+gsettings set org.mate.terminal.profile:/org/mate/terminal/profiles/default/ foreground-color '#4CC9F0' 2>/dev/null || true
 
 # Отмечаем, что настройка выполнена
 touch "$MARKER"
 THEMEEOF
 
 chmod +x "/usr/local/bin/vibecodeos-theme-setup.sh"
+
+# Создаём настройки в /etc/skel для live-сессии (применяются для всех новых пользователей)
+echo "[branding] Настройка /etc/skel для live-сессии..."
+mkdir -p /etc/skel/.config/mate-panel
+mkdir -p /etc/skel/.config/autostart
+mkdir -p /etc/skel/.config/dconf
+mkdir -p /etc/skel/.local/share/backgrounds
+
+# Копируем обои в /etc/skel
+if [[ -d "${BRANDING_DIR}/wallpapers" ]]; then
+  cp -r "${BRANDING_DIR}/wallpapers"/* /etc/skel/.local/share/backgrounds/ 2>/dev/null || true
+  # Копируем с правильным именем для dconf
+  if [[ -f "${BRANDING_DIR}/wallpapers"/*.svg ]]; then
+    cp "${BRANDING_DIR}/wallpapers"/*.svg /etc/skel/.local/share/backgrounds/vibecode-dark.svg 2>/dev/null || true
+  fi
+fi
+
+# Копируем dconf скрипт в /etc/skel
+cp "/home/${TARGET_USER}/.config/vibecodeos-dconf.sh" /etc/skel/.config/ 2>/dev/null || true
+chmod +x /etc/skel/.config/vibecodeos-dconf.sh
+
+# Копируем autostart в /etc/skel
+cp "/home/${TARGET_USER}/.config/autostart/vibecodeos-theme.desktop" /etc/skel/.config/autostart/ 2>/dev/null || true
+
+# Настройки dconf на уровне системы (/etc/dconf/db/local.d/)
+echo "[branding] Настройка системных dconf..."
+mkdir -p /etc/dconf/db/local.d
+cat > /etc/dconf/db/local.d/00-vibecodeos << 'DCONFSYSEOF'
+# VibeCode OS system dconf settings
+
+[org/mate/desktop/interface]
+gtk-theme='Arc-Dark'
+icon-theme='Papirus-Dark'
+monospace-font-name='JetBrains Mono 11'
+
+[org/mate/desktop/background]
+picture-filename='/usr/share/backgrounds/vibecode-dark.svg'
+picture-options='zoom'
+primary-color='#0B1020'
+secondary-color='#0B1020'
+
+[org/mate/terminal/profiles/default]
+use-system-font=false
+font='JetBrains Mono 11'
+use-theme-colors=false
+background-color='#0B1020'
+foreground-color='#4CC9F0'
+DCONFSYSEOF
+
+# Обновляем dconf базу
+dconf update
 
 # Добавляем автозапуск настройки темы
 mkdir -p "/home/${TARGET_USER}/.config/autostart"

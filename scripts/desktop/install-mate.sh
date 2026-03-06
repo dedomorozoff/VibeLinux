@@ -23,6 +23,34 @@ add-apt-repository -y restricted 2>/dev/null || true
 echo "[desktop/mate] Обновление списка пакетов..."
 apt-get update -y
 
+echo "[desktop/mate] Удаление GNOME (если есть) для предотвращения конфликтов..."
+apt-get remove --purge -y \
+  gnome-shell \
+  gnome-session \
+  gnome-software \
+  gnome-control-center \
+  gnome-terminal \
+  gnome-calculator \
+  gnome-calendar \
+  gnome-contacts \
+  gnome-disk-utility \
+  gnome-font-viewer \
+  gnome-logs \
+  gnome-maps \
+  gnome-screenshot \
+  gnome-system-monitor \
+  gnome-text-editor \
+  gnome-weather \
+  nautilus \
+  eog \
+  evince \
+  totem \
+  cheese \
+  simple-scan \
+  yelp \
+  2>/dev/null || true
+apt-get autoremove -y
+
 echo "[desktop/mate] Установка MATE (черновой вариант)..."
 
 case "$PROFILE" in
