@@ -96,8 +96,29 @@ else
   echo "[setup-langs] Пропуск SDKMAN! - нет сети"
 fi
 
+# Go (установка свежей версии)
 echo "[setup-langs] Установка Go..."
-DEBIAN_FRONTEND=noninteractive apt-get install -y golang-go 2>/dev/null || true
+if check_network; then
+  if ! command -v go >/dev/null 2>&1 || [[ "$(go version 2>/dev/null)" != *"go1.2"* ]]; then
+    su - "$USER_NAME" -c '
+      set -e
+      go_version="1.26.1"
+      wget -q "https://go.dev/dl/go${go_version}.linux-amd64.tar.gz" -O /tmp/go.tar.gz 2>/dev/null || true
+      if [ -f /tmp/go.tar.gz ]; then
+        rm -rf "$HOME/go"
+        tar -C "$HOME" -xzf /tmp/go.tar.gz 2>/dev/null || true
+        rm /tmp/go.tar.gz
+      fi
+    ' || true
+  fi
+else
+  apt-get install -y golang-go 2>/dev/null || true
+fi
+
+# Добавляем Go в PATH пользователя
+if [ -f "$USER_HOME/.zshrc" ] && ! grep -q 'export GOPATH' "$USER_HOME/.zshrc"; then
+  printf '\n# Go\nexport GOPATH="$HOME/go"\nexport PATH="$HOME/go/bin:$PATH"\n' >> "$USER_HOME/.zshrc"
+fi
 
 echo "[setup-langs] Готово."
 
