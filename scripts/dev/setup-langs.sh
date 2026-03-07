@@ -8,11 +8,11 @@ if [[ $EUID -ne 0 ]]; then
   exit 1
 fi
 
-USER_NAME="${SUDO_USER:-$USER}"
-USER_HOME="$(getent passwd "$USER_NAME" | cut -d: -f6)"
+USER_NAME="${1:-root}"
+USER_HOME="/home/${USER_NAME}"
 
 echo "[setup-langs] Установка зависимостей..."
-apt-get update -y
+apt-get update -y || true
 DEBIAN_FRONTEND=noninteractive apt-get install -y \
   build-essential \
   curl \
@@ -31,88 +31,73 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y \
   libxml2-dev \
   libxmlsec1-dev \
   libffi-dev \
-  liblzma-dev
+  liblzma-dev \
+  || true
+
+# Проверка доступности интернета
+check_network() {
+  curl -sf --connect-timeout 5 https://github.com >/dev/null 2>&1
+}
 
 echo "[setup-langs] Установка pyenv для пользователя ${USER_NAME}..."
-sudo -u "$USER_NAME" bash -lc '
-  if [ ! -d "$HOME/.pyenv" ]; then
-    curl https://pyenv.run | bash
-    
-    # Добавляем в shell конфиг если ещё не добавлено
-    if [ -f "$HOME/.zshrc" ] && ! grep -q "pyenv init" "$HOME/.zshrc"; then
-      echo "" >> "$HOME/.zshrc"
-      echo "# pyenv" >> "$HOME/.zshrc"
-      echo "export PYENV_ROOT=\"\$HOME/.pyenv\"" >> "$HOME/.zshrc"
-      echo "[[ -d \$PYENV_ROOT/bin ]] && export PATH=\"\$PYENV_ROOT/bin:\$PATH\"" >> "$HOME/.zshrc"
-      echo "eval \"\$(pyenv init -)\"" >> "$HOME/.zshrc"
-    fi
-    
-    if [ -f "$HOME/.bashrc" ] && ! grep -q "pyenv init" "$HOME/.bashrc"; then
-      echo "" >> "$HOME/.bashrc"
-      echo "# pyenv" >> "$HOME/.bashrc"
-      echo "export PYENV_ROOT=\"\$HOME/.pyenv\"" >> "$HOME/.bashrc"
-      echo "[[ -d \$PYENV_ROOT/bin ]] && export PATH=\"\$PYENV_ROOT/bin:\$PATH\"" >> "$HOME/.bashrc"
-      echo "eval \"\$(pyenv init -)\"" >> "$HOME/.bashrc"
+if check_network; then
+  if [ ! -d "$USER_HOME/.pyenv" ]; then
+    su - "$USER_NAME" -c 'curl -fsSL https://pyenv.run | bash' 2>/dev/null || true
+    if [ -f "$USER_HOME/.zshrc" ] && ! grep -q "pyenv init" "$USER_HOME/.zshrc"; then
+      printf '\n# pyenv\nexport PYENV_ROOT="$HOME/.pyenv"\n[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"\neval "$(pyenv init -)"\n' >> "$USER_HOME/.zshrc"
     fi
   fi
-'
 
-echo "[setup-langs] Установка Python версий через pyenv..."
-sudo -u "$USER_NAME" bash -lc '
-  export PYENV_ROOT="$HOME/.pyenv"
-  export PATH="$PYENV_ROOT/bin:$PATH"
-  eval "$(pyenv init -)"
-  
-  # Устанавливаем популярные версии
-  pyenv install -s 3.11.11 || true
-  pyenv install -s 3.12.8 || true
-  pyenv global 3.12.8 || true
-'
+  echo "[setup-langs] Установка Python версий через pyenv..."
+  su - "$USER_NAME" -c '
+    export PYENV_ROOT="$HOME/.pyenv"
+    export PATH="$PYENV_ROOT/bin:$PATH"
+    eval "$(pyenv init -)" 2>/dev/null || true
+    pyenv install -s 3.11.11 2>/dev/null || true
+    pyenv install -s 3.12.8 2>/dev/null || true
+    pyenv global 3.12.8 2>/dev/null || true
+  ' || true
+else
+  echo "[setup-langs] Пропуск pyenv - нет сети"
+fi
 
 echo "[setup-langs] Установка nvm для пользователя ${USER_NAME}..."
-sudo -u "$USER_NAME" bash -lc '
-  if [ ! -d "$HOME/.nvm" ]; then
-    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash
+if check_network; then
+  if [ ! -d "$USER_HOME/.nvm" ]; then
+    su - "$USER_NAME" -c 'curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash' 2>/dev/null || true
   fi
-'
 
-echo "[setup-langs] Установка Node.js версий через nvm..."
-sudo -u "$USER_NAME" bash -lc '
-  export NVM_DIR="$HOME/.nvm"
-  [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-  
-  # Устанавливаем LTS и latest
-  nvm install --lts || true
-  nvm install node || true
-  nvm alias default lts/* || true
-'
+  echo "[setup-langs] Установка Node.js версий через nvm..."
+  su - "$USER_NAME" -c '
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" 2>/dev/null || true
+    nvm install --lts 2>/dev/null || true
+    nvm install node 2>/dev/null || true
+  ' || true
+else
+  echo "[setup-langs] Пропуск nvm - нет сети"
+fi
 
 echo "[setup-langs] Установка rustup для пользователя ${USER_NAME}..."
-sudo -u "$USER_NAME" bash -lc '
-  if ! command -v rustup >/dev/null 2>&1; then
-    curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+if check_network; then
+  if [ ! -d "$USER_HOME/.cargo" ]; then
+    su - "$USER_NAME" -c 'curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y' 2>/dev/null || true
   fi
-'
+else
+  echo "[setup-langs] Пропуск rustup - нет сети"
+fi
 
 echo "[setup-langs] Установка SDKMAN! для пользователя ${USER_NAME}..."
-sudo -u "$USER_NAME" bash -lc '
-  if [ ! -d "$HOME/.sdkman" ]; then
-    curl -s "https://get.sdkman.io" | bash
+if check_network; then
+  if [ ! -d "$USER_HOME/.sdkman" ]; then
+    su - "$USER_NAME" -c 'curl -s "https://get.sdkman.io" | bash' 2>/dev/null || true
   fi
-'
-
-echo "[setup-langs] Установка Java через SDKMAN!..."
-sudo -u "$USER_NAME" bash -lc '
-  export SDKMAN_DIR="$HOME/.sdkman"
-  [[ -s "$SDKMAN_DIR/bin/sdkman-init.sh" ]] && source "$SDKMAN_DIR/bin/sdkman-init.sh"
-  
-  # Устанавливаем последний LTS Java
-  sdk install java 21.0.5-tem || true
-  sdk default java 21.0.5-tem || true
-'
+else
+  echo "[setup-langs] Пропуск SDKMAN! - нет сети"
+fi
 
 echo "[setup-langs] Установка Go..."
-DEBIAN_FRONTEND=noninteractive apt-get install -y golang-go || true
+DEBIAN_FRONTEND=noninteractive apt-get install -y golang-go 2>/dev/null || true
 
 echo "[setup-langs] Готово."
 

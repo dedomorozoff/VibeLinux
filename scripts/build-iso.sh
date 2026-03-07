@@ -77,7 +77,7 @@ case "${BUILD_MODE}" in
     need_file "${ROOT_DIR}/scripts/desktop/setup-installer.sh"
     need_file "${ROOT_DIR}/scripts/desktop/apply-branding.sh"
     need_file "${ROOT_DIR}/scripts/drivers/install-nvidia.sh"
-    
+
     # Брендинг
     need_dir "${ROOT_DIR}/branding"
 
@@ -101,7 +101,7 @@ case "${BUILD_MODE}" in
     if [[ -d "${CHROOT_DIR}/root" ]] && [[ -d "${CHROOT_DIR}/etc" ]]; then
       CHROOT_VALID=1
     fi
-    
+
     if [[ "${KEEP_CHROOT:-0}" == "1" ]] && [[ ${CHROOT_VALID} -eq 1 ]]; then
       log "Шаг 1: Пропускаем bootstrap (KEEP_CHROOT=1, chroot валидный)"
     else
@@ -115,7 +115,7 @@ case "${BUILD_MODE}" in
       umount -l -f "${CHROOT_DIR}/sys" 2>/dev/null || true
       umount -l -f "${CHROOT_DIR}/dev" 2>/dev/null || true
       umount -l -f "${CHROOT_DIR}/dev/pts" 2>/dev/null || true
-      
+
       # Удаляем старый chroot (игнорируем ошибки)
       rm -rf "${CHROOT_DIR}" 2>/dev/null || true
       # Если не удалось удалить — пробуем ещё раз после небольшой паузы
@@ -123,7 +123,7 @@ case "${BUILD_MODE}" in
         sleep 1
         rm -rf "${CHROOT_DIR}" 2>/dev/null || true
       fi
-      
+
       # Bootstrap Ubuntu 24.04 в chroot
       log "Шаг 1: Bootstrap Ubuntu 24.04 (noble) в ${CHROOT_DIR}"
       debootstrap --arch=amd64 noble "${CHROOT_DIR}" http://archive.ubuntu.com/ubuntu
@@ -135,7 +135,7 @@ case "${BUILD_MODE}" in
     umount -l "${CHROOT_DIR}/proc" 2>/dev/null || true
     umount -l "${CHROOT_DIR}/sys" 2>/dev/null || true
     umount -l "${CHROOT_DIR}/dev" 2>/dev/null || true
-    
+
     mount -t proc proc "${CHROOT_DIR}/proc"
     mount -t sysfs sys "${CHROOT_DIR}/sys"
     mount -o bind /dev "${CHROOT_DIR}/dev"
@@ -151,13 +151,19 @@ case "${BUILD_MODE}" in
     cp "${ROOT_DIR}/scripts/desktop/setup-installer.sh" "${CHROOT_DIR}/root/setup-installer.sh"
     cp "${ROOT_DIR}/scripts/desktop/apply-branding.sh" "${CHROOT_DIR}/root/apply-branding.sh"
     cp "${ROOT_DIR}/scripts/drivers/install-nvidia.sh" "${CHROOT_DIR}/root/install-nvidia.sh"
-    
+
     # Копируем брендинг
     if [[ -d "${ROOT_DIR}/branding" ]]; then
       log "Копирование брендинга в chroot..."
       cp -r "${ROOT_DIR}/branding" "${CHROOT_DIR}/root/"
+      
+      # Копируем конфиги в корень chroot для скриптов dev-стека
+      if [[ -d "${ROOT_DIR}/branding/config" ]]; then
+        log "Копирование конфигов в chroot..."
+        cp -r "${ROOT_DIR}/branding/config" "${CHROOT_DIR}/root/"
+      fi
     fi
-    
+
     # Делаем скрипты исполняемыми
     chmod +x "${CHROOT_DIR}/root"/*.sh
 
@@ -179,21 +185,9 @@ case "${BUILD_MODE}" in
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/setup-bootloader.sh"
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/cleanup.sh"
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/install-mate.sh"
-    
-    # Настройка autologin для live сессии
-    log "Настройка autologin и локали..."
-    
-    # Устанавливаем русскую локаль
-    chroot "${CHROOT_DIR}" /bin/bash -c '
-      DEBIAN_FRONTEND=noninteractive apt-get install -y language-pack-ru-base
-      locale-gen ru_RU.UTF-8
-    '
-    
-    # Настройка системной локали по умолчанию
-    echo "LANG=ru_RU.UTF-8" > "${CHROOT_DIR}/etc/default/locale"
-    echo "LANGUAGE=ru_RU.UTF-8" >> "${CHROOT_DIR}/etc/default/locale"
-    
-    # Создаём пользователя vibecode если его нет
+
+    # Создаём пользователя vibecode ДО установки dev-инструментов
+    log "Создание пользователя vibecode..."
     chroot "${CHROOT_DIR}" /bin/bash -c '
       if ! id "vibecode" &>/dev/null; then
         useradd -m -s /bin/bash vibecode
@@ -201,7 +195,46 @@ case "${BUILD_MODE}" in
         usermod -a -G sudo vibecode 2>/dev/null || true
       fi
     '
-    
+
+    # === Фаза 2: Code Forge (Инструменты разработки) ===
+    log "Фаза 2: Установка инструментов разработки..."
+
+    # Копируем скрипты dev-стека
+    cp "${ROOT_DIR}/scripts/dev/setup-terminal.sh" "${CHROOT_DIR}/root/"
+    cp "${ROOT_DIR}/scripts/dev/setup-shell.sh" "${CHROOT_DIR}/root/"
+    cp "${ROOT_DIR}/scripts/dev/setup-langs.sh" "${CHROOT_DIR}/root/"
+    cp "${ROOT_DIR}/scripts/dev/setup-editors.sh" "${CHROOT_DIR}/root/"
+    cp "${ROOT_DIR}/scripts/dev/setup-devtools.sh" "${CHROOT_DIR}/root/"
+    chmod +x "${CHROOT_DIR}/root"/setup-*.sh
+
+    # Установка терминала (Kitty + Zsh + Starship)
+    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/setup-terminal.sh vibecode"
+
+    # Установка оболочки (Zsh + Oh My Zsh + Starship)
+    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/setup-shell.sh vibecode"
+
+    # Установка языков программирования
+    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/setup-langs.sh vibecode"
+
+    # Установка редакторов (VSCodium, Neovim, Zed)
+    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/setup-editors.sh vibecode"
+
+    # Установка devtools (Git, lazygit, Docker)
+    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/setup-devtools.sh vibecode"
+
+    # Настройка autologin для live сессии
+    log "Настройка autologin и локали..."
+
+    # Устанавливаем русскую локаль
+    chroot "${CHROOT_DIR}" /bin/bash -c '
+      DEBIAN_FRONTEND=noninteractive apt-get install -y language-pack-ru-base
+      locale-gen ru_RU.UTF-8
+    '
+
+    # Настройка системной локали по умолчанию
+    echo "LANG=ru_RU.UTF-8" > "${CHROOT_DIR}/etc/default/locale"
+    echo "LANGUAGE=ru_RU.UTF-8" >> "${CHROOT_DIR}/etc/default/locale"
+
     # Настройка LightDM для autologin - полное отключение greeter
     mkdir -p "${CHROOT_DIR}/etc/lightdm"
     cat > "${CHROOT_DIR}/etc/lightdm/lightdm.conf" << 'LIGHTDMEOF'
@@ -213,17 +246,17 @@ allow-guest=false
 greeter-session=
 user-session=mate
 LIGHTDMEOF
-    
+
     # Настройка пользовательских настроек MATE
     log "Настройка MATE панели..."
-    
+
     # Создаём директорию для настроек
     mkdir -p "${CHROOT_DIR}/home/vibecode/.config/mate-panel"
     mkdir -p "${CHROOT_DIR}/home/vibecode/.config/dconf"
-    
+
     # Dconf настройки для MATE - часы с датой (пропускаем, настроим позже)
     # Настройки панели будут применены при первом входе пользователя
-    
+
     # Создаём backup настроек панели
     cat > "${CHROOT_DIR}/home/vibecode/.config/mate-panel/default-layout" << 'MATEPANELEOF'
 [top]
@@ -244,19 +277,19 @@ MATEPANELEOF
     chroot "${CHROOT_DIR}" /bin/bash -c '
       chown -R vibecode:vibecode /home/vibecode
     '
-    
+
     # Настройка панели MATE
     log "Настройка панели MATE..."
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/configure-mate-panel.sh vibecode"
-    
+
     # Установка и настройка установщика
     log "Установка установщика (ubiquity)..."
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/setup-installer.sh"
-    
+
     # Применение брендинга
     log "Применение брендинга VibeCode OS..."
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/apply-branding.sh /root/branding vibecode"
-    
+
     # Обновляем dconf базу для применения системных настроек
     log "Обновление dconf базы..."
     chroot "${CHROOT_DIR}" /bin/bash -c "dconf update"
@@ -282,7 +315,7 @@ MATEPANELEOF
     mkdir -p "${IMAGE_DIR}/EFI"
     mkdir -p "${IMAGE_DIR}/EFI/boot"
     mkdir -p "${IMAGE_DIR}/boot"
-    
+
     # Копируем модули GRUB для графики
     log "Копирование модулей GRUB..."
     if [[ -d "/usr/lib/grub/x86_64-efi" ]]; then
@@ -291,11 +324,11 @@ MATEPANELEOF
     if [[ -d "/usr/lib/grub/i386-pc" ]]; then
       cp -r /usr/lib/grub/i386-pc/*.mod "${IMAGE_DIR}/boot/grub/i386-pc/" 2>/dev/null || true
     fi
-    
+
     # Устанавливаем темы GRUB
     log "Установка тем GRUB..."
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive apt-get install -y grub2-themes-" 2>/dev/null || true
-    
+
     # Создаём шрифт для GRUB
     log "Создание шрифта GRUB..."
     if command -v grub-mkfont >/dev/null 2>&1; then
@@ -307,11 +340,11 @@ MATEPANELEOF
         cp /usr/share/grub/unicode.pf2 "${IMAGE_DIR}/boot/grub/fonts/" 2>/dev/null || true
       fi
     fi
-    
+
     # Создаём графическую тему для GRUB
     log "Создание темы GRUB..."
     mkdir -p "${IMAGE_DIR}/boot/grub/themes/vibecode"
-    
+
     # Простой theme.txt для GRUB
     cat > "${IMAGE_DIR}/boot/grub/themes/vibecode/theme.txt" << 'THEMEEOF'
 title-text: ""
@@ -327,11 +360,11 @@ message-color: "#ffffff"
     padding = 20px
     border = 0
     border_color = "#2c3e50"
-    
+
     item_color = "#ffffff"
     selected_item_color = "#3498db"
     selected_item_pixmap = "selected.png"
-    
+
     item_font = "DejaVu Sans:16"
     selected_item_font = "DejaVu Sans:bold:16"
 }
@@ -339,7 +372,7 @@ THEMEEOF
 
     # Создаём простой pixmap для выбранного элемента (чёрный прямоугольник)
     mkdir -p "${IMAGE_DIR}/boot/grub/themes/vibecode"
-    
+
     # Копируем стандартные изображения если есть
     if [[ -d "/usr/share/grub/themes" ]]; then
       cp -r /usr/share/grub/themes/* "${IMAGE_DIR}/boot/grub/themes/" 2>/dev/null || true
@@ -364,7 +397,7 @@ THEMEEOF
         die "Не удалось найти ядро vmlinuz в chroot/boot"
       fi
     fi
-    
+
     if [[ -f "${CHROOT_DIR}/boot/initrd.img" ]]; then
       cp "${CHROOT_DIR}/boot/initrd.img" "${IMAGE_DIR}/boot/initrd.img"
     else
@@ -418,13 +451,13 @@ EOF
 
     # Шаг 7: Подготовка файлов для casper
     log "Шаг 7: Подготовка файлов для casper..."
-    
+
     # Устанавливаем squashfs в chroot для генерации squashfs подержки в initrd
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive apt-get install -y squashfs-tools casper" || true
-    
+
     # Создаём файл с размером squashfs
     du -sx "${CHROOT_DIR}" --block=1M | awk '{print $1}' > "${IMAGE_DIR}/casper/filesystem.size"
-    
+
     # Создаём файл манифеста
     # shellcheck disable=SC2016  # шаблон формата обрабатывается dpkg-query, а не shell
     chroot "${CHROOT_DIR}" dpkg-query -W -f='${Package} ${Version}\n' > "${IMAGE_DIR}/casper/filesystem.manifest" || true
@@ -436,10 +469,10 @@ EOF
 
     # Шаг 8: Создание ISO через grub-mkrescue
     log "Шаг 8: Создание ISO с grub-mkrescue"
-    
+
     # Добавляем пустую директорию для boot, чтобы избежать ошибки
     touch "${IMAGE_DIR}/boot/grub/grub.cfg"
-    
+
     grub-mkrescue -o "${ISO_OUTPUT}" "${IMAGE_DIR}" --compress=xz || die "Ошибка при создании ISO"
 
     log "✅ ISO собран: ${ISO_OUTPUT}"
@@ -450,4 +483,3 @@ EOF
     die "Неизвестный BUILD_MODE='${BUILD_MODE}'. Допустимо: dry-run|full"
     ;;
 esac
-

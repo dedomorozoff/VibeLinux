@@ -8,49 +8,69 @@ if [[ $EUID -ne 0 ]]; then
   exit 1
 fi
 
-USER_NAME="${SUDO_USER:-$USER}"
-USER_HOME="$(getent passwd "$USER_NAME" | cut -d: -f6)"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+USER_NAME="${1:-root}"
+USER_HOME="/home/${USER_NAME}"
+BRANDING_DIR="/root/branding"
 
 echo "[setup-shell] Установка Zsh..."
-apt-get update -y
-DEBIAN_FRONTEND=noninteractive apt-get install -y zsh curl git
+apt-get update -y || true
+DEBIAN_FRONTEND=noninteractive apt-get install -y zsh curl git wget || true
 
+# Установка Oh My Zsh (без интерактивного режима)
 echo "[setup-shell] Установка Oh My Zsh для пользователя ${USER_NAME}..."
-sudo -u "$USER_NAME" sh -c '
-  if [ ! -d "$HOME/.oh-my-zsh" ]; then
-    RUNZSH=no KEEP_ZSHRC=yes \
-    sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
-  fi
-'
+if [ ! -d "$USER_HOME/.oh-my-zsh" ]; then
+  su - "$USER_NAME" -c '
+    RUNZSH=no KEEP_ZSHRC=yes sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" 2>/dev/null || true
+  ' || echo "[setup-shell] Oh My Zsh установка пропущена (может потребоваться сеть)"
+else
+  echo "[setup-shell] Oh My Zsh уже установлен"
+fi
 
+# Установка Starship
 echo "[setup-shell] Установка Starship..."
-curl -fsSL https://starship.rs/install.sh | bash -s -- -y
+if command -v starship >/dev/null 2>&1; then
+  echo "[setup-shell] Starship уже установлен"
+else
+  curl -fsSL https://starship.rs/install.sh 2>/dev/null | bash -s -- -y 2>/dev/null || true
+  # Fallback: установить через apt
+  if ! command -v starship >/dev/null 2>&1; then
+    DEBIAN_FRONTEND=noninteractive apt-get install -y starship 2>/dev/null || true
+  fi
+fi
 
+# Копирование конфигов
 echo "[setup-shell] Копирование конфигов..."
-# Копируем шаблон .zshrc
-if [[ -f "${ROOT_DIR}/scripts/dev/configs/zshrc.template" ]]; then
-  cp "${ROOT_DIR}/scripts/dev/configs/zshrc.template" "${USER_HOME}/.zshrc"
-  chown "$USER_NAME:$USER_NAME" "${USER_HOME}/.zshrc"
-  echo "[setup-shell] .zshrc скопирован"
-fi
+mkdir -p "${USER_HOME}/.config"
 
-# Копируем конфиг Starship
-if [[ -f "${ROOT_DIR}/scripts/dev/configs/starship.toml" ]]; then
-  mkdir -p "${USER_HOME}/.config"
-  cp "${ROOT_DIR}/scripts/dev/configs/starship.toml" "${USER_HOME}/.config/starship.toml"
-  chown -R "$USER_NAME:$USER_NAME" "${USER_HOME}/.config"
-  echo "[setup-shell] starship.toml скопирован"
+# Zshrc
+if [[ -f "${BRANDING_DIR}/config/zsh/zshrc" ]]; then
+  cp "${BRANDING_DIR}/config/zsh/zshrc" "${USER_HOME}/.zshrc"
+  echo "[setup-shell] Zshrc скопирован из branding"
+elif [[ -f "/root/zshrc" ]]; then
+  cp "/root/zshrc" "${USER_HOME}/.zshrc"
+else
+  echo "[setup-shell] ВНИМАНИЕ: zshrc не найден, используется стандартный Oh My Zsh"
 fi
+chown "$USER_NAME:$USER_NAME" "${USER_HOME}/.zshrc" 2>/dev/null || true
 
+# Starship
+if [[ -f "${BRANDING_DIR}/config/starship/starship.toml" ]]; then
+  cp "${BRANDING_DIR}/config/starship/starship.toml" "${USER_HOME}/.config/starship.toml"
+  echo "[setup-shell] Starship config скопирован из branding"
+elif [[ -f "/root/starship.toml" ]]; then
+  cp "/root/starship.toml" "${USER_HOME}/.config/starship.toml"
+fi
+chown -R "$USER_NAME:$USER_NAME" "${USER_HOME}/.config" 2>/dev/null || true
+
+# Добавление Starship в .zshrc если его там нет
 ZSHRC="${USER_HOME}/.zshrc"
-if ! grep -q "eval \"\$(starship init zsh)\"" "$ZSHRC" 2>/dev/null; then
+if [[ -f "$ZSHRC" ]] && ! grep -q 'starship init' "$ZSHRC" 2>/dev/null; then
   echo '[setup-shell] Добавление Starship в .zshrc...'
   printf '\n# Starship prompt\nif command -v starship >/dev/null 2>&1; then\n  eval "$(starship init zsh)"\nfi\n' >> "$ZSHRC"
 fi
 
-chsh -s "$(command -v zsh)" "$USER_NAME" || true
+# Установка zsh по умолчанию
+chsh -s "$(command -v zsh)" "$USER_NAME" 2>/dev/null || true
 
-echo "[setup-shell] Готово. Требуется ручная полировка конфигов позже."
+echo "[setup-shell] Готово."
 

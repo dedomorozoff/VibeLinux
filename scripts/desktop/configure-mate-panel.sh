@@ -45,11 +45,28 @@ sleep 5
 # Сбрасываем настройки панели к дефолтным
 dconf reset -f /org/mate/panel/ 2>/dev/null || true
 
+# Создаём объекты панели заново
+dconf write /org/mate/panel/objects/toplevels/bottom/orientation "'bottom'" 2>/dev/null || true
+dconf write /org/mate/panel/objects/toplevels/bottom/size 24 2>/dev/null || true
+dconf write /org/mate/panel/objects/toplevels/bottom/expand true 2>/dev/null || true
+dconf write /org/mate/panel/objects/toplevels/bottom/auto-hide false 2>/dev/null || true
+
+# Добавляем апплет меню (MATE Menu)
+dconf write /org/mate/panel/objects/object-0/toplevel "'bottom'" 2>/dev/null || true
+dconf write /org/mate/panel/objects/object-0/position 0 2>/dev/null || true
+dconf write /org/mate/panel/objects/object-0/panel-right true 2>/dev/null || true
+dconf write /org/mate/panel/objects/object-0/applet-iid "'MateMenuFactory::MateMenu'" 2>/dev/null || true
+
+# Добавляем апплет часов
+dconf write /org/mate/panel/objects/object-1/toplevel "'bottom'" 2>/dev/null || true
+dconf write /org/mate/panel/objects/object-1/position 1000 2>/dev/null || true
+dconf write /org/mate/panel/objects/object-1/applet-iid "'ClockAppletFactory::ClockApplet'" 2>/dev/null || true
+
 # Настраиваем часы на панели
-dconf write /org/mate/panel/objects/clock/prefs/format "'24-hour'" 2>/dev/null || true
-dconf write /org/mate/panel/objects/clock/prefs/show-date true 2>/dev/null || true
-dconf write /org/mate/panel/objects/clock/prefs/show-seconds false 2>/dev/null || true
-dconf write /org/mate/panel/objects/clock/prefs/show-weather false 2>/dev/null || true
+dconf write /org/mate/panel/objects/object-1/prefs/format "'24-hour'" 2>/dev/null || true
+dconf write /org/mate/panel/objects/object-1/prefs/show-date true 2>/dev/null || true
+dconf write /org/mate/panel/objects/object-1/prefs/show-seconds false 2>/dev/null || true
+dconf write /org/mate/panel/objects/object-1/prefs/show-weather false 2>/dev/null || true
 
 # Перезапускаем панель
 pkill mate-panel || true
