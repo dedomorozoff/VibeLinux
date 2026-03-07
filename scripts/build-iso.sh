@@ -300,10 +300,10 @@ MATEPANELEOF
     umount "${CHROOT_DIR}/sys"
     umount "${CHROOT_DIR}/dev"
 
-    # Шаг 5: Подготовка SquashFS
+    # Шаг 5: Подготовка SquashFS (lz4 для поддержки >4GB)
     log "Шаг 5: Упаковка rootfs в SquashFS"
     mkdir -p "${IMAGE_DIR}/casper"
-    mksquashfs "${CHROOT_DIR}" "${IMAGE_DIR}/casper/filesystem.squashfs" -comp xz -b 1M
+    mksquashfs "${CHROOT_DIR}" "${IMAGE_DIR}/casper/filesystem.squashfs" -comp lz4 -Xhc
 
     # Шаг 6: Подготовка структуры live-ISO
     log "Шаг 6: Подготовка структуры live-ISO"
