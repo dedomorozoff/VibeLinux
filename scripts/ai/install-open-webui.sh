@@ -22,6 +22,7 @@ echo "[install-open-webui] Запуск контейнера Open WebUI..."
 docker run -d \
   --name open-webui \
   --restart unless-stopped \
+  --add-host=host.docker.internal:host-gateway \
   -p 3000:8080 \
   -e OLLAMA_BASE_URL=http://host.docker.internal:11434 \
   -v open-webui:/app/backend/data \

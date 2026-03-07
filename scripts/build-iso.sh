@@ -63,7 +63,6 @@ case "${BUILD_MODE}" in
     need_cmd debootstrap
     need_cmd mksquashfs
     need_cmd xorriso
-    need_cmd grub-mkrescue
     need_cmd mformat
 
     # Базовая структура scripts/
@@ -294,16 +293,29 @@ MATEPANELEOF
     log "Обновление dconf базы..."
     chroot "${CHROOT_DIR}" /bin/bash -c "dconf update"
 
+    # Устанавливаем casper для live-сессии (до размонтирования!)
+    log "Установка casper для live-сессии..."
+    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive apt-get install -y casper"
+
+    # Генерируем манифест пакетов (нужен chroot с /proc)
+    log "Генерация манифеста пакетов..."
+    mkdir -p "${IMAGE_DIR}/casper"
+    # shellcheck disable=SC2016
+    chroot "${CHROOT_DIR}" dpkg-query -W -f='${Package} ${Version}\n' > "${IMAGE_DIR}/casper/filesystem.manifest" || true
+    cp "${IMAGE_DIR}/casper/filesystem.manifest" "${IMAGE_DIR}/casper/filesystem.manifest-remove"
+
     # Шаг 4: Очистка и выключение
     log "Шаг 4: Очистка chroot"
     umount "${CHROOT_DIR}/proc"
     umount "${CHROOT_DIR}/sys"
     umount "${CHROOT_DIR}/dev"
 
-    # Шаг 5: Подготовка SquashFS (lz4 для поддержки >4GB)
+    # Шаг 5: Подготовка SquashFS (xz для лучшего сжатия, iso-level 3 для >4GB)
     log "Шаг 5: Упаковка rootfs в SquashFS"
     mkdir -p "${IMAGE_DIR}/casper"
-    mksquashfs "${CHROOT_DIR}" "${IMAGE_DIR}/casper/filesystem.squashfs" -comp lz4 -Xhc
+    mksquashfs "${CHROOT_DIR}" "${IMAGE_DIR}/casper/filesystem.squashfs" \
+      -comp xz -Xbcj x86 \
+      -e boot proc sys dev run tmp
 
     # Шаг 6: Подготовка структуры live-ISO
     log "Шаг 6: Подготовка структуры live-ISO"
@@ -324,10 +336,6 @@ MATEPANELEOF
     if [[ -d "/usr/lib/grub/i386-pc" ]]; then
       cp -r /usr/lib/grub/i386-pc/*.mod "${IMAGE_DIR}/boot/grub/i386-pc/" 2>/dev/null || true
     fi
-
-    # Устанавливаем темы GRUB
-    log "Установка тем GRUB..."
-    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive apt-get install -y grub2-themes-" 2>/dev/null || true
 
     # Создаём шрифт для GRUB
     log "Создание шрифта GRUB..."
@@ -452,28 +460,75 @@ EOF
     # Шаг 7: Подготовка файлов для casper
     log "Шаг 7: Подготовка файлов для casper..."
 
-    # Устанавливаем squashfs в chroot для генерации squashfs подержки в initrd
-    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive apt-get install -y squashfs-tools casper" || true
-
-    # Создаём файл с размером squashfs
+    # Создаём файл с размером squashfs (манифест уже создан до размонтирования)
     du -sx "${CHROOT_DIR}" --block=1M | awk '{print $1}' > "${IMAGE_DIR}/casper/filesystem.size"
 
-    # Создаём файл манифеста
-    # shellcheck disable=SC2016  # шаблон формата обрабатывается dpkg-query, а не shell
-    chroot "${CHROOT_DIR}" dpkg-query -W -f='${Package} ${Version}\n' > "${IMAGE_DIR}/casper/filesystem.manifest" || true
-    cp "${IMAGE_DIR}/casper/filesystem.manifest" "${IMAGE_DIR}/casper/filesystem.manifest-remove"
+    # Шаг 8: Создание загрузочных образов GRUB (BIOS + UEFI)
+    log "Шаг 8: Создание загрузочных образов GRUB..."
 
-    # Создаём файлы для EFI
-    # Т.к. grub-mkrescue не включает ядро автоматически, нужно подготовить загрузчик иначе
-    # Используем более простой подход с созданием boot файлов
+    # Встроенный конфиг GRUB для поиска основного grub.cfg
+    GRUB_EMBED_CFG="$(mktemp)"
+    cat > "${GRUB_EMBED_CFG}" << 'GRUBEMBEDEOF'
+search --set=root --file /boot/grub/grub.cfg
+set prefix=($root)/boot/grub
+configfile $prefix/grub.cfg
+GRUBEMBEDEOF
 
-    # Шаг 8: Создание ISO через grub-mkrescue
-    log "Шаг 8: Создание ISO с grub-mkrescue"
+    # --- BIOS boot image ---
+    grub-mkstandalone \
+      --format=i386-pc \
+      --output="${WORK_DIR}/core.img" \
+      --install-modules="linux normal iso9660 biosdisk memdisk search tar ls" \
+      --modules="linux normal iso9660 biosdisk search" \
+      --locales="" \
+      --fonts="" \
+      "boot/grub/grub.cfg=${GRUB_EMBED_CFG}"
 
-    # Добавляем пустую директорию для boot, чтобы избежать ошибки
-    touch "${IMAGE_DIR}/boot/grub/grub.cfg"
+    cat /usr/lib/grub/i386-pc/cdboot.img "${WORK_DIR}/core.img" \
+      > "${IMAGE_DIR}/boot/grub/bios.img"
 
-    grub-mkrescue -o "${ISO_OUTPUT}" "${IMAGE_DIR}" --compress=xz || die "Ошибка при создании ISO"
+    # --- UEFI boot image ---
+    grub-mkstandalone \
+      --format=x86_64-efi \
+      --output="${WORK_DIR}/bootx64.efi" \
+      --locales="" \
+      --fonts="" \
+      "boot/grub/grub.cfg=${GRUB_EMBED_CFG}"
+
+    # Создаём FAT-образ EFI System Partition
+    EFI_IMG="${IMAGE_DIR}/boot/grub/efi.img"
+    dd if=/dev/zero of="${EFI_IMG}" bs=1M count=4
+    mkfs.vfat "${EFI_IMG}"
+    mmd -i "${EFI_IMG}" ::/EFI ::/EFI/boot
+    mcopy -i "${EFI_IMG}" "${WORK_DIR}/bootx64.efi" ::/EFI/boot/bootx64.efi
+
+    # Копируем EFI-загрузчик в дерево ISO
+    cp "${WORK_DIR}/bootx64.efi" "${IMAGE_DIR}/EFI/boot/bootx64.efi"
+
+    rm -f "${GRUB_EMBED_CFG}"
+
+    # Шаг 9: Создание ISO через xorriso (BIOS + UEFI hybrid)
+    log "Шаг 9: Создание ISO"
+
+    xorriso -as mkisofs \
+      -iso-level 3 \
+      -r -V "VibeCodeOS" \
+      -J -joliet-long \
+      -o "${ISO_OUTPUT}" \
+      --grub2-mbr /usr/lib/grub/i386-pc/boot_hybrid.img \
+      --mbr-force-bootable \
+      -partition_offset 16 \
+      -b boot/grub/bios.img \
+        -no-emul-boot \
+        -boot-load-size 4 \
+        -boot-info-table \
+        --grub2-boot-info \
+      -eltorito-alt-boot \
+      -e boot/grub/efi.img \
+        -no-emul-boot \
+      -append_partition 2 0xef "${EFI_IMG}" \
+      "${IMAGE_DIR}" \
+      || die "Ошибка при создании ISO"
 
     log "✅ ISO собран: ${ISO_OUTPUT}"
     log "Проверьте файл: ${ISO_OUTPUT}"
