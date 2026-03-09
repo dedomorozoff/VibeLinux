@@ -20,8 +20,12 @@ else
 fi
 
 echo "[install-ollama] Включение и запуск сервиса..."
-systemctl enable ollama || true
-systemctl restart ollama || true
+if pidof systemd >/dev/null 2>&1; then
+  systemctl enable ollama || true
+  systemctl restart ollama || true
+else
+  echo "[install-ollama] Пропуск systemctl (среда без systemd / chroot)"
+fi
 
 echo "[install-ollama] Проверка..."
 if ollama --version >/dev/null 2>&1; then

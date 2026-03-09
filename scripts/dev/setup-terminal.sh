@@ -8,29 +8,35 @@ if [[ $EUID -ne 0 ]]; then
   exit 1
 fi
 
-USER_NAME="${SUDO_USER:-$USER}"
-USER_HOME="$(getent passwd "$USER_NAME" | cut -d: -f6)"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+USER_NAME="${1:-root}"
+USER_HOME="/home/${USER_NAME}"
+BRANDING_DIR="/root/branding"
 
 echo "[setup-terminal] Установка Kitty..."
-apt-get update -y
-DEBIAN_FRONTEND=noninteractive apt-get install -y kitty
+apt-get update -y || true
+DEBIAN_FRONTEND=noninteractive apt-get install -y kitty || true
 
 echo "[setup-terminal] Копирование конфигов..."
-# Копируем конфиг Kitty
-if [[ -f "${ROOT_DIR}/scripts/dev/configs/kitty.conf" ]]; then
-  mkdir -p "${USER_HOME}/.config/kitty"
-  cp "${ROOT_DIR}/scripts/dev/configs/kitty.conf" "${USER_HOME}/.config/kitty/kitty.conf"
-  chown -R "$USER_NAME:$USER_NAME" "${USER_HOME}/.config/kitty"
-  echo "[setup-terminal] kitty.conf скопирован"
+mkdir -p "${USER_HOME}/.config/kitty"
+
+# Копируем из branding если есть
+if [[ -f "${BRANDING_DIR}/config/kitty/kitty.conf" ]]; then
+  cp "${BRANDING_DIR}/config/kitty/kitty.conf" "${USER_HOME}/.config/kitty/kitty.conf"
+  echo "[setup-terminal] Конфиг скопирован из branding"
+elif [[ -f "/root/kitty.conf" ]]; then
+  cp "/root/kitty.conf" "${USER_HOME}/.config/kitty/kitty.conf"
+  echo "[setup-terminal] Конфиг скопирован из /root"
+else
+  echo "[setup-terminal] ВНИМАНИЕ: kitty.conf не найден, используется стандартный"
 fi
+chown -R "$USER_NAME:$USER_NAME" "${USER_HOME}/.config/kitty" 2>/dev/null || true
 
 echo "[setup-terminal] Установка шрифтов для кодинга..."
 DEBIAN_FRONTEND=noninteractive apt-get install -y \
   fonts-jetbrains-mono \
   fonts-fira-code \
   fonts-cascadia-code \
+  fonts-hack \
   || true
 
 echo "[setup-terminal] Готово."

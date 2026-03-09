@@ -1,0 +1,125 @@
+# VibeCode OS - Starship Prompt Configuration
+
+format = """
+[┌─────────────────────────────────────────────────────────────>](bold green)
+[│](bold green)$directory$rust$python$node$golang$git_branch$git_status
+[└─>](bold green) $character"""
+
+# Character
+[character]
+success_symbol = "[➜](bold green)"
+error_symbol = "[✗](bold red)"
+vimcmd_symbol = "[❮](bold green)"
+
+# Directory
+[directory]
+truncation_length = 3
+truncate_to_repo = true
+format = "[$read_only]($read_only_color )[$cropped_repo_root](bold blue)[$inner](default)"
+read_only = "🔒"
+read_only_color = "red"
+
+# Git
+[git_branch]
+symbol = " "
+format = "on [$symbol$branch]($style) "
+style = "bold purple"
+
+[git_status]
+format = '([\[$all_status$ahead_behind\]]($style) )'
+style = "bold yellow"
+conflicted = "⚔️ "
+ahead = "⇡${count}"
+behind = "⇣${count}"
+diverged = "⇕⇡${ahead_count}⇣${behind_count}"
+untracked = "?${count}"
+stashed = "📦"
+modified = "!${count}"
+staged = '+${count}'
+renamed = "»${count}"
+deleted = "✘${count}"
+
+# Rust
+[rust]
+symbol = " "
+format = "via [$symbol($version )](bold red)"
+version_format = "v${raw}"
+
+# Python
+[python]
+symbol = " "
+format = "via [${symbol}${pyenv_prefix}(${version} )(\\($virtualenv\\) )](bold yellow)"
+pyenv_version_name = false
+pyenv_prefix = "pyenv "
+
+# Node
+[nodejs]
+symbol = " "
+format = "via [$symbol($version )](bold green)"
+
+# Golang
+[golang]
+symbol = " "
+format = "via [$symbol($version )](bold cyan)"
+
+# Docker
+[docker_context]
+symbol = " "
+format = "via [$symbol$context](bold blue)"
+
+# Kubernetes
+[kubernetes]
+symbol = "☸ "
+format = 'on [$symbol$context( \($namespace\) )](bold blue)'
+disabled = false
+
+# Time
+[time]
+disabled = true
+format = "[@$time]($style) "
+
+# Shell
+[shell]
+bash_indicator = ""
+fish_indicator = ""
+zsh_indicator = ""
+ion_indicator = ""
+powershell_indicator = ""
+python_indicator = ""
+julia_indicator = ""
+ruby_indicator = ""
+aws_indicator = ""
+conda_indicator = ""
+dart_indicator = ""
+dotnet_indicator = ""
+elixir_indicator ""
+elm_indicator = ""
+erlang_indicator = ""
+go_indicator = ""
+helm_indicator = ""
+java_indicator = ""
+julia_indicator = ""
+kotlin_indicator = ""
+lua_indicator = ""
+nim_indicator = ""
+nodejs_indicator = ""
+ocaml_indicator = ""
+perl_indicator = ""
+php_indicator = ""
+purescript_indicator = ""
+rust_indicator = ""
+scala_indicator = ""
+swift_indicator = ""
+terraform_indicator = ""
+terraform_workspace = "🏢 "
+vagrant_indicator = ""
+vcsh_indicator = ""
+
+# Newline
+[line_break]
+disabled = false
+
+# Package
+[package]
+symbol = "📦 "
+format = "is [$symbol$version](bold green) "
