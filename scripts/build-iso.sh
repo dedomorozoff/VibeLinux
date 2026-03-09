@@ -77,81 +77,11 @@ case "${BUILD_MODE}" in
     need_file "${ROOT_DIR}/scripts/desktop/setup-installer.sh"
     need_file "${ROOT_DIR}/scripts/desktop/apply-branding.sh"
     need_file "${ROOT_DIR}/scripts/drivers/install-nvidia.sh"
-    
-    # Брендинг
-    need_dir "${ROOT_DIR}/branding"
+    need_file "${ROOT_DIR}/scripts/dev/install-dev-stack.sh"
+    need_file "${ROOT_DIR}/scripts/dev/chroot-configs/kitty.conf"
+    need_file "${ROOT_DIR}/scripts/dev/chroot-configs/vscodium-settings.json"
+    need_file "${ROOT_DIR}/scripts/dev/chroot-configs/vscodium-extensions.txt"
 
-    # Документация/CI точка опоры (чтобы не разъехалось)
-    need_file "${ROOT_DIR}/docs/BUILD-ISO.md"
-    need_file "${ROOT_DIR}/.github/workflows/build-iso.yml"
-
-    log "OK: dry-run проверки пройдены. Полная сборка пока не выполняется этим скриптом."
-    ;;
-
-  full)
-    if [[ $EUID -ne 0 ]]; then
-      die "Режим full требует root (запускайте через sudo)."
-    fi
-
-    log "Запуск пайплайна сборки alpha-ISO VibeCode OS..."
-
-    # Поддержка KEEP_CHROOT для экономии времени при повторной сборке
-    # Проверяем, что chroot валидный (есть /root, /etc)
-    CHROOT_VALID=0
-    if [[ -d "${CHROOT_DIR}/root" ]] && [[ -d "${CHROOT_DIR}/etc" ]]; then
-      CHROOT_VALID=1
-    fi
-    
-    if [[ "${KEEP_CHROOT:-0}" == "1" ]] && [[ ${CHROOT_VALID} -eq 1 ]]; then
-      log "Шаг 1: Пропускаем bootstrap (KEEP_CHROOT=1, chroot валидный)"
-    else
-      if [[ "${KEEP_CHROOT:-0}" == "1" ]] && [[ ${CHROOT_VALID} -eq 0 ]]; then
-        log "ВНИМАНИЕ: KEEP_CHROOT=1, но chroot неполный. Пересоздаём..."
-      fi
-      # Сначала размонтируем, если что-то осталось от предыдущей сборки
-      log "Шаг 1: Очистка предыдущей сборки..."
-      # Агрессивное размонтирование
-      umount -l -f "${CHROOT_DIR}/proc" 2>/dev/null || true
-      umount -l -f "${CHROOT_DIR}/sys" 2>/dev/null || true
-      umount -l -f "${CHROOT_DIR}/dev" 2>/dev/null || true
-      umount -l -f "${CHROOT_DIR}/dev/pts" 2>/dev/null || true
-      
-      # Удаляем старый chroot (игнорируем ошибки)
-      rm -rf "${CHROOT_DIR}" 2>/dev/null || true
-      # Если не удалось удалить — пробуем ещё раз после небольшой паузы
-      if [[ -d "${CHROOT_DIR}" ]]; then
-        sleep 1
-        rm -rf "${CHROOT_DIR}" 2>/dev/null || true
-      fi
-      
-      # Bootstrap Ubuntu 24.04 в chroot
-      log "Шаг 1: Bootstrap Ubuntu 24.04 (noble) в ${CHROOT_DIR}"
-      debootstrap --arch=amd64 noble "${CHROOT_DIR}" http://archive.ubuntu.com/ubuntu
-    fi
-
-    # Шаг 2: Настройка chroot
-    log "Шаг 2: Настройка chroot"
-    # Сначала размонтируем, если уже примонтировано (от предыдущей сборки)
-    umount -l "${CHROOT_DIR}/proc" 2>/dev/null || true
-    umount -l "${CHROOT_DIR}/sys" 2>/dev/null || true
-    umount -l "${CHROOT_DIR}/dev" 2>/dev/null || true
-    
-    mount -t proc proc "${CHROOT_DIR}/proc"
-    mount -t sysfs sys "${CHROOT_DIR}/sys"
-    mount -o bind /dev "${CHROOT_DIR}/dev"
-
-    # Шаг 3: Установка базовых пакетов
-    log "Шаг 3: Установка базовых пакетов"
-    cp "${ROOT_DIR}/scripts/base/base-packages.sh" "${CHROOT_DIR}/root/base-packages.sh"
-    cp "${ROOT_DIR}/scripts/base/cleanup.sh" "${CHROOT_DIR}/root/cleanup.sh"
-    cp "${ROOT_DIR}/scripts/base/setup-distro-info.sh" "${CHROOT_DIR}/root/setup-distro-info.sh"
-    cp "${ROOT_DIR}/scripts/base/setup-bootloader.sh" "${CHROOT_DIR}/root/setup-bootloader.sh"
-    cp "${ROOT_DIR}/scripts/desktop/install-mate.sh" "${CHROOT_DIR}/root/install-mate.sh"
-    cp "${ROOT_DIR}/scripts/desktop/configure-mate-panel.sh" "${CHROOT_DIR}/root/configure-mate-panel.sh"
-    cp "${ROOT_DIR}/scripts/desktop/setup-installer.sh" "${CHROOT_DIR}/root/setup-installer.sh"
-    cp "${ROOT_DIR}/scripts/desktop/apply-branding.sh" "${CHROOT_DIR}/root/apply-branding.sh"
-    cp "${ROOT_DIR}/scripts/drivers/install-nvidia.sh" "${CHROOT_DIR}/root/install-nvidia.sh"
-    
     # Копируем брендинг
     if [[ -d "${ROOT_DIR}/branding" ]]; then
       log "Копирование брендинга в chroot..."
@@ -179,7 +109,8 @@ case "${BUILD_MODE}" in
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/setup-bootloader.sh"
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/cleanup.sh"
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/install-mate.sh"
-    
+    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/install-dev-stack.sh"
+
     # Настройка autologin для live сессии
     log "Настройка autologin и локали..."
     
@@ -304,8 +235,25 @@ MATEPANELEOF
         grub-mkfont -o "${IMAGE_DIR}/boot/grub/fonts/DejaVuSans.pf2" -s 16 /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf 2>/dev/null || true
       fi
       if [[ -f /usr/share/grub/unicode.pf2 ]]; then
-        cp /usr/share/grub/unicode.pf2 "${IMAGE_DIR}/boot/grub/fonts/" 2>/dev/null || true
+        cp /usr/share/grub/unicode.pf2 "${IMAGE_DIR}/boot/grub/fonts/unicode.pf2" 2>/dev/null || true
+        # Копируем unicode как fallback для DejaVuSans
+        if [[ ! -f "${IMAGE_DIR}/boot/grub/fonts/DejaVuSans.pf2" ]]; then
+          cp /usr/share/grub/unicode.pf2 "${IMAGE_DIR}/boot/grub/fonts/DejaVuSans.pf2" 2>/dev/null || true
+        fi
       fi
+      # Дополнительный fallback - пробуем найти любые truetype шрифты
+      if [[ ! -f "${IMAGE_DIR}/boot/grub/fonts/DejaVuSans.pf2" ]]; then
+        for font in /usr/share/fonts/**/*.ttf; do
+          if [[ -f "$font" ]]; then
+            grub-mkfont -o "${IMAGE_DIR}/boot/grub/fonts/DejaVuSans.pf2" -s 16 "$font" 2>/dev/null && break || true
+          fi
+        done
+      fi
+    fi
+    
+    # Проверяем что шрифт создан
+    if [[ ! -f "${IMAGE_DIR}/boot/grub/fonts/DejaVuSans.pf2" ]]; then
+      log "WARNING: Не удалось создать шрифт GRUB. Графический режим может не работать."
     fi
     
     # Создаём графическую тему для GRUB
@@ -377,41 +325,68 @@ THEMEEOF
       fi
     fi
 
-    # Создаём конфигурацию GRUB (чисто текстовый режим для максимальной совместимости)
+    # Создаём конфигурацию GRUB (графический режим с поддержкой EFI и BIOS)
     log "Создание конфигурации GRUB..."
     cat > "${IMAGE_DIR}/boot/grub/grub.cfg" << 'GRUBEOF'
 set default=0
 set timeout=10
 set timeout_style=menu
-terminal_output console
+
+# Загружаем модули для графики
+if loadfont ${prefix}/fonts/DejaVuSans.pf2 ; then
+    set gfxmode=auto
+    insmod all_video
+    insmod gfxterm
+    terminal_output gfxterm
+fi
+
+# Fallback на консоль если графика не доступна
+if [ "${grub_gfx_loaded}" != "y" ]; then
+    terminal_output console
+fi
+
 menuentry "VibeCode OS (Live)" {
-    echo "Loading kernel..."
-    linux /boot/vmlinuz boot=casper noprompt splash --
-    echo "Loading initrd..."
+    linux /boot/vmlinuz boot=casper noprompt quiet splash --
     initrd /boot/initrd.img
 }
+
 menuentry "VibeCode OS Live Try" {
-    echo "Loading kernel..."
-    linux /boot/vmlinuz boot=casper only-ubiquity --
-    echo "Loading initrd..."
+    linux /boot/vmlinuz boot=casper only-ubiquity quiet splash --
+    initrd /boot/initrd.img
+}
+
+menuentry "VibeCode OS (compatibility mode)" {
+    linux /boot/vmlinuz boot=casper noprompt nomodeset --
     initrd /boot/initrd.img
 }
 GRUBEOF
 
-    # Конфиг для EFI (также в текстовом режиме)
+    # Конфиг для EFI (с графическим режимом)
     cat > "${IMAGE_DIR}/boot/grub/x86_64-efi/grub.cfg" << 'EOF'
 set default=0
 set timeout=10
 set timeout_style=menu
-terminal_output console
+
+# Графические модули для EFI
+if loadfont ${prefix}/fonts/DejaVuSans.pf2 ; then
+    set gfxmode=auto
+    insmod all_video
+    insmod gfxterm
+    terminal_output gfxterm
+fi
 
 menuentry "VibeCode OS (Live)" {
-    linux /boot/vmlinuz boot=casper noprompt splash --
+    linux /boot/vmlinuz boot=casper noprompt quiet splash --
     initrd /boot/initrd.img
 }
 
 menuentry "VibeCode OS (Live - Try VibeCode OS without installing)" {
-    linux /boot/vmlinuz boot=casper only-ubiquity --
+    linux /boot/vmlinuz boot=casper only-ubiquity quiet splash --
+    initrd /boot/initrd.img
+}
+
+menuentry "VibeCode OS (compatibility mode)" {
+    linux /boot/vmlinuz boot=casper noprompt nomodeset --
     initrd /boot/initrd.img
 }
 EOF

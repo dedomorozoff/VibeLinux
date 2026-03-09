@@ -1,0 +1,115 @@
+# VSCodium extensions for VibeCode OS
+# Install with: codium --install-extension <extension-id>
+
+# Git
+gitlens.gitlens
+
+# Docker
+ms-azuretools.vscode-docker
+
+# Python
+ms-python.python
+ms-python.vscode-pylance
+
+# JavaScript/TypeScript
+dbaeumer.vscode-eslint
+esbenp.prettier-vscode
+
+# Rust
+rust-lang.rust-analyzer
+
+# Go
+golang.go
+
+# Java
+vscjava.vscode-java-pack
+
+# C/C++
+ms-vscode.cpptools
+
+# Markdown
+yzhang.markdown-all-in-one
+
+# YAML
+redhat.vscode-yaml
+
+# JSON
+vscodejson.json-language-features
+
+# XML
+redhat.vscode-xml
+
+# TOML
+tamasfe.even-better-toml
+
+# SQL
+ms-mssql.mssql
+
+# Dockerfile
+ms-azuretools.vscode-docker
+
+# GitLens
+gitlens.gitlens
+
+# GitHub
+github.vscode-github-actions
+
+# REST Client
+humao.rest-client
+
+# Thunder Client
+rangav.vscode-thunder-client
+
+# Code Spell Checker
+streetsidesoftware.code-spell-checker
+
+# Better Comments
+aaron-bond.better-comments
+
+# Material Icon Theme
+pkief.material-icon-theme
+
+# Tokyo Night
+enkia.tokyo-night
+
+# Catppuccin
+catppuccin.catppuccin-vsc
+
+# Kilo Code (theme)
+kilo-code.kilo-code
+
+# Continue
+continue.continue
+
+# AI Chat
+aider-ai.aider-chat
+
+# Copilot
+github.copilot
+
+# Copilot Chat
+github.copilot-chat
+
+# OpenAI
+openai.openai
+
+# Ollama
+ollama-ai.ollama
+
+# ComfyUI
+comfyui.comfyui
+
+# Stable Diffusion
+stability-ai.stable-diffusion
+
+# LangChain
+langchain.langchain
+
+# LlamaIndex
+llamaindex.llamaindex
+
+# Transformers
+huggingface.transformers
+
+# PyTorch
+pytorch.pytorch

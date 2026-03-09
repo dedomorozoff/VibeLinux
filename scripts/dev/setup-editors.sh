@@ -44,7 +44,7 @@ sudo -u "$USER_NAME" bash -lc '
   fi
 '
 
-echo "[setup-editors] Установка расширений VSCodium..."
-bash "${ROOT_DIR}/scripts/dev/utils/install-vscodium-extensions.sh"
+echo "[setup-editors] Настройка VSCodium..."
+bash "${ROOT_DIR}/scripts/dev/setup-vscodium.sh"
 
 echo "[setup-editors] Готово."

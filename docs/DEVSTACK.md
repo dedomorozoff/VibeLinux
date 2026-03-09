@@ -96,6 +96,25 @@ sudo ./scripts/dev/setup-dev-env.sh
 
 ---
 
+### **Интеграция в build-iso.sh**
+
+Фаза 2 автоматически интегрируется в сборку ISO через `scripts/build-iso.sh`:
+
+1. **Скрипт install-dev-stack.sh** — устанавливает весь dev-стек внутри chroot
+2. **Автоматическая интеграция** — dev-конфигы копируются в chroot перед установкой
+3. **Автоматическая установка** — запускается после установки MATE и до настройки autologin
+
+Скрипты для сборки на хост-системе:
+```bash
+sudo ./scripts/dev/setup-dev-env.sh  # Для локальной среды
+```
+
+Скрипты для установки внутри chroot (автоматические):
+- `install-dev-stack.sh` — основной скрипт установки
+- `install-vscodium.sh` — настройка VSCodium (вызывается install-dev-stack.sh)
+
+---
+
 ### **Утилиты**
 
 **check-install.sh** — проверка установки компонентов:
@@ -123,6 +142,12 @@ sudo ./scripts/dev/utils/install-vscodium-extensions.sh
 - `starship.toml` — настройки промпта
 - `kitty.conf` — настройки терминала
 - `vscodium-extensions.txt` — список расширений VSCodium
+- `vscodium-settings.json` — настройки VSCodium с темой Kilo Code по умолчанию
+
+Конфиги для chroot (автоматические):
+- `kitty.conf` — копируется в `/root/.config/kitty/`
+- `vscodium-settings.json` — копируется в `/root/.config/codium/User/`
+- `vscodium-extensions.txt` — копируется в `/root/dev-configs/`
 
 ---
 
