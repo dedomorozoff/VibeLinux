@@ -12,9 +12,14 @@ fi
 echo "[cleanup] Удаление типичных предустановленных пакетов (черновой список)..."
 
 TO_REMOVE=(
-  libreoffice-*      # офисный пакет
-  thunderbird        # почтовый клиент
-  games-*            # пример игровых пакетов
+  libreoffice-core
+  libreoffice-common
+  libreoffice-writer
+  libreoffice-calc
+  libreoffice-impress
+  thunderbird
+  gnome-games
+  ubuntu-games-*
 )
 
 apt-get update -y

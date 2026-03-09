@@ -18,22 +18,23 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 PROFILE="${PROFILE:-desktop}" # desktop|ai
+DRIVER_VERSION="${NVIDIA_DRIVER_VERSION:-535}" # 535 for LTS stability, can be overridden via env
 
 echo "[drivers/nvidia] Обновление списка пакетов..."
 apt-get update -y
 
-echo "[drivers/nvidia] Установка проприетарных драйверов NVIDIA (черновой вариант)..."
+echo "[drivers/nvidia] Установка проприетарных драйверов NVIDIA (версия ${DRIVER_VERSION})..."
 
 case "$PROFILE" in
   ai)
     # Для AI-профиля: драйвер + CUDA toolkit
-    DEBIAN_FRONTEND=noninteractive apt-get install -y \
-      nvidia-driver-550 \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y\
+      "nvidia-driver-${DRIVER_VERSION}" \
       nvidia-cuda-toolkit
     ;;
   desktop|*)
-    DEBIAN_FRONTEND=noninteractive apt-get install -y \
-      nvidia-driver-550
+    DEBIAN_FRONTEND=noninteractive apt-get install -y\
+      "nvidia-driver-${DRIVER_VERSION}"
     ;;
 esac
 

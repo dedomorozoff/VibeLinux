@@ -173,8 +173,10 @@ fi
 cp "/home/${TARGET_USER}/.config/vibecodeos-dconf.sh" /etc/skel/.config/ 2>/dev/null || true
 chmod +x /etc/skel/.config/vibecodeos-dconf.sh
 
-# Копируем autostart в /etc/skel
-cp "/home/${TARGET_USER}/.config/autostart/vibecodeos-theme.desktop" /etc/skel/.config/autostart/ 2>/dev/null || true
+# Копируем autostart в /etc/skel (после того как он создан)
+if [[ -f "/home/${TARGET_USER}/.config/autostart/vibecodeos-theme.desktop" ]]; then
+  cp "/home/${TARGET_USER}/.config/autostart/vibecodeos-theme.desktop" /etc/skel/.config/autostart/ 2>/dev/null || true
+fi
 
 # Настройки dconf на уровне системы (/etc/dconf/db/local.d/)
 echo "[branding] Настройка системных dconf..."

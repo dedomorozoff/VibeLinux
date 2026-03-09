@@ -3,6 +3,10 @@ set -euo pipefail
 
 # Скрипт установки редакторов: VSCodium, Neovim, Zed для VibeCode OS.
 
+# Определяем ROOT_DIR
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+
 if [[ $EUID -ne 0 ]]; then
   echo "Пожалуйста, запустите этот скрипт с sudo или от root."
   exit 1
@@ -51,7 +55,6 @@ if check_network; then
 else
   echo "[setup-editors] Пропуск Zed - нет сети"
 fi
-'
 
 echo "[setup-editors] Настройка VSCodium..."
 bash "${ROOT_DIR}/scripts/dev/setup-vscodium.sh"

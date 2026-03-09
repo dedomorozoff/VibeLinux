@@ -21,7 +21,7 @@ else
 fi
 
 # Копируем расширения из списка
-bash "${ROOT_DIR}/scripts/dev/utils/install-vscodium-extensions.sh"
+bash "${ROOT_DIR}/scripts/dev/utils/install-vscodium-extensions.sh" || echo "[setup-vscodium] Warning: Extension installation failed"
 
 echo "[setup-vscodium] Готово."
 

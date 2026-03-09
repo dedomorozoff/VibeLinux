@@ -20,7 +20,9 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y kitty
 
 echo "[install-dev-stack] Настройка Kitty..."
 mkdir -p /root/.config/kitty
-cp /root/dev-configs/kitty.conf /root/.config/kitty/
+if [[ -f "/root/dev-configs/kitty.conf" ]]; then
+  cp /root/dev-configs/kitty.conf /root/.config/kitty/
+fi
 
 echo "[install-dev-stack] Установка Python, Node.js, Rust, Go, Java..."
 DEBIAN_FRONTEND=noninteractive apt-get install -y \
@@ -60,7 +62,9 @@ fi
 
 echo "[install-dev-stack] Настройка VSCodium..."
 mkdir -p /root/.config/codium/User
-cp /root/dev-configs/vscodium-settings.json /root/.config/codium/User/settings.json
+if [[ -f "/root/dev-configs/vscodium-settings.json" ]]; then
+  cp /root/dev-configs/vscodium-settings.json /root/.config/codium/User/settings.json
+fi
 
 echo "[install-dev-stack] Установка расширений VSCodium..."
 if [ -f "/root/dev-configs/vscodium-extensions.txt" ]; then

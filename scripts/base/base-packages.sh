@@ -18,22 +18,22 @@ echo "[base-packages] Обновление списка пакетов..."
 apt-get update -y
 
 echo "[base-packages] Установка базовых утилит + VirtualBox guest + шрифты..."
-DEBIAN_FRONTEND=noninteractive apt-get install -y \
-  htop \
+DEBIAN_FRONTEND=noninteractive apt-get install-y\
+  htop\
   curl \
   wget \
   unzip \
   git \
   build-essential \
-  ca-certificates \
+ ca-certificates\
   software-properties-common \
   linux-image-generic \
   linux-headers-generic \
   initramfs-tools \
   squashfs-tools \
-  casper \
-  virtualbox-guest-x11 \
+ casper \
   virtualbox-guest-utils \
+  virtualbox-guest-desktop\
   fonts-dejavu \
   neofetch \
   nano \
