@@ -18,8 +18,8 @@ echo "[base-packages] Обновление списка пакетов..."
 apt-get update -y
 
 echo "[base-packages] Установка базовых утилит + VirtualBox guest + шрифты..."
-DEBIAN_FRONTEND=noninteractive apt-get install-y\
-  htop\
+DEBIAN_FRONTEND=noninteractive apt-get install -y\
+  htop \
   curl \
   wget \
   unzip \
@@ -33,7 +33,7 @@ DEBIAN_FRONTEND=noninteractive apt-get install-y\
   squashfs-tools \
  casper \
   virtualbox-guest-utils \
-  virtualbox-guest-desktop\
+  virtualbox-guest-desktop \
   fonts-dejavu \
   neofetch \
   nano \
@@ -46,7 +46,11 @@ DEBIAN_FRONTEND=noninteractive apt-get install-y\
   || true
 
 echo "[base-packages] Обновление initramfs для live-boot..."
-update-initramfs -u
+if command-v update-initramfs &>/dev/null; then
+  update-initramfs -u || echo "[base-packages] Warning: Failed to update initramfs"
+else
+ echo "[base-packages] Skipping initramfs update (command not found)"
+fi
 
 echo "[base-packages] Установка дополнительных полезных утилит..."
 DEBIAN_FRONTEND=noninteractive apt-get install -y \
