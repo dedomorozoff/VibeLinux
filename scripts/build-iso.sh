@@ -211,6 +211,15 @@ case "${BUILD_MODE}" in
     cp "${ROOT_DIR}/scripts/dev/setup-devtools.sh" "${CHROOT_DIR}/root/"
     chmod +x "${CHROOT_DIR}/root"/setup-*.sh
 
+    # Копируем конфиги для VSCodium в chroot
+    mkdir -p "${CHROOT_DIR}/root/configs"
+    if [[ -f "${ROOT_DIR}/scripts/dev/configs/vscodium-settings.json" ]]; then
+      cp "${ROOT_DIR}/scripts/dev/configs/vscodium-settings.json" "${CHROOT_DIR}/root/configs/"
+    fi
+    if [[ -f "${ROOT_DIR}/scripts/dev/configs/vscodium-extensions.txt" ]]; then
+      cp "${ROOT_DIR}/scripts/dev/configs/vscodium-extensions.txt" "${CHROOT_DIR}/root/configs/"
+    fi
+
     # Установка терминала (Kitty + Zsh + Starship)
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/setup-terminal.sh vibecode"
 

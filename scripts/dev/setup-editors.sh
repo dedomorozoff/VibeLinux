@@ -57,6 +57,23 @@ else
 fi
 
 echo "[setup-editors] Настройка VSCodium..."
-bash "${ROOT_DIR}/scripts/dev/setup-vscodium.sh"
+# В chroot среде ROOT_DIR не определен, поэтому используем встроенную логику
+if [[ -f "/root/configs/vscodium-settings.json" ]]; then
+  mkdir -p "/home/${USER_NAME}/.config/codium/User"
+  cp /root/configs/vscodium-settings.json "/home/${USER_NAME}/.config/codium/User/settings.json" || true
+ echo "[setup-editors] VSCodium settings applied"
+fi
+
+# Установка расширений если есть файл со списком
+if [[ -f "/root/configs/vscodium-extensions.txt" ]]; then
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    [[ -z "$line" || "$line" =~ ^# ]] && continue
+  extension_id=$(echo "$line" | awk '{print $1}')
+  if [[ -n "$extension_id" ]]; then
+      codium --install-extension "$extension_id" 2>/dev/null || true
+  fi
+  done < /root/configs/vscodium-extensions.txt
+ echo "[setup-editors] VSCodium extensions installed"
+fi
 
 echo "[setup-editors] Готово."

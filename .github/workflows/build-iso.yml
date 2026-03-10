@@ -1,19 +1,32 @@
 name: Build VibeCode OS ISO
 
+# ⚠️ AUTOMATIC BUILDS DISABLED TO SAVE GITHUB STORAGE SPACE
+# Manual builds only- use "Run workflow" button when needed
+# Storage used by artifacts counts against GitHub plan limits
+
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-      - master
-    paths:
-      - "scripts/**"
-      - "branding/**"
-      - ".github/workflows/build-iso.yml"
-  pull_request:
-    branches:
-      - main
-      - master
+  inputs:
+    build_mode:
+        description: 'Build mode (dry-run|full)'
+        required: true
+        default: 'dry-run'
+        type: choice
+        options:
+          - dry-run
+          - full
+  # push:  # DISABLED - automatic builds consume too much storage
+  #  branches:
+  #     - main
+  #     - master
+  #   paths:
+  #     - "scripts/**"
+  #     - "branding/**"
+  #     - ".github/workflows/build-iso.yml"
+  # pull_request:  # DISABLED - automatic builds consume too much storage
+  #  branches:
+  #     - main
+  #     - master
 
 jobs:
   # Быстрая проверка синтаксиса
@@ -68,11 +81,19 @@ jobs:
 
   # Полная сборка ISO
   build-iso:
-    runs-on: ubuntu-latest
-    needs: dry-run
-    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+   runs-on: ubuntu-latest
+   needs: dry-run
+   if: github.event_name == 'workflow_dispatch'
     
-    steps:
+   steps:
+      - name: ⚠️ STORAGE WARNING
+       run: |
+         echo "⚠️  This build will consume GitHub Actions storage space"
+         echo "📦 Artifact files are stored for 30 days (retention-days)"
+         echo "💾 Total storage affects your GitHub plan limits"
+         echo ""
+         echo "Build mode: ${{ github.event.inputs.build_mode || 'dry-run' }}"
+      
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -98,11 +119,11 @@ jobs:
             genisoimage
 
       - name: Build ISO
-        env:
-          BUILD_MODE: full
-        run: |
-          chmod +x scripts/build-iso.sh
-          sudo BUILD_MODE=full ./scripts/build-iso.sh
+      env:
+          BUILD_MODE: ${{ github.event.inputs.build_mode || 'dry-run' }}
+     run: |
+       chmod +x scripts/build-iso.sh
+       sudo BUILD_MODE=${{ github.event.inputs.build_mode || 'dry-run' }} ./scripts/build-iso.sh
 
       - name: Check ISO file
         run: |

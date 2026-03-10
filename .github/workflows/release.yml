@@ -18,6 +18,17 @@ jobs:
       contents: write  # Для создания релизов
     
     steps:
+      - name: ⚠️ STORAGE WARNING
+      run: |
+        echo "⚠️  This release will consume significant GitHub storage space"
+        echo "📦 ISO files (~2-3GB) are stored permanently as release assets"
+        echo "💾 Each release counts against your total GitHub storage quota"
+        echo ""
+        echo "Consider:"
+        echo "- Deleting old releases when not needed"
+        echo "- Using external hosting (e.g., SourceForge, Internet Archive)"
+        echo "- Building locally instead of via CI for testing"
+      
       - name: Checkout repository
         uses: actions/checkout@v4
 
