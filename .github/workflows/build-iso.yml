@@ -42,9 +42,11 @@ jobs:
       - name: Check script syntax
        run: |
          bash -n scripts/build-iso.sh
-         bash-n scripts/base/*.sh
+         bash -n scripts/base/*.sh
          bash -n scripts/desktop/*.sh
          bash -n scripts/drivers/*.sh
+         bash -n scripts/dev/*.sh
+         bash -n scripts/ai/*.sh
 
       - name: Run shellcheck
        run: |
@@ -64,12 +66,12 @@ jobs:
       - name: Install build dependencies
        run: |
          sudo apt-get update
-         sudo apt-get install-y\
+         sudo apt-get install -y \
             debootstrap \
             squashfs-tools \
             xorriso \
-           grub-pc-bin \
-           grub-efi-amd64-bin \
+            grub-pc-bin \
+            grub-efi-amd64-bin \
             mtools
 
       - name: Run dry-run check
@@ -109,14 +111,14 @@ jobs:
       - name: Install build dependencies
        run: |
          sudo apt-get update
-         sudo apt-get install -y\
+         sudo apt-get install -y \
             debootstrap \
             squashfs-tools \
             xorriso \
-           grub-pc-bin \
-           grub-efi-amd64-bin \
+            grub-pc-bin \
+            grub-efi-amd64-bin \
             mtools \
-           genisoimage
+            genisoimage
 
       - name: Build ISO
        env:

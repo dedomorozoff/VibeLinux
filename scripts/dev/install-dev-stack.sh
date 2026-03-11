@@ -1,7 +1,23 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Скрипт установки dev-среды внутри chroot для VibeCode OS
+# ⚠️ DEPRECATED: Этот скрипт устарел и не используется.
+# Вместо него используйте отдельные скрипты:
+#   - setup-terminal.sh — Kitty
+#   - setup-shell.sh — Zsh + Oh My Zsh + Starship
+#   - setup-langs.sh — Python, Node.js, Rust, Go, Java
+#   - setup-editors.sh — VSCodium, Neovim, Zed
+#   - setup-devtools.sh — Git, Docker, lazygit
+#
+# Скрипт будет удалён в версии v1.0.0
+
+echo "[install-dev-stack] ⚠️ WARNING: Скрипт устарел (deprecated)"
+echo "[install-dev-stack] Используйте setup-dev-env.sh для полной установки"
+
+# Проверка доступности интернета
+check_network() {
+  curl -sf --connect-timeout 5 https://github.com >/dev/null 2>&1
+}
 
 echo "[install-dev-stack] Установка базовых утилит..."
 apt-get update -y
@@ -18,13 +34,7 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y \
 echo "[install-dev-stack] Установка Kitty..."
 DEBIAN_FRONTEND=noninteractive apt-get install -y kitty
 
-echo "[install-dev-stack] Настройка Kitty..."
-mkdir -p /root/.config/kitty
-if [[ -f "/root/dev-configs/kitty.conf" ]]; then
-  cp /root/dev-configs/kitty.conf /root/.config/kitty/
-fi
-
-echo "[install-dev-stack] Установка Python, Node.js, Rust, Go, Java..."
+echo "[install-dev-stack] Установка Python, Node.js, Rust, Go..."
 DEBIAN_FRONTEND=noninteractive apt-get install -y \
   python3 \
   python3-pip \
@@ -33,8 +43,10 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y \
   npm \
   rustc \
   cargo \
-  golang-go \
-  sdkman || true
+  golang-go || true
+
+# ⚠️ sdkman не устанавливается через apt - только через curl-скрипт
+echo "[install-dev-stack] ⚠️ SDKMAN! требует ручной установки через curl"
 
 echo "[install-dev-stack] Установка Git, lazygit, Docker..."
 DEBIAN_FRONTEND=noninteractive apt-get install -y \
@@ -44,37 +56,16 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y \
   docker-compose-plugin || true
 
 echo "[install-dev-stack] Установка VSCodium..."
-DEBIAN_FRONTEND=noninteractive apt-get install -y codium || true
+if check_network; then
+  DEBIAN_FRONTEND=noninteractive apt-get install -y codium 2>/dev/null || true
+else
+  echo "[install-dev-stack] Пропуск VSCodium - нет сети"
+fi
 
 echo "[install-dev-stack] Установка Neovim..."
 DEBIAN_FRONTEND=noninteractive apt-get install -y neovim || true
 
-echo "[install-dev-stack] Настройка AstroNvim..."
-if [ ! -d "/root/.config/nvim" ]; then
-  git clone --depth 1 https://github.com/AstroNvim/template /root/.config/nvim
-  rm -rf /root/.config/nvim/.git
-fi
+echo "[install-dev-stack] ⚠️ AstroNvim и Zed требуют setup-editors.sh"
 
-echo "[install-dev-stack] Установка Zed..."
-if ! command -v zed >/dev/null 2>&1; then
-  curl -f https://zed.dev/install.sh | sh || true
-fi
-
-echo "[install-dev-stack] Настройка VSCodium..."
-mkdir -p /root/.config/codium/User
-if [[ -f "/root/dev-configs/vscodium-settings.json" ]]; then
-  cp /root/dev-configs/vscodium-settings.json /root/.config/codium/User/settings.json
-fi
-
-echo "[install-dev-stack] Установка расширений VSCodium..."
-if [ -f "/root/dev-configs/vscodium-extensions.txt" ]; then
-  while IFS= read -r line || [[ -n "$line" ]]; do
-    [[ -z "$line" || "$line" =~ ^# ]] && continue
-    extension_id=$(echo "$line" | awk '{print $1}')
-    if [[ -n "$extension_id" ]]; then
-      codium --install-extension "$extension_id" 2>/dev/null || true
-    fi
-  done < /root/dev-configs/vscodium-extensions.txt
-fi
-
-echo "[install-dev-stack] Готово."
+echo "[install-dev-stack] Готово (базовая установка)."
+echo "[install-dev-stack] Для полной настройки запустите setup-dev-env.sh"

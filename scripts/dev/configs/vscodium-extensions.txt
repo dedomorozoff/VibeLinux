@@ -45,12 +45,6 @@ tamasfe.even-better-toml
 # SQL
 ms-mssql.mssql
 
-# Dockerfile
-ms-azuretools.vscode-docker
-
-# GitLens
-gitlens.gitlens
-
 # GitHub
 github.vscode-github-actions
 
@@ -69,47 +63,16 @@ aaron-bond.better-comments
 # Material Icon Theme
 pkief.material-icon-theme
 
-# Tokyo Night
+# Themes
 enkia.tokyo-night
-
-# Catppuccin
 catppuccin.catppuccin-vsc
-
-# Kilo Code (theme)
 kilo-code.kilo-code
 
-# Continue
+# AI Tools
 continue.continue
-
-# AI Chat
 aider-ai.aider-chat
-
-# Copilot
 github.copilot
-
-# Copilot Chat
 github.copilot-chat
 
-# OpenAI
-openai.openai
-
-# Ollama
+# Ollama & Local AI
 ollama-ai.ollama
-
-# ComfyUI
-comfyui.comfyui
-
-# Stable Diffusion
-stability-ai.stable-diffusion
-
-# LangChain
-langchain.langchain
-
-# LlamaIndex
-llamaindex.llamaindex
-
-# Transformers
-huggingface.transformers
-
-# PyTorch
-pytorch.pytorch

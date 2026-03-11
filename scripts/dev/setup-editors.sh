@@ -57,23 +57,45 @@ else
 fi
 
 echo "[setup-editors] Настройка VSCodium..."
-# В chroot среде ROOT_DIR не определен, поэтому используем встроенную логику
+# В chroot среде конфиги копируются в /root/configs/ (из build-iso.sh)
+# Для хост-системы используем относительные пути
+VSCODIUM_SETTINGS=""
+VSCODIUM_EXTENSIONS=""
+
+# Проверяем возможные расположения конфигов
 if [[ -f "/root/configs/vscodium-settings.json" ]]; then
+  VSCODIUM_SETTINGS="/root/configs/vscodium-settings.json"
+elif [[ -f "/root/dev-configs/vscodium-settings.json" ]]; then
+  VSCODIUM_SETTINGS="/root/dev-configs/vscodium-settings.json"
+elif [[ -n "${ROOT_DIR:-}" ]] && [[ -f "${ROOT_DIR}/scripts/dev/configs/vscodium-settings.json" ]]; then
+  VSCODIUM_SETTINGS="${ROOT_DIR}/scripts/dev/configs/vscodium-settings.json"
+fi
+
+if [[ -f "/root/configs/vscodium-extensions.txt" ]]; then
+  VSCODIUM_EXTENSIONS="/root/configs/vscodium-extensions.txt"
+elif [[ -f "/root/dev-configs/vscodium-extensions.txt" ]]; then
+  VSCODIUM_EXTENSIONS="/root/dev-configs/vscodium-extensions.txt"
+elif [[ -n "${ROOT_DIR:-}" ]] && [[ -f "${ROOT_DIR}/scripts/dev/configs/vscodium-extensions.txt" ]]; then
+  VSCODIUM_EXTENSIONS="${ROOT_DIR}/scripts/dev/configs/vscodium-extensions.txt"
+fi
+
+# Применяем настройки VSCodium
+if [[ -n "$VSCODIUM_SETTINGS" ]] && [[ -f "$VSCODIUM_SETTINGS" ]]; then
   mkdir -p "/home/${USER_NAME}/.config/codium/User"
-  cp /root/configs/vscodium-settings.json "/home/${USER_NAME}/.config/codium/User/settings.json" || true
- echo "[setup-editors] VSCodium settings applied"
+  cp "$VSCODIUM_SETTINGS" "/home/${USER_NAME}/.config/codium/User/settings.json" || true
+  echo "[setup-editors] VSCodium settings applied from: $VSCODIUM_SETTINGS"
 fi
 
 # Установка расширений если есть файл со списком
-if [[ -f "/root/configs/vscodium-extensions.txt" ]]; then
+if [[ -n "$VSCODIUM_EXTENSIONS" ]] && [[ -f "$VSCODIUM_EXTENSIONS" ]]; then
   while IFS= read -r line || [[ -n "$line" ]]; do
     [[ -z "$line" || "$line" =~ ^# ]] && continue
-  extension_id=$(echo "$line" | awk '{print $1}')
-  if [[ -n "$extension_id" ]]; then
+    extension_id=$(echo "$line" | awk '{print $1}')
+    if [[ -n "$extension_id" ]]; then
       codium --install-extension "$extension_id" 2>/dev/null || true
-  fi
-  done < /root/configs/vscodium-extensions.txt
- echo "[setup-editors] VSCodium extensions installed"
+    fi
+  done < "$VSCODIUM_EXTENSIONS"
+  echo "[setup-editors] VSCodium extensions installed from: $VSCODIUM_EXTENSIONS"
 fi
 
 echo "[setup-editors] Готово."

@@ -153,8 +153,8 @@ case "${BUILD_MODE}" in
 
     need_file "${ROOT_DIR}/scripts/dev/install-dev-stack.sh"
     need_file "${ROOT_DIR}/scripts/dev/chroot-configs/kitty.conf"
-    need_file "${ROOT_DIR}/scripts/dev/chroot-configs/vscodium-settings.json"
-    need_file "${ROOT_DIR}/scripts/dev/chroot-configs/vscodium-extensions.txt"
+    need_file "${ROOT_DIR}/scripts/dev/configs/vscodium-settings.json"
+    need_file "${ROOT_DIR}/scripts/dev/configs/vscodium-extensions.txt"
 
     # Копируем брендинг
     if [[ -d "${ROOT_DIR}/branding" ]]; then
@@ -355,31 +355,61 @@ MATEPANELEOF
 
     # Создаём шрифт для GRUB
     log "Создание шрифта GRUB..."
-    if command -v grub-mkfont >/dev/null 2>&1; then
-      # Пробуем разные источники шрифтов
-      if [[ -f /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf ]]; then
-        grub-mkfont -o "${IMAGE_DIR}/boot/grub/fonts/DejaVuSans.pf2" -s 16 /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf 2>/dev/null || true
-      fi
-      if [[ -f /usr/share/grub/unicode.pf2 ]]; then
-        cp /usr/share/grub/unicode.pf2 "${IMAGE_DIR}/boot/grub/fonts/unicode.pf2" 2>/dev/null || true
-        # Копируем unicode как fallback для DejaVuSans
-        if [[ ! -f "${IMAGE_DIR}/boot/grub/fonts/DejaVuSans.pf2" ]]; then
-          cp /usr/share/grub/unicode.pf2 "${IMAGE_DIR}/boot/grub/fonts/DejaVuSans.pf2" 2>/dev/null || true
-        fi
-      fi
-      # Дополнительный fallback - пробуем найти любые truetype шрифты
-      if [[ ! -f "${IMAGE_DIR}/boot/grub/fonts/DejaVuSans.pf2" ]]; then
-        for font in /usr/share/fonts/**/*.ttf; do
-          if [[ -f "$font" ]]; then
-            grub-mkfont -o "${IMAGE_DIR}/boot/grub/fonts/DejaVuSans.pf2" -s 16 "$font" 2>/dev/null && break || true
-          fi
-        done
-      fi
-    fi
     
+    # Сначала пробуем использовать встроенный шрифт GRUB (самый надёжный вариант)
+    if [[ -f /usr/share/grub/unicode.pf2 ]]; then
+      log "Используем встроенный шрифт GRUB unicode.pf2"
+      cp /usr/share/grub/unicode.pf2 "${IMAGE_DIR}/boot/grub/fonts/unicode.pf2"
+      cp /usr/share/grub/unicode.pf2 "${IMAGE_DIR}/boot/grub/fonts/DejaVuSans.pf2"
+    elif command -v grub-mkfont >/dev/null 2>&1; then
+      # Пробуем разные источники шрифтов (Ubuntu 24.04)
+      FONT_FOUND=0
+      
+      # DejaVu Sans Mono (есть в fonts-dejavu-core)
+      if [[ -f /usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf ]]; then
+        log "Используем шрифт DejaVuSansMono.ttf"
+        grub-mkfont -o "${IMAGE_DIR}/boot/grub/fonts/DejaVuSans.pf2" -s 16 /usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf 2>/dev/null && FONT_FOUND=1 || true
+      fi
+      
+      # DejaVu Sans (альтернатива)
+      if [[ ${FONT_FOUND} -eq 0 ]] && [[ -f /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf ]]; then
+        log "Используем шрифт DejaVuSans.ttf"
+        grub-mkfont -o "${IMAGE_DIR}/boot/grub/fonts/DejaVuSans.pf2" -s 16 /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf 2>/dev/null && FONT_FOUND=1 || true
+      fi
+      
+      # Ubuntu Font (если есть)
+      if [[ ${FONT_FOUND} -eq 0 ]] && [[ -f /usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf ]]; then
+        log "Используем шрифт Ubuntu-R.ttf"
+        grub-mkfont -o "${IMAGE_DIR}/boot/grub/fonts/DejaVuSans.pf2" -s 16 /usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf 2>/dev/null && FONT_FOUND=1 || true
+      fi
+      
+      # Fallback - ищем любые truetype шрифты
+      if [[ ${FONT_FOUND} -eq 0 ]]; then
+        log "Ищем доступные truetype шрифты..."
+        while IFS= read -r -d '' font; do
+          if [[ -f "$font" ]]; then
+            log "Пытаемся использовать: $font"
+            if grub-mkfont -o "${IMAGE_DIR}/boot/grub/fonts/DejaVuSans.pf2" -s 16 "$font" 2>/dev/null; then
+              FONT_FOUND=1
+              break
+            fi
+          fi
+        done < <(find /usr/share/fonts -name "*.ttf" -print0 2>/dev/null | head -z -n 10)
+      fi
+      
+      if [[ ${FONT_FOUND} -eq 0 ]]; then
+        log "WARNING: Не удалось создать шрифт GRUB из системных шрифтов"
+      fi
+    else
+      log "WARNING: grub-mkfont не найден. Установите пакет grub-common."
+    fi
+
     # Проверяем что шрифт создан
     if [[ ! -f "${IMAGE_DIR}/boot/grub/fonts/DejaVuSans.pf2" ]]; then
       log "WARNING: Не удалось создать шрифт GRUB. Графический режим может не работать."
+      log "INFO: Для исправления установите: sudo apt install fonts-dejavu-core grub-common"
+    else
+      log "OK: Шрифт GRUB создан успешно"
     fi
 
     # Создаём графическую тему для GRUB

@@ -46,7 +46,7 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y\
   || true
 
 echo "[base-packages] Обновление initramfs для live-boot..."
-if command-v update-initramfs &>/dev/null; then
+if command -v update-initramfs &>/dev/null; then
   update-initramfs -u || echo "[base-packages] Warning: Failed to update initramfs"
 else
  echo "[base-packages] Skipping initramfs update (command not found)"
