@@ -42,7 +42,7 @@ case "${BUILD_MODE}" in
     need_cmd debootstrap
     need_cmd mksquashfs
     need_cmd xorriso
-    
+
     [[ -f "${ROOT_DIR}/scripts/base/minimal-packages.sh" ]] || die "Не найден скрипт minimal-packages.sh"
     log "OK: dry-run проверки пройдены."
     ;;
@@ -71,7 +71,14 @@ case "${BUILD_MODE}" in
     cp "${ROOT_DIR}/scripts/base/cleanup.sh" "${CHROOT_DIR}/root/"
     cp "${ROOT_DIR}/scripts/base/setup-distro-info.sh" "${CHROOT_DIR}/root/"
     cp "${ROOT_DIR}/scripts/base/setup-bootloader.sh" "${CHROOT_DIR}/root/"
-    
+
+    # Копируем скрипт доустановки (minimal-upgrade.sh)
+    if [[ -f "${ROOT_DIR}/scripts/minimal-upgrade.sh" ]]; then
+        log "Копирование minimal-upgrade.sh в chroot..."
+        cp "${ROOT_DIR}/scripts/minimal-upgrade.sh" "${CHROOT_DIR}/usr/local/bin/vibecode-upgrade"
+        chmod +x "${CHROOT_DIR}/usr/local/bin/vibecode-upgrade"
+    fi
+
     chmod +x "${CHROOT_DIR}/root"/*.sh
 
     # Шаг 3: Установка пакетов
@@ -79,7 +86,7 @@ case "${BUILD_MODE}" in
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/minimal-packages.sh"
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/setup-distro-info.sh"
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/setup-bootloader.sh"
-    
+
     # Создание пользователя
     chroot "${CHROOT_DIR}" /bin/bash -c '
       if ! id "vibecode" &>/dev/null; then
@@ -109,7 +116,7 @@ case "${BUILD_MODE}" in
     log "Шаг 6: Подготовка структуры ISO..."
     mkdir -p "${IMAGE_DIR}/boot/grub"
     mkdir -p "${IMAGE_DIR}/casper"
-    
+
     # Копирование ядра
     cp "$(ls -v ${CHROOT_DIR}/boot/vmlinuz-* | tail -n 1)" "${IMAGE_DIR}/boot/vmlinuz"
     cp "$(ls -v ${CHROOT_DIR}/boot/initrd.img-* | tail -n 1)" "${IMAGE_DIR}/boot/initrd.img"

@@ -35,7 +35,7 @@ usermod -aG docker "$USER_NAME" 2>/dev/null || true
 
 # Docker требует systemd в runtime, пропускаем в chroot
 if ! pidof systemd >/dev/null 2>&1; then
-  echo "[setup-devtools] Пропуск запуска Docker (chroot режим)"
+  echo "[setup-devtools] Chroot среда: Docker будет доступен после установки"
 else
   echo "[setup-devtools] Перезапуск сервиса Docker..."
   systemctl enable docker 2>/dev/null || true
@@ -43,11 +43,10 @@ else
 
   echo "[setup-devtools] Проверка Docker (может занять время)..."
   if docker run --rm hello-world >/dev/null 2>&1; then
-    echo "[setup-devtools] Docker работает корректно."
+    echo "[setup-devtools] ✓ Docker работает корректно."
   else
-    echo "[setup-devtools] Не удалось запустить hello-world. Проверьте Docker вручную."
+    echo "[setup-devtools] ⚠ Не удалось запустить hello-world. Проверьте Docker вручную."
   fi
 fi
 
 echo "[setup-devtools] Готово."
-

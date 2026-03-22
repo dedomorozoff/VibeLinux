@@ -151,7 +151,6 @@ case "${BUILD_MODE}" in
     cp "${ROOT_DIR}/scripts/desktop/apply-branding.sh" "${CHROOT_DIR}/root/apply-branding.sh"
     cp "${ROOT_DIR}/scripts/drivers/install-nvidia.sh" "${CHROOT_DIR}/root/install-nvidia.sh"
 
-    need_file "${ROOT_DIR}/scripts/dev/install-dev-stack.sh"
     need_file "${ROOT_DIR}/scripts/dev/chroot-configs/kitty.conf"
     need_file "${ROOT_DIR}/scripts/dev/configs/vscodium-settings.json"
     need_file "${ROOT_DIR}/scripts/dev/configs/vscodium-extensions.txt"
@@ -160,7 +159,7 @@ case "${BUILD_MODE}" in
     if [[ -d "${ROOT_DIR}/branding" ]]; then
       log "Копирование брендинга в chroot..."
       cp -r "${ROOT_DIR}/branding" "${CHROOT_DIR}/root/"
-      
+
       # Копируем конфиги в корень chroot для скриптов dev-стека
       if [[ -d "${ROOT_DIR}/branding/config" ]]; then
         log "Копирование конфигов в chroot..."
@@ -238,8 +237,6 @@ case "${BUILD_MODE}" in
 
     # Установка devtools (Git, lazygit, Docker)
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/setup-devtools.sh vibecode"
-
-    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/install-dev-stack.sh"
 
     # Настройка autologin для live сессии
     log "Настройка autologin и локали..."
@@ -385,7 +382,7 @@ MATEPANELEOF
 
     # Создаём шрифт для GRUB
     log "Создание шрифта GRUB..."
-    
+
     # Сначала пробуем использовать встроенный шрифт GRUB (самый надёжный вариант)
     if [[ -f /usr/share/grub/unicode.pf2 ]]; then
       log "Используем встроенный шрифт GRUB unicode.pf2"
@@ -394,25 +391,25 @@ MATEPANELEOF
     elif command -v grub-mkfont >/dev/null 2>&1; then
       # Пробуем разные источники шрифтов (Ubuntu 24.04)
       FONT_FOUND=0
-      
+
       # DejaVu Sans Mono (есть в fonts-dejavu-core)
       if [[ -f /usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf ]]; then
         log "Используем шрифт DejaVuSansMono.ttf"
         grub-mkfont -o "${IMAGE_DIR}/boot/grub/fonts/DejaVuSans.pf2" -s 16 /usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf 2>/dev/null && FONT_FOUND=1 || true
       fi
-      
+
       # DejaVu Sans (альтернатива)
       if [[ ${FONT_FOUND} -eq 0 ]] && [[ -f /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf ]]; then
         log "Используем шрифт DejaVuSans.ttf"
         grub-mkfont -o "${IMAGE_DIR}/boot/grub/fonts/DejaVuSans.pf2" -s 16 /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf 2>/dev/null && FONT_FOUND=1 || true
       fi
-      
+
       # Ubuntu Font (если есть)
       if [[ ${FONT_FOUND} -eq 0 ]] && [[ -f /usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf ]]; then
         log "Используем шрифт Ubuntu-R.ttf"
         grub-mkfont -o "${IMAGE_DIR}/boot/grub/fonts/DejaVuSans.pf2" -s 16 /usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf 2>/dev/null && FONT_FOUND=1 || true
       fi
-      
+
       # Fallback - ищем любые truetype шрифты
       if [[ ${FONT_FOUND} -eq 0 ]]; then
         log "Ищем доступные truetype шрифты..."
@@ -426,7 +423,7 @@ MATEPANELEOF
           fi
         done < <(find /usr/share/fonts -name "*.ttf" -print0 2>/dev/null | head -z -n 10)
       fi
-      
+
       if [[ ${FONT_FOUND} -eq 0 ]]; then
         log "WARNING: Не удалось создать шрифт GRUB из системных шрифтов"
       fi

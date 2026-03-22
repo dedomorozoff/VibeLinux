@@ -66,9 +66,9 @@ pkief.material-icon-theme
 # Themes
 enkia.tokyo-night
 catppuccin.catppuccin-vsc
-kilo-code.kilo-code
 
 # AI Tools
+kilo-code.kilo-code
 continue.continue
 aider-ai.aider-chat
 github.copilot

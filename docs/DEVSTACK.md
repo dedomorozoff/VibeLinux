@@ -2,6 +2,8 @@
 
 Этот документ фиксирует целевой стек инструментов разработки и базовые принципы его установки/настройки. Реализация будет постепенно автоматизироваться скриптами в каталоге `scripts/`.
 
+**⚡ Полный список программ см. также в [`PACKAGES.md`](../PACKAGES.md).**
+
 ---
 
 ### **Терминал, оболочка и CLI-утилиты**
@@ -55,8 +57,8 @@
 - Установка через официальный репозиторий
 - Базовые расширения (автоматически устанавливаются):
   - GitLens, Docker, Python, ESLint/Prettier, Rust, Go
-  - Темы (Catppuccin, Tokyo Night, Kilo Code)
-  - Continue (для AI-интеграции)
+  - Темы (Catppuccin, Tokyo Night по умолчанию)
+  - AI-инструменты (Kilo Code, Continue, Aider, GitHub Copilot, Ollama)
 
 **Neovim + AstroNvim**
 
@@ -110,7 +112,7 @@ sudo ./scripts/dev/setup-dev-env.sh
 
 Фаза 2 автоматически интегрируется в сборку ISO через `scripts/build-iso.sh`:
 
-1. **Скрипт install-dev-stack.sh** — устанавливает весь dev-стек внутри chroot
+1. **Автоматическая установка** — скрипты копируются в chroot и выполняются по порядку
 2. **Автоматическая интеграция** — dev-конфигы копируются в chroot перед установкой
 3. **Автоматическая установка** — запускается после установки MATE и до настройки autologin
 
@@ -118,10 +120,6 @@ sudo ./scripts/dev/setup-dev-env.sh
 ```bash
 sudo ./scripts/dev/setup-dev-env.sh  # Для локальной среды
 ```
-
-Скрипты для установки внутри chroot (автоматические):
-- `install-dev-stack.sh` — основной скрипт установки
-- `install-vscodium.sh` — настройка VSCodium (вызывается install-dev-stack.sh)
 
 ---
 

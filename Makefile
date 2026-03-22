@@ -7,10 +7,11 @@
 #   make mini-keep     - минимальная сборка с сохранением chroot
 #   make check         - проверка зависимостей (dry-run)
 #   make check-mini    - проверка зависимостей для mini (dry-run)
+#   make upgrade       - мастер доустановки компонентов (для Minimal)
 #   make clean         - очистка артефактов сборки
 #   make help          - справка по доступным командам
 
-.PHONY: full mini full-keep mini-keep check check-mini clean help
+.PHONY: full mini full-keep mini-keep check check-mini upgrade clean help
 
 # Основная цель по умолчанию
 all: help
@@ -45,6 +46,14 @@ check-mini:
 	@echo "🔍 Проверка зависимостей для минимальной сборки..."
 	BUILD_MODE=dry-run ./scripts/build-minimal-iso.sh
 
+# Мастер доустановки компонентов (для Minimal → Full)
+upgrade:
+	@echo "🚀 Запуск мастера доустановки компонентов..."
+	@echo ""
+	@echo "Этот мастер поможет превратить Minimal версию в Full"
+	@echo ""
+	sudo bash ./scripts/minimal-upgrade.sh
+
 # Очистка артефактов сборки
 clean:
 	@echo "🧹 Очистка артефактов сборки..."
@@ -62,6 +71,7 @@ help:
 	@echo "  make mini-keep   - минимальная сборка с сохранением chroot (быстрая пересборка)"
 	@echo "  make check       - проверка зависимостей для полной сборки (dry-run)"
 	@echo "  make check-mini  - проверка зависимостей для минимальной сборки (dry-run)"
+	@echo "  make upgrade     - мастер доустановки компонентов (Minimal → Full)"
 	@echo "  make clean       - очистка артефактов сборки"
 	@echo "  make help        - показать эту справку"
 	@echo ""
@@ -69,3 +79,4 @@ help:
 	@echo "  make check       # Сначала проверь зависимости"
 	@echo "  make mini        # Собери минимальный ISO"
 	@echo "  make full-keep   # Быстрая пересборка полного ISO"
+	@echo "  make upgrade     # Доустановить компоненты в Minimal версии"

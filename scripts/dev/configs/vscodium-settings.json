@@ -1,5 +1,5 @@
 {
-  "workbench.colorTheme": "kilo-code.kilo-code",
+  "workbench.colorTheme": "Tokyo Night",
   "editor.fontSize": 14,
   "editor.fontFamily": "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace",
   "editor.fontLigatures": true,
@@ -12,13 +12,7 @@
   "workbench.iconTheme": "pkief.material-icon-theme",
   "files.autoSave": "afterDelay",
   "files.autoSaveDelay": 1000,
-  "files.autoSaveIgnoredExtensions": [
-    ".iso",
-    ".dmg",
-    ".zip",
-    ".rar",
-    ".7z"
-  ],
+  "files.autoSaveIgnoredExtensions": [".iso", ".dmg", ".zip", ".rar", ".7z"],
   "git.enableSmartCommit": true,
   "git.confirmSync": false,
   "git.autofetch": true,
