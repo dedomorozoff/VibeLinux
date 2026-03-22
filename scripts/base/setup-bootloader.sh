@@ -14,13 +14,13 @@ echo "[bootloader] Настройка GRUB для VibeCode OS..."
 if [[ -f /etc/default/grub ]]; then
   # Бэкап оригинального конфига
   cp /etc/default/grub /etc/default/grub.backup
-  
+
   # Настраиваем GRUB
   sed -i 's/GRUB_DISTRIBUTOR=.*/GRUB_DISTRIBUTOR="VibeCode OS"/' /etc/default/grub
-  
+
   # Убираем quiet splash для отладки (можно вернуть позже)
   # sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"/' /etc/default/grub
-  
+
   echo "[bootloader] GRUB конфигурация обновлена."
 else
   echo "[bootloader] Файл /etc/default/grub не найден, создаём новый..."
@@ -123,9 +123,14 @@ EOF
 # Для текстовой темы можно использовать bgrt или text тему как базу
 echo "[bootloader] Используем текстовую тему Plymouth как fallback..."
 
-# Устанавливаем тему (используем существующую текстовую тему)
-if [[ -d /usr/share/plymouth/themes/text ]]; then
-  plymouth-set-default-theme text || true
+# Устанавливаем тему (если plymouth установлен)
+if command -v plymouth-set-default-theme &>/dev/null; then
+  if [[ -d /usr/share/plymouth/themes/text ]]; then
+    plymouth-set-default-theme text || true
+    echo "[bootloader] Тема Plymouth установлена: text"
+  fi
+else
+  echo "[bootloader] Plymouth не установлен (minimal версия), пропускаем..."
 fi
 
 # Обновляем initramfs

@@ -251,6 +251,7 @@ git push origin v0.1.0-alpha
 - [docs/CORE-OS-SCRIPTS.md](docs/CORE-OS-SCRIPTS.md) — скрипты базовой системы
 - [docs/UPGRADE-MINIMAL.md](docs/UPGRADE-MINIMAL.md) — мастер доустановки (из репозитория)
 - [docs/MINIMAL-UPGRADE.md](docs/MINIMAL-UPGRADE.md) — **мастер доустановки (из установленной системы)**
+- [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) — **решение проблем**
 
 ---
 

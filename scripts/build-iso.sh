@@ -214,6 +214,16 @@ case "${BUILD_MODE}" in
     cp "${ROOT_DIR}/scripts/dev/setup-devtools.sh" "${CHROOT_DIR}/root/"
     chmod +x "${CHROOT_DIR}/root"/setup-*.sh
 
+    # Конвертация CRLF в LF для dev-скриптов
+    log "Конвертация окончаний строк в Unix-формат (dev-скрипты)..."
+    chroot "${CHROOT_DIR}" /bin/bash -c "
+      if command -v sed >/dev/null 2>&1; then
+        for f in /root/setup-*.sh; do
+          [ -f \"\$f\" ] && sed -i 's/\r$//' \"\$f\" || true
+        done
+      fi
+    "
+
     # Копируем конфиги для VSCodium в chroot
     mkdir -p "${CHROOT_DIR}/root/configs"
     if [[ -f "${ROOT_DIR}/scripts/dev/configs/vscodium-settings.json" ]]; then

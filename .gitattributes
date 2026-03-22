@@ -1,2 +1,51 @@
+# Автоматически определяем файлы и устанавливаем правильные окончания строк
+
+# Скрипты - только LF
 *.sh text eol=lf
 
+# Python - только LF
+*.py text eol=lf
+
+# Конфигурационные файлы - только LF
+*.conf text eol=lf
+*.toml text eol=lf
+*.json text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+
+# Документация - только LF
+*.md text eol=lf
+*.txt text eol=lf
+*.rst text eol=lf
+
+# Makefile - только LF
+Makefile text eol=lf
+makefile text eol=lf
+
+# Shell-скрипты без расширения - только LF
+.gitignore text eol=lf
+.gitattributes text eol=lf
+
+# Исполняемые файлы - бинарные
+*.exe binary
+*.dll binary
+*.so binary
+*.bin binary
+
+# Изображения - бинарные
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.svg binary
+*.ico binary
+
+# Архивы - бинарные
+*.zip binary
+*.tar binary
+*.gz binary
+*.7z binary
+*.rar binary
+
+# ISO образы - бинарные
+*.iso binary

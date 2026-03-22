@@ -81,6 +81,16 @@ case "${BUILD_MODE}" in
 
     chmod +x "${CHROOT_DIR}/root"/*.sh
 
+    # Конвертация CRLF в LF (для Windows-систем)
+    log "Конвертация окончаний строк в Unix-формат..."
+    if command -v sed &>/dev/null; then
+      chroot "${CHROOT_DIR}" /bin/bash -c "
+        for f in /root/*.sh /usr/local/bin/vibecode-upgrade; do
+          [ -f \"\$f\" ] && sed -i 's/\r$//' \"\$f\" 2>/dev/null || true
+        done
+      "
+    fi
+
     # Шаг 3: Установка пакетов
     log "Шаг 3: Установка пакетов и настройка..."
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/minimal-packages.sh"
