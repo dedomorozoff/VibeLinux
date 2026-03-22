@@ -1,1 +1,58 @@
-﻿#!/usr/bin/env bash\nset -euo pipefail\n\n# РЈСЃС‚Р°РЅРѕРІРєР° ComfyUI РІ /opt/vibecode/comfyui (С‡РµСЂРµР· venv).\n# РџРѕСЃР»Рµ СѓСЃС‚Р°РЅРѕРІРєРё Р·Р°РїСѓСЃРєР°С‚СЊ С‡РµСЂРµР· scripts/ai/start-sd.sh\n\nif [[ $EUID -ne 0 ]]; then\n  echo "РџРѕР¶Р°Р»СѓР№СЃС‚Р°, Р·Р°РїСѓСЃС‚РёС‚Рµ СЌС‚РѕС‚ СЃРєСЂРёРїС‚ СЃ sudo РёР»Рё РѕС‚ root."\n  exit 1\nfi\n\nINSTALL_DIR="/opt/vibecode/comfyui"\n\necho "[setup-comfyui] РЈСЃС‚Р°РЅРѕРІРєР° СЃРёСЃС‚РµРјРЅС‹С… Р·Р°РІРёСЃРёРјРѕСЃС‚РµР№..."\napt-get update -y\nDEBIAN_FRONTEND=noninteractive apt-get install -y \\n  git \\n  python3 \\n  python3-venv \\n  python3-pip \\n  ca-certificates\n\nmkdir -p "$(dirname "$INSTALL_DIR")"\n\nif [[ ! -d "${INSTALL_DIR}/.git" ]]; then\n  echo "[setup-comfyui] РљР»РѕРЅРёСЂРѕРІР°РЅРёРµ ComfyUI..."\n  git clone https://github.com/comfyanonymous/ComfyUI.git "$INSTALL_DIR"\nelse\n  echo "[setup-comfyui] ComfyUI СѓР¶Рµ СЃСѓС‰РµСЃС‚РІСѓРµС‚, РѕР±РЅРѕРІР»РµРЅРёРµ..."\n  git -C "$INSTALL_DIR" pull --ff-only || true\nfi\n\necho "[setup-comfyui] РЎРѕР·РґР°РЅРёРµ venv Рё СѓСЃС‚Р°РЅРѕРІРєР° Р·Р°РІРёСЃРёРјРѕСЃС‚РµР№..."\npython3 -m venv "${INSTALL_DIR}/.venv"\n"${INSTALL_DIR}/.venv/bin/python" -m pip install --upgrade pip setuptools wheel\n\n# РЈСЃС‚Р°РЅР°РІР»РёРІР°РµРј PyTorch CPU РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ (РґР»СЏ GPU РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ РїРµСЂРµСѓСЃС‚Р°РЅРѕРІРёС‚)\n"${INSTALL_DIR}/.venv/bin/pip" install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu\n\nif [[ -f "${INSTALL_DIR}/requirements.txt" ]]; then\n  "${INSTALL_DIR}/.venv/bin/pip" install -r "${INSTALL_DIR}/requirements.txt"\nfi\n\n# РЎРѕР·РґР°С‘Рј РґРёСЂРµРєС‚РѕСЂРёРё РґР»СЏ РјРѕРґРµР»РµР№\nmkdir -p "${INSTALL_DIR}/models/checkpoints"\nmkdir -p "${INSTALL_DIR}/models/vae"\nmkdir -p "${INSTALL_DIR}/models/loras"\n\necho ""\necho "[setup-comfyui] вњ“ ComfyUI СѓСЃС‚Р°РЅРѕРІР»РµРЅ РІ ${INSTALL_DIR}"\necho ""\necho "Р”Р»СЏ Р·Р°РїСѓСЃРєР°: sudo bash scripts/ai/start-sd.sh"\necho "РњРѕРґРµР»Рё РєР»Р°РґРёС‚Рµ РІ: ${INSTALL_DIR}/models/"\necho ""\necho "Р”Р»СЏ GPU РїРѕРґРґРµСЂР¶РєРё:"\necho "  cd ${INSTALL_DIR}"\necho "  source .venv/bin/activate"\necho "  pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121"\n\n
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Установка ComfyUI в /opt/vibecode/comfyui (через venv).
+# После установки запускать через scripts/ai/start-sd.sh
+
+if [[ $EUID -ne 0 ]]; then
+  echo "Пожалуйста, запустите этот скрипт с sudo или от root."
+  exit 1
+fi
+
+INSTALL_DIR="/opt/vibecode/comfyui"
+
+echo "[setup-comfyui] Установка системных зависимостей..."
+apt-get update -y
+DEBIAN_FRONTEND=noninteractive apt-get install -y \
+  git \
+  python3 \
+  python3-venv \
+  python3-pip \
+  ca-certificates
+
+mkdir -p "$(dirname "$INSTALL_DIR")"
+
+if [[ ! -d "${INSTALL_DIR}/.git" ]]; then
+  echo "[setup-comfyui] Клонирование ComfyUI..."
+  git clone https://github.com/comfyanonymous/ComfyUI.git "$INSTALL_DIR"
+else
+  echo "[setup-comfyui] ComfyUI уже существует, обновление..."
+  git -C "$INSTALL_DIR" pull --ff-only || true
+fi
+
+echo "[setup-comfyui] Создание venv и установка зависимостей..."
+python3 -m venv "${INSTALL_DIR}/.venv"
+"${INSTALL_DIR}/.venv/bin/python" -m pip install --upgrade pip setuptools wheel
+
+# Устанавливаем PyTorch CPU по умолчанию (для GPU пользователь переустановит)
+"${INSTALL_DIR}/.venv/bin/pip" install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+
+if [[ -f "${INSTALL_DIR}/requirements.txt" ]]; then
+  "${INSTALL_DIR}/.venv/bin/pip" install -r "${INSTALL_DIR}/requirements.txt"
+fi
+
+# Создаём директории для моделей
+mkdir -p "${INSTALL_DIR}/models/checkpoints"
+mkdir -p "${INSTALL_DIR}/models/vae"
+mkdir -p "${INSTALL_DIR}/models/loras"
+
+echo ""
+echo "[setup-comfyui] ✓ ComfyUI установлен в ${INSTALL_DIR}"
+echo ""
+echo "Для запуска: sudo bash scripts/ai/start-sd.sh"
+echo "Модели кладите в: ${INSTALL_DIR}/models/"
+echo ""
+echo "Для GPU поддержки:"
+echo "  cd ${INSTALL_DIR}"
+echo "  source .venv/bin/activate"
+echo "  pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121"

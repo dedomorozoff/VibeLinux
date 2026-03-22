@@ -18,10 +18,21 @@ if [[ -f /etc/default/grub ]]; then
   # Настраиваем GRUB
   sed -i 's/GRUB_DISTRIBUTOR=.*/GRUB_DISTRIBUTOR="VibeCode OS"/' /etc/default/grub
 
-  # Убираем quiet splash для отладки (можно вернуть позже)
-  # sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"/' /etc/default/grub
+  # Safe video режим для VirtualBox и проблемных видеокарт
+  # nomodeset - отключает режим setting ядра для видеокарт
+  # vga=normal - стандартный VGA режим
+  # fb=false - отключает framebuffer
+  sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT="nomodeset vga=normal fb=false"/' /etc/default/grub
 
-  echo "[bootloader] GRUB конфигурация обновлена."
+  # Устанавливаем безопасное разрешение для GRUB
+  sed -i 's/GRUB_GFXMODE=.*/GRUB_GFXMODE=1024x768,800x600,640x480/' /etc/default/grub
+  sed -i 's/GRUB_GFXPAYLOAD=.*/GRUB_GFXPAYLOAD=text/' /etc/default/grub
+
+  # Добавляем настройки если их нет
+  grep -q "^GRUB_GFXMODE=" /etc/default/grub || echo "GRUB_GFXMODE=1024x768,800x600,640x480" >> /etc/default/grub
+  grep -q "^GRUB_GFXPAYLOAD=" /etc/default/grub || echo "GRUB_GFXPAYLOAD=text" >> /etc/default/grub
+
+  echo "[bootloader] GRUB конфигурация обновлена (safe video режим)."
 else
   echo "[bootloader] Файл /etc/default/grub не найден, создаём новый..."
   cat > /etc/default/grub << 'EOF'
@@ -29,8 +40,10 @@ GRUB_DEFAULT=0
 GRUB_TIMEOUT_STYLE=menu
 GRUB_TIMEOUT=5
 GRUB_DISTRIBUTOR="VibeCode OS"
-GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"
+GRUB_CMDLINE_LINUX_DEFAULT="nomodeset vga=normal fb=false"
 GRUB_CMDLINE_LINUX=""
+GRUB_GFXMODE=1024x768,800x600,640x480
+GRUB_GFXPAYLOAD=text
 EOF
 fi
 

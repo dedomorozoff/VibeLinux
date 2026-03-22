@@ -512,18 +512,24 @@ if [ "${grub_gfx_loaded}" != "y" ]; then
     terminal_output console
 fi
 
+# Safe video режим по умолчанию для VirtualBox и проблемных видеокарт
 menuentry "VibeCode OS (Live)" {
-    linux /boot/vmlinuz boot=casper noprompt quiet splash --
+    linux /boot/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false quiet splash --
     initrd /boot/initrd.img
 }
 
 menuentry "VibeCode OS Live Try" {
-    linux /boot/vmlinuz boot=casper only-ubiquity quiet splash --
+    linux /boot/vmlinuz boot=casper only-ubiquity nomodeset vga=normal fb=false quiet splash --
     initrd /boot/initrd.img
 }
 
 menuentry "VibeCode OS (compatibility mode)" {
-    linux /boot/vmlinuz boot=casper noprompt nomodeset --
+    linux /boot/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false ---
+    initrd /boot/initrd.img
+}
+
+menuentry "VibeCode OS (rescue mode)" {
+    linux /boot/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false rescue ---
     initrd /boot/initrd.img
 }
 GRUBEOF
@@ -542,18 +548,24 @@ if loadfont ${prefix}/fonts/DejaVuSans.pf2 ; then
     terminal_output gfxterm
 fi
 
+# Safe video режим по умолчанию
 menuentry "VibeCode OS (Live)" {
-    linux /boot/vmlinuz boot=casper noprompt quiet splash --
+    linux /boot/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false quiet splash --
     initrd /boot/initrd.img
 }
 
 menuentry "VibeCode OS (Live - Try VibeCode OS without installing)" {
-    linux /boot/vmlinuz boot=casper only-ubiquity quiet splash --
+    linux /boot/vmlinuz boot=casper only-ubiquity nomodeset vga=normal fb=false quiet splash --
     initrd /boot/initrd.img
 }
 
 menuentry "VibeCode OS (compatibility mode)" {
-    linux /boot/vmlinuz boot=casper noprompt nomodeset --
+    linux /boot/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false ---
+    initrd /boot/initrd.img
+}
+
+menuentry "VibeCode OS (rescue mode)" {
+    linux /boot/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false rescue ---
     initrd /boot/initrd.img
 }
 EOF

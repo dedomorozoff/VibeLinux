@@ -1,1 +1,36 @@
-﻿#!/usr/bin/env bash\nset -euo pipefail\n\n# РЎРєСЂРёРїС‚ РґР»СЏ Р·Р°РіСЂСѓР·РєРё Р±Р°Р·РѕРІС‹С… РјРѕРґРµР»РµР№ Ollama.\n# РСЃРїРѕР»СЊР·РѕРІР°РЅРёРµ: ./install-ollama-models.sh [model1 model2 ...]\n# Р‘РµР· Р°СЂРіСѓРјРµРЅС‚РѕРІ Р·Р°РіСЂСѓР¶Р°РµС‚ Р±Р°Р·РѕРІС‹Р№ РЅР°Р±РѕСЂ.\n\nif [[ $# -gt 0 ]]; then\n  MODELS=("$@")\nelse\n  MODELS=(\n    "llama3.2:latest"\n    "codellama:latest"\n    "qwen2.5-coder:latest"\n  )\nfi\n\nif ! command -v ollama >/dev/null 2>&1; then\n  echo "[install-ollama-models] РљРѕРјР°РЅРґР° 'ollama' РЅРµ РЅР°Р№РґРµРЅР°. РЈСЃС‚Р°РЅРѕРІРёС‚Рµ Ollama РїРµСЂРµРґ Р·Р°РїСѓСЃРєРѕРј СЌС‚РѕРіРѕ СЃРєСЂРёРїС‚Р°."\n  exit 1\nfi\n\nfor model in "${MODELS[@]}"; do\n  echo "[install-ollama-models] Р—Р°РіСЂСѓР·РєР° РјРѕРґРµР»Рё: ${model}..."\n  if ollama pull "${model}"; then\n    echo "[install-ollama-models] вњ“ ${model} Р·Р°РіСЂСѓР¶РµРЅР°"\n  else\n    echo "[install-ollama-models] вњ— РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ ${model}"\n  fi\ndone\n\necho ""\necho "[install-ollama-models] РЎРїРёСЃРѕРє СѓСЃС‚Р°РЅРѕРІР»РµРЅРЅС‹С… РјРѕРґРµР»РµР№:"\nollama list\n\necho "[install-ollama-models] Р“РѕС‚РѕРІРѕ."\n\n
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Скрипт для загрузки базовых моделей Ollama.
+# Использование: ./install-ollama-models.sh [model1 model2 ...]
+# Без аргументов загружает базовый набор.
+
+if [[ $# -gt 0 ]]; then
+  MODELS=("$@")
+else
+  MODELS=(
+    "llama3.2:latest"
+    "codellama:latest"
+    "qwen2.5-coder:latest"
+  )
+fi
+
+if ! command -v ollama >/dev/null 2>&1; then
+  echo "[install-ollama-models] Команда 'ollama' не найдена. Установите Ollama перед запуском этого скрипта."
+  exit 1
+fi
+
+for model in "${MODELS[@]}"; do
+  echo "[install-ollama-models] Загрузка модели: ${model}..."
+  if ollama pull "${model}"; then
+    echo "[install-ollama-models] ✓ ${model} загружена"
+  else
+    echo "[install-ollama-models] ✗ Не удалось загрузить ${model}"
+  fi
+done
+
+echo ""
+echo "[install-ollama-models] Список установленных моделей:"
+ollama list
+
+echo "[install-ollama-models] Готово."

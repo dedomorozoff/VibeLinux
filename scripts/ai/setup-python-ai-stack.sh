@@ -1,1 +1,74 @@
-﻿#!/usr/bin/env bash\nset -euo pipefail\n\n# РЈСЃС‚Р°РЅРѕРІРєР° Python AI-СЃС‚РµРєР°: PyTorch, Transformers, LangChain Рё РґСЂ.\n# РџРѕ СѓРјРѕР»С‡Р°РЅРёСЋ СЃС‚Р°РІРёС‚ CPU-РІРµСЂСЃРёРё, РґР»СЏ GPU РЅСѓР¶РЅРѕ РїРµСЂРµСѓСЃС‚Р°РЅРѕРІРёС‚СЊ PyTorch.\n\nif [[ $EUID -ne 0 ]]; then\n  echo "РџРѕР¶Р°Р»СѓР№СЃС‚Р°, Р·Р°РїСѓСЃС‚РёС‚Рµ СЌС‚РѕС‚ СЃРєСЂРёРїС‚ СЃ sudo РёР»Рё РѕС‚ root."\n  exit 1\nfi\n\nUSER_NAME="${SUDO_USER:-$USER}"\n\necho "[setup-python-ai] РЈСЃС‚Р°РЅРѕРІРєР° СЃРёСЃС‚РµРјРЅС‹С… Р·Р°РІРёСЃРёРјРѕСЃС‚РµР№..."\napt-get update -y\nDEBIAN_FRONTEND=noninteractive apt-get install -y \\n  python3-pip \\n  python3-venv \\n  python3-dev \\n  build-essential\n\necho "[setup-python-ai] РЎРѕР·РґР°РЅРёРµ РІРёСЂС‚СѓР°Р»СЊРЅРѕРіРѕ РѕРєСЂСѓР¶РµРЅРёСЏ РґР»СЏ AI..."\nsudo -u "$USER_NAME" bash -lc '\n  if [ ! -d "$HOME/.venv-ai" ]; then\n    python3 -m venv "$HOME/.venv-ai"\n  fi\n'\n\necho "[setup-python-ai] РЈСЃС‚Р°РЅРѕРІРєР° AI-Р±РёР±Р»РёРѕС‚РµРє..."\nsudo -u "$USER_NAME" bash -lc '\n  source "$HOME/.venv-ai/bin/activate"\n  \n  # РћР±РЅРѕРІР»СЏРµРј pip\n  pip install --upgrade pip setuptools wheel\n  \n  # PyTorch CPU (РґР»СЏ GPU: pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121)\n  pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu\n  \n  # Transformers Рё СЃРІСЏР·Р°РЅРЅС‹Рµ\n  pip install transformers accelerate sentencepiece protobuf\n  \n  # LangChain СЌРєРѕСЃРёСЃС‚РµРјР°\n  pip install langchain langchain-community langchain-core\n  \n  # LlamaIndex\n  pip install llama-index\n  \n  # Ollama Python SDK\n  pip install ollama\n  \n  # Р”РѕРїРѕР»РЅРёС‚РµР»СЊРЅС‹Рµ СѓС‚РёР»РёС‚С‹\n  pip install numpy pandas matplotlib jupyter ipython\n  \n  echo ""\n  echo "вњ“ AI-СЃС‚РµРє СѓСЃС‚Р°РЅРѕРІР»РµРЅ РІ ~/.venv-ai"\n  echo ""\n  echo "Р”Р»СЏ Р°РєС‚РёРІР°С†РёРё: source ~/.venv-ai/bin/activate"\n  echo "Р”Р»СЏ GPU PyTorch: pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121"\n'\n\n# Р”РѕР±Р°РІР»СЏРµРј Р°Р»РёР°СЃ РґР»СЏ Р±С‹СЃС‚СЂРѕР№ Р°РєС‚РёРІР°С†РёРё\nif ! grep -q "alias ai-env" "/home/$USER_NAME/.zshrc" 2>/dev/null; then\n  echo "" >> "/home/$USER_NAME/.zshrc"\n  echo "# AI environment" >> "/home/$USER_NAME/.zshrc"\n  echo "alias ai-env='source ~/.venv-ai/bin/activate'" >> "/home/$USER_NAME/.zshrc"\nfi\n\nif ! grep -q "alias ai-env" "/home/$USER_NAME/.bashrc" 2>/dev/null; then\n  echo "" >> "/home/$USER_NAME/.bashrc"\n  echo "# AI environment" >> "/home/$USER_NAME/.bashrc"\n  echo "alias ai-env='source ~/.venv-ai/bin/activate'" >> "/home/$USER_NAME/.bashrc"\nfi\n\necho "[setup-python-ai] Р“РѕС‚РѕРІРѕ. РСЃРїРѕР»СЊР·СѓР№С‚Рµ 'ai-env' РґР»СЏ Р°РєС‚РёРІР°С†РёРё РѕРєСЂСѓР¶РµРЅРёСЏ."\n
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Установка Python AI-стека: PyTorch, Transformers, LangChain и др.
+# По умолчанию ставит CPU-версии, для GPU нужно переустановить PyTorch.
+
+if [[ $EUID -ne 0 ]]; then
+  echo "Пожалуйста, запустите этот скрипт с sudo или от root."
+  exit 1
+fi
+
+USER_NAME="${SUDO_USER:-$USER}"
+
+echo "[setup-python-ai] Установка системных зависимостей..."
+apt-get update -y
+DEBIAN_FRONTEND=noninteractive apt-get install -y \
+  python3-pip \
+  python3-venv \
+  python3-dev \
+  build-essential
+
+echo "[setup-python-ai] Создание виртуального окружения для AI..."
+sudo -u "$USER_NAME" bash -lc '
+  if [ ! -d "$HOME/.venv-ai" ]; then
+    python3 -m venv "$HOME/.venv-ai"
+  fi
+'
+
+echo "[setup-python-ai] Установка AI-библиотек..."
+sudo -u "$USER_NAME" bash -lc '
+  source "$HOME/.venv-ai/bin/activate"
+
+  # Обновляем pip
+  pip install --upgrade pip setuptools wheel
+
+  # PyTorch CPU (для GPU: pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121)
+  pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+
+  # Transformers и связанные
+  pip install transformers accelerate sentencepiece protobuf
+
+  # LangChain экосистема
+  pip install langchain langchain-community langchain-core
+
+  # LlamaIndex
+  pip install llama-index
+
+  # Ollama Python SDK
+  pip install ollama
+
+  # Дополнительные утилиты
+  pip install numpy pandas matplotlib jupyter ipython
+
+  echo ""
+  echo "✓ AI-стек установлен в ~/.venv-ai"
+  echo ""
+  echo "Для активации: source ~/.venv-ai/bin/activate"
+  echo "Для GPU PyTorch: pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121"
+'
+
+# Добавляем алиас для быстрой активации
+if ! grep -q "alias ai-env" "/home/$USER_NAME/.zshrc" 2>/dev/null; then
+  echo "" >> "/home/$USER_NAME/.zshrc"
+  echo "# AI environment" >> "/home/$USER_NAME/.zshrc"
+  echo "alias ai-env='source ~/.venv-ai/bin/activate'" >> "/home/$USER_NAME/.zshrc"
+fi
+
+if ! grep -q "alias ai-env" "/home/$USER_NAME/.bashrc" 2>/dev/null; then
+  echo "" >> "/home/$USER_NAME/.bashrc"
+  echo "# AI environment" >> "/home/$USER_NAME/.bashrc"
+  echo "alias ai-env='source ~/.venv-ai/bin/activate'" >> "/home/$USER_NAME/.bashrc"
+fi
+
+echo "[setup-python-ai] Готово. Используйте 'ai-env' для активации окружения."

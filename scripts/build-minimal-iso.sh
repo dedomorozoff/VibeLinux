@@ -135,10 +135,21 @@ case "${BUILD_MODE}" in
     log "Шаг 7: Настройка GRUB..."
     cat > "${IMAGE_DIR}/boot/grub/grub.cfg" << 'GRUBEOF'
 set default=0
-set timeout=5
+set timeout=10
 
+# Safe video режим для VirtualBox и проблемных видеокарт
 menuentry "VibeCode OS Minimal (CLI)" {
-    linux /boot/vmlinuz boot=casper noprompt quiet ---
+    linux /boot/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false quiet ---
+    initrd /boot/initrd.img
+}
+
+menuentry "VibeCode OS Minimal (safe graphics)" {
+    linux /boot/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false ---
+    initrd /boot/initrd.img
+}
+
+menuentry "VibeCode OS Minimal (rescue mode)" {
+    linux /boot/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false rescue ---
     initrd /boot/initrd.img
 }
 GRUBEOF
