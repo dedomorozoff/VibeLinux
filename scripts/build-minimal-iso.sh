@@ -127,9 +127,17 @@ case "${BUILD_MODE}" in
     mkdir -p "${IMAGE_DIR}/boot/grub"
     mkdir -p "${IMAGE_DIR}/casper"
 
-    # Копирование ядра
-    cp "$(ls -v ${CHROOT_DIR}/boot/vmlinuz-* | tail -n 1)" "${IMAGE_DIR}/boot/vmlinuz"
-    cp "$(ls -v ${CHROOT_DIR}/boot/initrd.img-* | tail -n 1)" "${IMAGE_DIR}/boot/initrd.img"
+    # Копирование ядра (используем относительные пути для casper)
+    log "Копирование ядра и initrd..."
+    if ls "${CHROOT_DIR}"/boot/vmlinuz-* 1>/dev/null 2>&1; then
+        cp "$(ls -v "${CHROOT_DIR}"/boot/vmlinuz-* | tail -n 1)" "${IMAGE_DIR}/casper/vmlinuz"
+        cp "$(ls -v "${CHROOT_DIR}"/boot/initrd.img-* | tail -n 1)" "${IMAGE_DIR}/casper/initrd"
+        # Также копируем в boot для совместимости
+        cp "${IMAGE_DIR}/casper/vmlinuz" "${IMAGE_DIR}/boot/vmlinuz"
+        cp "${IMAGE_DIR}/casper/initrd" "${IMAGE_DIR}/boot/initrd"
+    else
+        die "Ядро не найдено в chroot/boot"
+    fi
 
     # Шаг 7: Конфиг GRUB
     log "Шаг 7: Настройка GRUB..."
@@ -139,18 +147,18 @@ set timeout=10
 
 # Safe video режим для VirtualBox и проблемных видеокарт
 menuentry "VibeCode OS Minimal (CLI)" {
-    linux /boot/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false quiet ---
-    initrd /boot/initrd.img
+    linux /casper/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false quiet ---
+    initrd /casper/initrd
 }
 
 menuentry "VibeCode OS Minimal (safe graphics)" {
-    linux /boot/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false ---
-    initrd /boot/initrd.img
+    linux /casper/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false ---
+    initrd /casper/initrd
 }
 
 menuentry "VibeCode OS Minimal (rescue mode)" {
-    linux /boot/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false rescue ---
-    initrd /boot/initrd.img
+    linux /casper/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false rescue ---
+    initrd /casper/initrd
 }
 GRUBEOF
 

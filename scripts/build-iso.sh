@@ -357,12 +357,16 @@ MATEPANELEOF
 
     # Копируем ядро и initrd из chroot ПЕРЕД созданием образов GRUB
     log "Копирование ядра и initrd..."
+
+    # Копируем в casper (для live-сессии)
     if [[ -f "${CHROOT_DIR}/boot/vmlinuz" ]]; then
+      cp "${CHROOT_DIR}/boot/vmlinuz" "${IMAGE_DIR}/casper/vmlinuz"
       cp "${CHROOT_DIR}/boot/vmlinuz" "${IMAGE_DIR}/boot/vmlinuz"
     else
       # Ищем первое подходящее ядро по шаблону vmlinuz-*
       kernel_candidates=( "${CHROOT_DIR}"/boot/vmlinuz-* )
       if [[ -n "${kernel_candidates[0]:-}" && -f "${kernel_candidates[0]}" ]]; then
+        cp "${kernel_candidates[0]}" "${IMAGE_DIR}/casper/vmlinuz"
         cp "${kernel_candidates[0]}" "${IMAGE_DIR}/boot/vmlinuz"
       else
         die "Не удалось найти ядро vmlinuz в chroot/boot"
@@ -370,16 +374,20 @@ MATEPANELEOF
     fi
 
     if [[ -f "${CHROOT_DIR}/boot/initrd.img" ]]; then
-      cp "${CHROOT_DIR}/boot/initrd.img" "${IMAGE_DIR}/boot/initrd.img"
+      cp "${CHROOT_DIR}/boot/initrd.img" "${IMAGE_DIR}/casper/initrd"
+      cp "${CHROOT_DIR}/boot/initrd.img" "${IMAGE_DIR}/boot/initrd"
     else
       # Ищем первое подходящее initrd по шаблону initrd.img-*
       initrd_candidates=( "${CHROOT_DIR}"/boot/initrd.img-* )
       if [[ -n "${initrd_candidates[0]:-}" && -f "${initrd_candidates[0]}" ]]; then
-        cp "${initrd_candidates[0]}" "${IMAGE_DIR}/boot/initrd.img"
+        cp "${initrd_candidates[0]}" "${IMAGE_DIR}/casper/initrd"
+        cp "${initrd_candidates[0]}" "${IMAGE_DIR}/boot/initrd"
       else
         die "Не удалось найти initrd в chroot/boot"
       fi
     fi
+
+    log "Ядро и initrd скопированы в casper/ и boot/"
 
     # Копируем модули GRUB для графики
     log "Копирование модулей GRUB..."
@@ -514,23 +522,23 @@ fi
 
 # Safe video режим по умолчанию для VirtualBox и проблемных видеокарт
 menuentry "VibeCode OS (Live)" {
-    linux /boot/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false quiet splash --
-    initrd /boot/initrd.img
+    linux /casper/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false quiet splash --
+    initrd /casper/initrd
 }
 
 menuentry "VibeCode OS Live Try" {
-    linux /boot/vmlinuz boot=casper only-ubiquity nomodeset vga=normal fb=false quiet splash --
-    initrd /boot/initrd.img
+    linux /casper/vmlinuz boot=casper only-ubiquity nomodeset vga=normal fb=false quiet splash --
+    initrd /casper/initrd
 }
 
 menuentry "VibeCode OS (compatibility mode)" {
-    linux /boot/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false ---
-    initrd /boot/initrd.img
+    linux /casper/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false ---
+    initrd /casper/initrd
 }
 
 menuentry "VibeCode OS (rescue mode)" {
-    linux /boot/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false rescue ---
-    initrd /boot/initrd.img
+    linux /casper/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false rescue ---
+    initrd /casper/initrd
 }
 GRUBEOF
 
@@ -550,23 +558,23 @@ fi
 
 # Safe video режим по умолчанию
 menuentry "VibeCode OS (Live)" {
-    linux /boot/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false quiet splash --
-    initrd /boot/initrd.img
+    linux /casper/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false quiet splash --
+    initrd /casper/initrd
 }
 
 menuentry "VibeCode OS (Live - Try VibeCode OS without installing)" {
-    linux /boot/vmlinuz boot=casper only-ubiquity nomodeset vga=normal fb=false quiet splash --
-    initrd /boot/initrd.img
+    linux /casper/vmlinuz boot=casper only-ubiquity nomodeset vga=normal fb=false quiet splash --
+    initrd /casper/initrd
 }
 
 menuentry "VibeCode OS (compatibility mode)" {
-    linux /boot/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false ---
-    initrd /boot/initrd.img
+    linux /casper/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false ---
+    initrd /casper/initrd
 }
 
 menuentry "VibeCode OS (rescue mode)" {
-    linux /boot/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false rescue ---
-    initrd /boot/initrd.img
+    linux /casper/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false rescue ---
+    initrd /casper/initrd
 }
 EOF
 
