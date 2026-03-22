@@ -47,6 +47,9 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y \
   tmux \
   zsh \
   sudo \
+  grub-pc-bin \
+  grub-efi-amd64-bin \
+  mtools \
   || true
 
 echo "[minimal-packages] Обновление initramfs для live-boot..."

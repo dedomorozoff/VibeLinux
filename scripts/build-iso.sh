@@ -507,17 +507,20 @@ set default=0
 set timeout=10
 set timeout_style=menu
 
-# Загружаем модули для графики
+# Загружаем шрифт и включаем графический режим
 if loadfont ${prefix}/fonts/DejaVuSans.pf2 ; then
-    set gfxmode=auto
+    set gfxmode=auto,1024x768,800x600,640x480
     insmod all_video
     insmod gfxterm
     terminal_output gfxterm
+else
+    # Fallback на консоль если шрифт не загружен
+    terminal_output console
 fi
 
-# Fallback на консоль если графика не доступна
-if [ "${grub_gfx_loaded}" != "y" ]; then
-    terminal_output console
+# Применяем тему (если есть)
+if [ -f ${prefix}/themes/vibecode/theme.txt ]; then
+    set theme=${prefix}/themes/vibecode/theme.txt
 fi
 
 # Safe video режим по умолчанию для VirtualBox и проблемных видеокарт
@@ -542,7 +545,7 @@ menuentry "VibeCode OS (rescue mode)" {
 }
 GRUBEOF
 
-    # Конфиг для EFI (с графическим режимом)
+    # Конфиг для EFI (с графическим режимом и темой)
     cat > "${IMAGE_DIR}/boot/grub/x86_64-efi/grub.cfg" << 'EOF'
 set default=0
 set timeout=10
@@ -550,10 +553,15 @@ set timeout_style=menu
 
 # Графические модули для EFI
 if loadfont ${prefix}/fonts/DejaVuSans.pf2 ; then
-    set gfxmode=auto
+    set gfxmode=auto,1024x768,800x600,640x480
     insmod all_video
     insmod gfxterm
     terminal_output gfxterm
+fi
+
+# Применяем тему (если есть)
+if [ -f ${prefix}/themes/vibecode/theme.txt ]; then
+    set theme=${prefix}/themes/vibecode/theme.txt
 fi
 
 # Safe video режим по умолчанию
@@ -590,17 +598,28 @@ EOF
     # Встроенный конфиг GRUB для поиска основного grub.cfg
     GRUB_EMBED_CFG="$(mktemp)"
     cat > "${GRUB_EMBED_CFG}" << 'GRUBEMBEDEOF'
-search --set=root --file /boot/grub/grub.cfg
-set prefix=($root)/boot/grub
-configfile $prefix/grub.cfg
+set echo=1
+echo "Searching for GRUB config..."
+if [ -z "$root" ]; then
+    search --file --set=root /boot/grub/grub.cfg
+fi
+if [ -f ($root)/boot/grub/grub.cfg ]; then
+    echo "Found config on $root"
+    set prefix=($root)/boot/grub
+    configfile $prefix/grub.cfg
+else
+    echo "Config not found! Dropping to shell."
+    ls ($root)/
+    ls ($root)/boot/grub/
+fi
 GRUBEMBEDEOF
 
     # --- BIOS boot image ---
     grub-mkstandalone \
       --format=i386-pc \
       --output="${WORK_DIR}/core.img" \
-      --install-modules="linux normal iso9660 biosdisk memdisk search tar ls" \
-      --modules="linux normal iso9660 biosdisk search" \
+      --install-modules="linux normal iso9660 biosdisk memdisk search tar ls part_gpt part_msdos fat ntfs configfile loopback" \
+      --modules="linux normal iso9660 biosdisk search configfile part_gpt part_msdos" \
       --locales="" \
       --fonts="" \
       "boot/grub/grub.cfg=${GRUB_EMBED_CFG}"
@@ -612,12 +631,15 @@ GRUBEMBEDEOF
     grub-mkstandalone \
       --format=x86_64-efi \
       --output="${WORK_DIR}/bootx64.efi" \
+      --install-modules="linux normal iso9660 search tar ls part_gpt part_msdos fat ntfs configfile loopback" \
+      --modules="linux normal iso9660 search configfile part_gpt part_msdos fat" \
       --locales="" \
       --fonts="" \
       "boot/grub/grub.cfg=${GRUB_EMBED_CFG}"
 
     # Создаём FAT-образ EFI System Partition
     EFI_IMG="${IMAGE_DIR}/boot/grub/efi.img"
+    mkdir -p "${IMAGE_DIR}/EFI/boot"
     dd if=/dev/zero of="${EFI_IMG}" bs=1M count=4
     mkfs.vfat "${EFI_IMG}"
     mmd -i "${EFI_IMG}" ::/EFI ::/EFI/boot
@@ -633,12 +655,15 @@ GRUBEMBEDEOF
 
     xorriso -as mkisofs \
       -iso-level 3 \
-      -r -V "VibeCodeOS" \
+      -full-iso9660-filenames \
+      -volid "VibeCodeOS" \
       -J -joliet-long \
-      -o "${ISO_OUTPUT}" \
+      -output "${ISO_OUTPUT}" \
       --grub2-mbr /usr/lib/grub/i386-pc/boot_hybrid.img \
       --mbr-force-bootable \
       -partition_offset 16 \
+      -isohybrid-mbr /usr/lib/grub/i386-pc/boot_hybrid.img \
+      -isohybrid-gpt-basdat \
       -b boot/grub/bios.img \
         -no-emul-boot \
         -boot-load-size 4 \
@@ -647,6 +672,7 @@ GRUBEMBEDEOF
       -eltorito-alt-boot \
       -e boot/grub/efi.img \
         -no-emul-boot \
+        -isohybrid-gpt-basdat \
       -append_partition 2 0xef "${EFI_IMG}" \
       "${IMAGE_DIR}" \
       || die "Ошибка при создании ISO"

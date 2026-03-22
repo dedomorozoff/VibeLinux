@@ -21,16 +21,16 @@ if [[ -f /etc/default/grub ]]; then
   # Safe video режим для VirtualBox и проблемных видеокарт
   # nomodeset - отключает режим setting ядра для видеокарт
   # vga=normal - стандартный VGA режим
-  # fb=false - отключает framebuffer
-  sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT="nomodeset vga=normal fb=false"/' /etc/default/grub
+  # fb=false - отключает framebuffer (можно убрать для графического режима GRUB)
+  sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT="nomodeset vga=normal fb=false quiet splash"/' /etc/default/grub
 
   # Устанавливаем безопасное разрешение для GRUB
   sed -i 's/GRUB_GFXMODE=.*/GRUB_GFXMODE=1024x768,800x600,640x480/' /etc/default/grub
-  sed -i 's/GRUB_GFXPAYLOAD=.*/GRUB_GFXPAYLOAD=text/' /etc/default/grub
+  sed -i 's/GRUB_GFXPAYLOAD=.*/GRUB_GFXPAYLOAD=keep/' /etc/default/grub
 
   # Добавляем настройки если их нет
   grep -q "^GRUB_GFXMODE=" /etc/default/grub || echo "GRUB_GFXMODE=1024x768,800x600,640x480" >> /etc/default/grub
-  grep -q "^GRUB_GFXPAYLOAD=" /etc/default/grub || echo "GRUB_GFXPAYLOAD=text" >> /etc/default/grub
+  grep -q "^GRUB_GFXPAYLOAD=" /etc/default/grub || echo "GRUB_GFXPAYLOAD=keep" >> /etc/default/grub
 
   echo "[bootloader] GRUB конфигурация обновлена (safe video режим)."
 else
@@ -50,6 +50,10 @@ fi
 # Обновляем GRUB (если система установлена)
 if command -v update-grub &> /dev/null; then
   echo "[bootloader] Обновление GRUB..."
+
+  # Отключаем os-prober для ускорения (не нужен в chroot/ISO)
+  echo "GRUB_DISABLE_OS_PROBER=true" >> /etc/default/grub
+
   update-grub || echo "[bootloader] Предупреждение: не удалось обновить GRUB (возможно, в chroot)"
 fi
 

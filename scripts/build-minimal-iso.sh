@@ -27,7 +27,7 @@ die() { echo "[build-minimal-iso] ERROR: $*" >&2; exit 1; }
 
 need_cmd() {
   local cmd="$1"
-  command -v "$cmd" >/dev/null 2>&1 || die "Не найдено: '$cmd'. Установите зависимости (debootstrap, mksquashfs, xorriso, grub-pc-bin, grub-efi-amd64-bin)."
+  command -v "$cmd" >/dev/null 2>&1 || die "Не найдено: '$cmd'. Установите зависимости (debootstrap, mksquashfs, xorriso, grub-pc-bin, grub-efi-amd64-bin, mtools)."
 }
 
 mkdir -p "${WORK_DIR}"
@@ -42,6 +42,9 @@ case "${BUILD_MODE}" in
     need_cmd debootstrap
     need_cmd mksquashfs
     need_cmd xorriso
+    need_cmd grub-mkstandalone
+    need_cmd mkfs.vfat
+    need_cmd mcopy
 
     [[ -f "${ROOT_DIR}/scripts/base/minimal-packages.sh" ]] || die "Не найден скрипт minimal-packages.sh"
     log "OK: dry-run проверки пройдены."
@@ -141,18 +144,81 @@ case "${BUILD_MODE}" in
 
     # Шаг 7: Конфиг GRUB
     log "Шаг 7: Настройка GRUB..."
+
+    # Копируем шрифт для GRUB (если есть в системе)
+    log "Копирование шрифта GRUB..."
+    mkdir -p "${IMAGE_DIR}/boot/grub/fonts"
+    if [[ -f /usr/share/grub/unicode.pf2 ]]; then
+      cp /usr/share/grub/unicode.pf2 "${IMAGE_DIR}/boot/grub/fonts/unicode.pf2"
+    elif command -v grub-mkfont >/dev/null 2>&1; then
+      # Пробуем создать шрифт из системных
+      for font in /usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf \
+                  /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf \
+                  /usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf; do
+        if [[ -f "$font" ]]; then
+          grub-mkfont -o "${IMAGE_DIR}/boot/grub/fonts/DejaVuSans.pf2" -s 16 "$font" 2>/dev/null && break || true
+        fi
+      done
+    fi
+
+    # Создаём тему GRUB
+    log "Создание темы GRUB..."
+    mkdir -p "${IMAGE_DIR}/boot/grub/themes/vibecode"
+    cat > "${IMAGE_DIR}/boot/grub/themes/vibecode/theme.txt" << 'THEMEEOF'
+title-text: ""
+title-color: "#ffffff"
+message-font: "DejaVu Sans:16"
+message-color: "#ffffff"
++ boot_menu {
+    left = 20%
+    top = 20%
+    width = 60%
+    height = 60%
+    item_height = 30px
+    padding = 20px
+    border = 0
+    border_color = "#2c3e50"
+    item_color = "#ffffff"
+    selected_item_color = "#3498db"
+    item_font = "DejaVu Sans:16"
+    selected_item_font = "DejaVu Sans:bold:16"
+}
+THEMEEOF
+
     cat > "${IMAGE_DIR}/boot/grub/grub.cfg" << 'GRUBEOF'
 set default=0
 set timeout=10
+set timeout_style=menu
+
+# Загружаем шрифт и включаем графический режим
+if loadfont ${prefix}/fonts/unicode.pf2 ; then
+    set gfxmode=auto,1024x768,800x600,640x480
+    insmod all_video
+    insmod gfxterm
+    terminal_output gfxterm
+elif loadfont ${prefix}/fonts/DejaVuSans.pf2 ; then
+    set gfxmode=auto,1024x768,800x600,640x480
+    insmod all_video
+    insmod gfxterm
+    terminal_output gfxterm
+else
+    # Fallback на консоль если шрифт не загружен
+    terminal_output console
+fi
+
+# Применяем тему (если есть)
+if [ -f ${prefix}/themes/vibecode/theme.txt ]; then
+    set theme=${prefix}/themes/vibecode/theme.txt
+fi
 
 # Safe video режим для VirtualBox и проблемных видеокарт
-menuentry "VibeCode OS Minimal (CLI)" {
+menuentry "VibeCode OS Minimal (Live)" {
     linux /casper/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false quiet ---
     initrd /casper/initrd
 }
 
 menuentry "VibeCode OS Minimal (safe graphics)" {
-    linux /casper/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false ---
+    linux /casper/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false quiet splash ---
     initrd /casper/initrd
 }
 
@@ -160,18 +226,136 @@ menuentry "VibeCode OS Minimal (rescue mode)" {
     linux /casper/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false rescue ---
     initrd /casper/initrd
 }
+
+menuentry "VibeCode OS Minimal (text mode)" {
+    linux /casper/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false textmode ---
+    initrd /casper/initrd
+}
 GRUBEOF
 
-    # Шаг 8: Создание ISO (упрощенная версия для CLI)
-    log "Шаг 8: Создание ISO..."
-    # Для простоты используем grub-mkrescue или xorriso напрямую
-    # Здесь используется минимальный xorriso вызов
+    # Шаг 8: Создание загрузочных образов GRUB
+    log "Шаг 8: Создание загрузочных образов GRUB..."
+
+    # Проверяем наличие GRUB файлов
+    GRUB_MBR="/usr/lib/grub/i386-pc/boot_hybrid.img"
+    if [[ ! -f "${GRUB_MBR}" ]]; then
+      GRUB_MBR="/usr/lib/grub/i386-pc/boot.img"
+    fi
+    if [[ ! -f "${GRUB_MBR}" ]]; then
+      die "Не найден GRUB MBR (boot_hybrid.img или boot.img). Установите grub-pc-bin."
+    fi
+
+    # Создаём embed-конфиг для GRUB
+    GRUB_EMBED_CFG="$(mktemp)"
+    cat > "${GRUB_EMBED_CFG}" << 'GRUBEMBEDEOF'
+set echo=1
+echo "Searching for GRUB config (Minimal ISO)..."
+if [ -z "$root" ]; then
+    search --file --set=root /boot/grub/grub.cfg
+fi
+if [ -f ($root)/boot/grub/grub.cfg ]; then
+    echo "Found config on $root"
+    set prefix=($root)/boot/grub
+    configfile $prefix/grub.cfg
+else
+    echo "Config not found! Dropping to shell."
+    ls ($root)/
+    ls ($root)/boot/grub/
+fi
+GRUBEMBEDEOF
+
+    # --- BIOS boot image ---
+    log "Создание BIOS boot image..."
+    # Для i386-pc в режиме CD/DVD (El Torito) часто лучше использовать grub-mkstandalone
+    # создающий полный образ, включая cdboot.img
+    grub-mkstandalone \
+      --format=i386-pc \
+      --output="${WORK_DIR}/core.img" \
+      --install-modules="linux normal iso9660 biosdisk memdisk search tar ls part_gpt part_msdos fat ntfs configfile loopback" \
+      --modules="linux normal iso9660 biosdisk search configfile part_gpt part_msdos" \
+      --locales="" \
+      --fonts="" \
+      "boot/grub/grub.cfg=${GRUB_EMBED_CFG}"
+
+    # Для El Torito i386-pc нам нужен cdboot.img в начале
+    if [[ -f "/usr/lib/grub/i386-pc/cdboot.img" ]]; then
+      cat /usr/lib/grub/i386-pc/cdboot.img "${WORK_DIR}/core.img" > "${IMAGE_DIR}/boot/grub/bios.img"
+    else
+      die "Не найден /usr/lib/grub/i386-pc/cdboot.img. Установите grub-pc-bin."
+    fi
+
+    # --- UEFI boot image ---
+    log "Создание UEFI boot image..."
+
+    # Создаём временную директорию для EFI образа с темой и шрифтами
+    EFI_TEMP_DIR="$(mktemp -d)"
+    mkdir -p "${EFI_TEMP_DIR}/boot/grub/fonts"
+    mkdir -p "${EFI_TEMP_DIR}/boot/grub/themes/vibecode"
+
+    # Копируем шрифты
+    if [[ -f "${IMAGE_DIR}/boot/grub/fonts/unicode.pf2" ]]; then
+      cp "${IMAGE_DIR}/boot/grub/fonts/unicode.pf2" "${EFI_TEMP_DIR}/boot/grub/fonts/"
+    fi
+    if [[ -f "${IMAGE_DIR}/boot/grub/fonts/DejaVuSans.pf2" ]]; then
+      cp "${IMAGE_DIR}/boot/grub/fonts/DejaVuSans.pf2" "${EFI_TEMP_DIR}/boot/grub/fonts/"
+    fi
+
+    # Копируем тему
+    if [[ -f "${IMAGE_DIR}/boot/grub/themes/vibecode/theme.txt" ]]; then
+      cp "${IMAGE_DIR}/boot/grub/themes/vibecode/theme.txt" "${EFI_TEMP_DIR}/boot/grub/themes/vibecode/"
+    fi
+
+    # Копируем основной grub.cfg для EFI
+    cp "${IMAGE_DIR}/boot/grub/grub.cfg" "${EFI_TEMP_DIR}/boot/grub/"
+
+    grub-mkstandalone \
+      --format=x86_64-efi \
+      --output="${WORK_DIR}/bootx64.efi" \
+      --install-modules="linux normal iso9660 search tar ls part_gpt part_msdos fat ntfs configfile loopback" \
+      --modules="linux normal iso9660 search configfile part_gpt part_msdos fat" \
+      --locales="" \
+      --fonts="" \
+      "boot/grub/grub.cfg=${GRUB_EMBED_CFG}"
+
+    # Создаём FAT-образ EFI System Partition
+    EFI_IMG="${IMAGE_DIR}/boot/grub/efi.img"
+    mkdir -p "${IMAGE_DIR}/EFI/boot"
+    dd if=/dev/zero of="${EFI_IMG}" bs=1M count=4 2>/dev/null
+    mkfs.vfat "${EFI_IMG}" 2>/dev/null
+    mmd -i "${EFI_IMG}" ::/EFI ::/EFI/boot
+    mcopy -i "${EFI_IMG}" "${WORK_DIR}/bootx64.efi" ::/EFI/boot/bootx64.efi
+
+    # Копируем EFI-загрузчик в дерево ISO
+    cp "${WORK_DIR}/bootx64.efi" "${IMAGE_DIR}/EFI/boot/bootx64.efi"
+
+    # Очищаем временную директорию
+    rm -rf "${EFI_TEMP_DIR}"
+
+    rm -f "${GRUB_EMBED_CFG}"
+
+    # Шаг 9: Создание ISO через xorriso (BIOS + UEFI hybrid)
+    log "Шаг 9: Создание ISO..."
+
     xorriso -as mkisofs \
       -iso-level 3 \
-      -r -V "VibeCodeMinimal" \
-      -o "${ISO_OUTPUT}" \
-      -b boot/grub/grub.cfg \
-      -no-emul-boot \
+      -full-iso9660-filenames \
+      -volid "VibeCodeMinimal" \
+      -output "${ISO_OUTPUT}" \
+      --grub2-mbr "${GRUB_MBR}" \
+      --mbr-force-bootable \
+      -partition_offset 16 \
+      -isohybrid-mbr "${GRUB_MBR}" \
+      -isohybrid-gpt-basdat \
+      -b boot/grub/bios.img \
+        -no-emul-boot \
+        -boot-load-size 4 \
+        -boot-info-table \
+        --grub2-boot-info \
+      -eltorito-alt-boot \
+      -e boot/grub/efi.img \
+        -no-emul-boot \
+        -isohybrid-gpt-basdat \
+      -append_partition 2 0xef "${EFI_IMG}" \
       "${IMAGE_DIR}" \
       || die "Ошибка при создании ISO"
 

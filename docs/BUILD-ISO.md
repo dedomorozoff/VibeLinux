@@ -13,6 +13,8 @@
   - `xorriso` — подготовка образа.
   - `grub-mkrescue` (пакеты `grub-pc-bin`, `grub-efi-amd64-bin`) — создание загрузочного ISO.
   - `mtools` (`mformat` и др.) — вспомогательные утилиты, которые использует `grub-mkrescue`.
+  - `grub-common` (`grub-mkfont`) — создание шрифтов для GRUB.
+  - `fonts-dejavu-core` — шрифты для графического режима GRUB.
 - **Причины выбора:**
   - Хорошо подходит для автоматизации и CI (GitHub Actions).
   - Не требует графического окружения на машине сборки.
@@ -54,7 +56,48 @@ sudo BUILD_MODE=full ./scripts/build-minimal-iso.sh
 
 ---
 
-### 4. Концептуальный пайплайн сборки (full режим)
+### 4. Графический режим GRUB
+
+Оба образа (Full и Minimal) используют графическое меню GRUB с темой VibeCode OS.
+
+#### Конфигурация GRUB
+
+**Шрифты:**
+- `unicode.pf2` (встроенный шрифт GRUB) — приоритетный вариант
+- `DejaVuSans.pf2` (создаётся из системных шрифтов) — fallback
+
+**Тема:**
+- Расположение: `/boot/grub/themes/vibecode/theme.txt`
+- Цвета: белый текст, синий выбранный элемент
+- Разрешение: автовыбор (1024x768, 800x600, 640x480)
+
+**Параметры загрузки ядра:**
+- `nomodeset` — отключает KMS для совместимости с видеокартами
+- `vga=normal` — стандартный VGA режим
+- `fb=false` — отключает framebuffer (для стабильности в VM)
+- `quiet splash` — тихая загрузка с Plymouth splash (Full версия)
+
+**Fallback:**
+- Если шрифт не загружен, GRUB автоматически переключается на текстовую консоль
+- Все образы содержат опцию "text mode" для загрузки без графики
+
+#### Требования к системе сборки
+
+Для создания графического меню GRUB необходимы:
+
+```bash
+sudo apt install -y \
+  grub-common \
+  grub-pc-bin \
+  grub-efi-amd64-bin \
+  fonts-dejavu-core \
+  mtools \
+  xorriso
+```
+
+---
+
+### 5. Концептуальный пайплайн сборки (full режим)
 
 В текущей реализации `full` ещё не выполняет реальные шаги, но целевая цепочка выглядит так:
 
@@ -78,7 +121,7 @@ sudo BUILD_MODE=full ./scripts/build-minimal-iso.sh
 
 ---
 
-### 4. Live-режим vs установленная система
+### 6. Live-режим vs установленная система
 
 - **Live-сессия по умолчанию:**
   - ISO грузится в live-окружение MATE с тем же rootfs, который затем используется установщиком.
@@ -92,7 +135,7 @@ sudo BUILD_MODE=full ./scripts/build-minimal-iso.sh
 
 ---
 
-### 4. Интеграция с GitHub Actions
+### 7. Интеграция с GitHub Actions
 
 - Workflow: `.github/workflows/build-iso.yml`.
 - **Джобы:**

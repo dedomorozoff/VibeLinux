@@ -1,5 +1,69 @@
 # VibeCode OS — Решение проблем
 
+## 🔧 Ошибка: GRUB загружается только в консольном режиме (нет графического меню)
+
+### Симптомы
+- При загрузке ISO отображается только текстовая консоль GRUB
+- Нет графического меню с выбором вариантов загрузки
+- Видно только сообщение `GRUB loading...` или черный экран
+
+### Причина
+GRUB не может загрузить шрифт или переключиться в графический режим из-за:
+- Отсутствия шрифтов в системе сборки
+- Проблем с видеодрайверами (особенно в VirtualBox)
+- Неправильных параметров загрузки ядра
+
+### Решение
+
+**1. Проверьте наличие шрифтов в системе сборки:**
+
+```bash
+# Ubuntu/Debian
+sudo apt install -y grub-common fonts-dejavu-core
+```
+
+**2. Проверьте конфигурацию GRUB в образе:**
+
+Убедитесь, что скрипт сборки создаёт шрифты и тему:
+- `scripts/build-iso.sh` — создаёт шрифт и тему для Full версии
+- `scripts/build-minimal-iso.sh` — создаёт шрифт и тему для Minimal версии
+
+**3. Используйте безопасные параметры загрузки:**
+
+В меню GRUB нажмите `e` для редактирования и добавьте:
+```
+nomodeset vga=normal fb=false
+```
+
+**4. Попробуйте режим совместимости:**
+
+В меню GRUB выберите опцию:
+- `VibeCode OS (compatibility mode)`
+- `VibeCode OS Minimal (safe graphics)`
+
+**5. Для VirtualBox:**
+
+Включите 3D-ускорение в настройках VM:
+- Settings → Display → Enable 3D Acceleration ✓
+- Video Memory: 128 MB
+
+**6. Проверьте fallback на консоль:**
+
+Если графический режим не работает, GRUB должен автоматически переключиться на консоль. Убедитесь, что в `grub.cfg` есть:
+
+```bash
+if loadfont ${prefix}/fonts/unicode.pf2 ; then
+    set gfxmode=auto,1024x768,800x600,640x480
+    insmod all_video
+    insmod gfxterm
+    terminal_output gfxterm
+else
+    terminal_output console
+fi
+```
+
+---
+
 ## 🔧 Ошибка: `/usr/bin/env: 'bash\r': No such file or directory`
 
 ### Причина
