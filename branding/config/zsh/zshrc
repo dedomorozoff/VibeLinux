@@ -15,7 +15,7 @@ export XDG_DATA_HOME="$HOME/.local/share"
 export XDG_CACHE_HOME="$HOME/.cache"
 
 # Path additions
-export PATH="$HOME/.local/bin:$PATH"
+export PATH="$HOME/.local/bin:$HOME/.local/share/pipx/bin:$PATH"
 export PATH="$HOME/.cargo/bin:$PATH"
 export PATH="$HOME/go/bin:$PATH"
 
@@ -65,13 +65,32 @@ if command -v starship >/dev/null 2>&1; then
   eval "$(starship init zsh)"
 fi
 
+# Zoxide
+if command -v zoxide >/dev/null 2>&1; then
+  eval "$(zoxide init zsh)"
+fi
+
+# FZF
+[ -f /usr/share/doc/fzf/examples/key-bindings.zsh ] && source /usr/share/doc/fzf/examples/key-bindings.zsh
+[ -f /usr/share/doc/fzf/examples/completion.zsh ] && source /usr/share/doc/fzf/examples/completion.zsh
+
+# Welcome Message
+if [ -f /root/branding/logos/ascii-logo.txt ]; then
+  cat /root/branding/logos/ascii-logo.txt
+elif [ -f /etc/vibecode/ascii-logo.txt ]; then
+  cat /etc/vibecode/ascii-logo.txt
+fi
+
 # Aliases
-alias ll='ls -lah'
-alias la='ls -A'
-alias l='ls -CF'
-alias grep='grep --color=auto'
-alias fgrep='fgrep --color=auto'
-alias egrep='egrep --color=auto'
+alias ls='eza --icons --group-directories-first'
+alias ll='eza -lah --icons --group-directories-first'
+alias la='eza -A --icons --group-directories-first'
+alias lt='eza --tree --icons'
+alias cat='bat --paging=never'
+alias find='fd'
+alias grep='rg'
+alias top='btop'
+alias cd='z'
 
 # Docker
 alias dps='docker ps'

@@ -20,11 +20,25 @@ TO_REMOVE=(
   thunderbird
   gnome-games
   ubuntu-games-*
+  example-content
+  simple-scan
+  totem
+  cheese
+  rhythmbox
+  shotwell
 )
 
 apt-get update -y
-DEBIAN_FRONTEND=noninteractive apt-get remove -y "${TO_REMOVE[@]}" || true
+DEBIAN_FRONTEND=noninteractive apt-get remove --purge -y "${TO_REMOVE[@]}" || true
 DEBIAN_FRONTEND=noninteractive apt-get autoremove -y
 
-echo "[cleanup] Готово. Список пакетов требует уточнения под финальную сборку."
+echo "[cleanup] Очистка кэша APT и временных файлов..."
+apt-get clean
+rm -rf /var/lib/apt/lists/*
+rm -rf /tmp/*
+rm -rf /var/tmp/*
+rm -rf /root/.cache/*
+rm -rf /home/vibecode/.cache/* 2>/dev/null || true
+
+echo "[cleanup] Готово."
 

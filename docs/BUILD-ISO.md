@@ -34,11 +34,27 @@
 BUILD_MODE=dry-run ./scripts/build-iso.sh
 sudo BUILD_MODE=full ./scripts/build-iso.sh
 sudo KEEP_CHROOT=1 BUILD_MODE=full ./scripts/build-iso.sh
+
+# Сборка МИНИМАЛЬНОГО образа (без GUI)
+sudo BUILD_MODE=full ./scripts/build-minimal-iso.sh
 ```
 
 ---
 
-### 3. Концептуальный пайплайн сборки (full режим)
+### 3. МИНИМАЛЬНЫЙ образ (VibeCode OS Minimal)
+
+Для серверных задач или слабых машин предусмотрен скрипт `scripts/build-minimal-iso.sh`.
+- **Особенности:**
+  - Полностью отсутствует графический стек (X11/MATE).
+  - Только консольные инструменты (Zsh, Tmux, Git, Vim-tiny, NetworkManager).
+  - Уменьшенный размер ISO.
+  - Подходит для создания Docker-контейнеров или серверных инсталляций.
+
+Пакетный состав минимальной версии управляется скриптом `scripts/base/minimal-packages.sh`.
+
+---
+
+### 4. Концептуальный пайплайн сборки (full режим)
 
 В текущей реализации `full` ещё не выполняет реальные шаги, но целевая цепочка выглядит так:
 

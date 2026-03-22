@@ -35,14 +35,19 @@ echo ""
 echo "[4/5] Установка ComfyUI..."
 bash "${ROOT_DIR}/scripts/ai/setup-comfyui.sh"
 
-# 5. Terminal AI
+# 5. Terminal AI (ai-chat)
 echo ""
-echo "[5/5] Установка ai-chat..."
+echo "[5/6] Установка ai-chat..."
 if [[ ! -f /usr/local/bin/ai-chat ]]; then
   cp "${ROOT_DIR}/scripts/ai/ai-chat" /usr/local/bin/ai-chat
   chmod +x /usr/local/bin/ai-chat
   echo "✓ ai-chat установлен в /usr/local/bin"
 fi
+
+# 6. Aider (Advanced AI coding agent)
+echo ""
+echo "[6/6] Установка Aider..."
+bash "${ROOT_DIR}/scripts/ai/install-aider.sh"
 
 echo ""
 echo "╔════════════════════════════════════════╗"
@@ -53,6 +58,7 @@ echo "Быстрый старт:"
 echo "  • Open WebUI:    http://localhost:3000"
 echo "  • ComfyUI:       sudo bash scripts/ai/start-sd.sh"
 echo "  • Terminal AI:   ai-chat"
+echo "  • Advanced AI:   aider"
 echo "  • Python AI:     ai-env (активация окружения)"
 echo ""
 echo "Загрузка моделей:"

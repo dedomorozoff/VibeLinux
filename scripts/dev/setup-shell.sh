@@ -14,9 +14,17 @@ BRANDING_DIR="/root/branding"
 
 export DEBIAN_FRONTEND=noninteractive
 
-echo "[setup-shell] Установка Zsh..."
+echo "[setup-shell] Установка Zsh и современных CLI-утилит..."
 apt-get update -y || true
-apt-get install -y zsh curl git wget || true
+apt-get install -y zsh curl git wget eza bat fd-find ripgrep fzf zoxide btop pipx || true
+
+# Исправление имен для bat и fd (в Ubuntu они называются batcat и fdfind)
+if command -v batcat >/dev/null 2>&1 && ! command -v bat >/dev/null 2>&1; then
+  ln -s /usr/bin/batcat /usr/local/bin/bat
+fi
+if command -v fdfind >/dev/null 2>&1 && ! command -v fd >/dev/null 2>&1; then
+  ln -s /usr/bin/fdfind /usr/local/bin/fd
+fi
 
 # Проверка доступности интернета
 check_network() {

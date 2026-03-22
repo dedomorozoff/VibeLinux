@@ -176,10 +176,14 @@ case "${BUILD_MODE}" in
     chroot "${CHROOT_DIR}" /bin/bash -c "
       if command -v sed >/dev/null 2>&1; then
         for f in /root/*.sh; do
-          [ -f \"\$f\" ] && sed -i 's/\r$//' \"\$f\" || true
+          [ -f \"\$f\" ] && sed -i 's/\\r$//' \"\$f\" || true
         done
       fi
     "
+
+    # Установка необходимых пакетов для работы загрузчика GRUB и создания ISO (внутри chroot)
+    log "Установка необходимых пакетов загрузчика в chroot..."
+    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y grub-common grub-pc-bin grub-efi-amd64-bin binutils xorriso"
 
     # Установка переменных для избежания интерактивных запросов
     export DEBIAN_FRONTEND=noninteractive
@@ -258,7 +262,7 @@ autologin-user=vibecode
 autologin-user-timeout=0
 autologin-guest=false
 allow-guest=false
-greeter-session=
+greeter-session=lightdm-gtk-greeter
 user-session=mate
 LIGHTDMEOF
 
@@ -326,11 +330,11 @@ MATEPANELEOF
     umount "${CHROOT_DIR}/sys"
     umount "${CHROOT_DIR}/dev"
 
-    # Шаг 5: Подготовка SquashFS (xz для лучшего сжатия, iso-level 3 для >4GB)
+    # Шаг 5: Подготовка SquashFS (zstd для баланса скорость/сжатие)
     log "Шаг 5: Упаковка rootfs в SquashFS"
     mkdir -p "${IMAGE_DIR}/casper"
     mksquashfs "${CHROOT_DIR}" "${IMAGE_DIR}/casper/filesystem.squashfs" \
-      -comp xz -Xbcj x86 \
+      -comp zstd \
       -e boot proc sys dev run tmp
 
     # Шаг 6: Подготовка структуры live-ISO
@@ -343,6 +347,32 @@ MATEPANELEOF
     mkdir -p "${IMAGE_DIR}/EFI"
     mkdir -p "${IMAGE_DIR}/EFI/boot"
     mkdir -p "${IMAGE_DIR}/boot"
+
+    # Копируем ядро и initrd из chroot ПЕРЕД созданием образов GRUB
+    log "Копирование ядра и initrd..."
+    if [[ -f "${CHROOT_DIR}/boot/vmlinuz" ]]; then
+      cp "${CHROOT_DIR}/boot/vmlinuz" "${IMAGE_DIR}/boot/vmlinuz"
+    else
+      # Ищем первое подходящее ядро по шаблону vmlinuz-*
+      kernel_candidates=( "${CHROOT_DIR}"/boot/vmlinuz-* )
+      if [[ -n "${kernel_candidates[0]:-}" && -f "${kernel_candidates[0]}" ]]; then
+        cp "${kernel_candidates[0]}" "${IMAGE_DIR}/boot/vmlinuz"
+      else
+        die "Не удалось найти ядро vmlinuz в chroot/boot"
+      fi
+    fi
+
+    if [[ -f "${CHROOT_DIR}/boot/initrd.img" ]]; then
+      cp "${CHROOT_DIR}/boot/initrd.img" "${IMAGE_DIR}/boot/initrd.img"
+    else
+      # Ищем первое подходящее initrd по шаблону initrd.img-*
+      initrd_candidates=( "${CHROOT_DIR}"/boot/initrd.img-* )
+      if [[ -n "${initrd_candidates[0]:-}" && -f "${initrd_candidates[0]}" ]]; then
+        cp "${initrd_candidates[0]}" "${IMAGE_DIR}/boot/initrd.img"
+      else
+        die "Не удалось найти initrd в chroot/boot"
+      fi
+    fi
 
     # Копируем модули GRUB для графики
     log "Копирование модулей GRUB..."
@@ -454,32 +484,6 @@ THEMEEOF
     echo "system" > "${IMAGE_DIR}/.disk/cd_type"
     date > "${IMAGE_DIR}/.disk/build_time"
     echo "VibeCodeOS-alpha" > "${IMAGE_DIR}/.disk/ubuntu_dist"
-
-    # Копируем ядро и initrd из chroot
-    log "Копирование ядра и initrd..."
-    if [[ -f "${CHROOT_DIR}/boot/vmlinuz" ]]; then
-      cp "${CHROOT_DIR}/boot/vmlinuz" "${IMAGE_DIR}/boot/vmlinuz"
-    else
-      # Ищем первое подходящее ядро по шаблону vmlinuz-*
-      kernel_candidates=( "${CHROOT_DIR}"/boot/vmlinuz-* )
-      if [[ -n "${kernel_candidates[0]:-}" && -f "${kernel_candidates[0]}" ]]; then
-        cp "${kernel_candidates[0]}" "${IMAGE_DIR}/boot/vmlinuz"
-      else
-        die "Не удалось найти ядро vmlinuz в chroot/boot"
-      fi
-    fi
-
-    if [[ -f "${CHROOT_DIR}/boot/initrd.img" ]]; then
-      cp "${CHROOT_DIR}/boot/initrd.img" "${IMAGE_DIR}/boot/initrd.img"
-    else
-      # Ищем первое подходящее initrd по шаблону initrd.img-*
-      initrd_candidates=( "${CHROOT_DIR}"/boot/initrd.img-* )
-      if [[ -n "${initrd_candidates[0]:-}" && -f "${initrd_candidates[0]}" ]]; then
-        cp "${initrd_candidates[0]}" "${IMAGE_DIR}/boot/initrd.img"
-      else
-        die "Не удалось найти initrd в chroot/boot"
-      fi
-    fi
 
     # Создаём конфигурацию GRUB (графический режим с поддержкой EFI и BIOS)
     log "Создание конфигурации GRUB..."
