@@ -59,18 +59,16 @@ fi
 
 echo "[bootloader] Настройка Plymouth splash screen..."
 
-# Устанавливаем Plymouth
-DEBIAN_FRONTEND=noninteractive apt-get install -y \
-  plymouth \
-  plymouth-themes \
-  || true
+# Plymouth нужен только для Full версии (в Minimal не устанавливается)
+if command -v plymouth &>/dev/null; then
+  echo "[bootloader] Plymouth установлен, настраиваем тему..."
 
-# Создаём кастомную тему Plymouth
-PLYMOUTH_THEME_DIR="/usr/share/plymouth/themes/vibecodeos"
-mkdir -p "$PLYMOUTH_THEME_DIR"
+  # Создаём кастомную тему Plymouth
+  PLYMOUTH_THEME_DIR="/usr/share/plymouth/themes/vibecodeos"
+  mkdir -p "$PLYMOUTH_THEME_DIR"
 
-# Создаём простую текстовую тему
-cat > "$PLYMOUTH_THEME_DIR/vibecodeos.plymouth" << 'EOF'
+  # Создаём простую текстовую тему
+  cat > "$PLYMOUTH_THEME_DIR/vibecodeos.plymouth" << 'EOF'
 [Plymouth Theme]
 Name=VibeCode OS
 Description=VibeCode OS boot splash
@@ -81,8 +79,8 @@ ImageDir=/usr/share/plymouth/themes/vibecodeos
 ScriptFile=/usr/share/plymouth/themes/vibecodeos/vibecodeos.script
 EOF
 
-# Создаём скрипт темы Plymouth
-cat > "$PLYMOUTH_THEME_DIR/vibecodeos.script" << 'EOF'
+  # Создаём скрипт темы Plymouth
+  cat > "$PLYMOUTH_THEME_DIR/vibecodeos.script" << 'EOF'
 # VibeCode OS Plymouth Theme
 
 Window.SetBackgroundTopColor(0.04, 0.06, 0.12);
@@ -135,6 +133,10 @@ Plymouth.SetBootProgressFunction(progress_callback);
 # Сообщение о загрузке
 Plymouth.SetMessage("Starting VibeCode OS...");
 EOF
+
+else
+  echo "[bootloader] Plymouth не установлен (minimal версия), пропускаем настройку темы..."
+fi
 
 # Создаём простые placeholder изображения (можно заменить на реальные)
 # Для текстовой темы можно использовать bgrt или text тему как базу

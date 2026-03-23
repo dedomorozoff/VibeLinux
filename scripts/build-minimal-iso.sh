@@ -60,7 +60,10 @@ case "${BUILD_MODE}" in
     # Шаг 1: Bootstrap
     if [[ ! -d "${CHROOT_DIR}/etc" ]]; then
       log "Шаг 1: Bootstrap Ubuntu 24.04..."
-      debootstrap --arch=amd64 noble "${CHROOT_DIR}" http://archive.ubuntu.com/ubuntu
+      # Базовая установка без ядра (ядро установим позже в chroot)
+      debootstrap --arch=amd64 \
+        --include=initramfs-tools \
+        noble "${CHROOT_DIR}" http://archive.ubuntu.com/ubuntu
     fi
 
     # Шаг 2: Mount & Prep
@@ -111,6 +114,24 @@ case "${BUILD_MODE}" in
 
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/cleanup.sh"
 
+    # === УСТАНОВКА ЯДРА (критично для live-boot) ===
+    # Ядро должно устанавливаться в chroot, а не через debootstrap
+    log "Установка ядра Linux в chroot..."
+    chroot "${CHROOT_DIR}" /bin/bash -c "
+      DEBIAN_FRONTEND=noninteractive apt-get update
+      DEBIAN_FRONTEND=noninteractive apt-get install -y linux-image-generic linux-modules-generic
+      update-initramfs -u -k all
+    " || log "WARNING: Возможны проблемы с установкой ядра"
+
+    # Проверка что ядро установилось
+    if ls "${CHROOT_DIR}"/boot/vmlinuz-* 1>/dev/null 2>&1; then
+      log "Ядро установлено успешно:"
+      ls -lh "${CHROOT_DIR}/boot/vmlinuz-*"
+    else
+      log "ERROR: Ядро не найдено после установки!"
+      log "Проверьте логи выше для деталей"
+    fi
+
     # Шаг 4: Размонтирование
     log "Шаг 4: Размонтирование..."
     umount -l "${CHROOT_DIR}/proc" || true
@@ -132,14 +153,51 @@ case "${BUILD_MODE}" in
 
     # Копирование ядра (используем относительные пути для casper)
     log "Копирование ядра и initrd..."
+
+    # Проверяем что есть в chroot/boot
+    log "Содержимое chroot/boot:"
+    ls -lh "${CHROOT_DIR}/boot/" 2>/dev/null || log "WARNING: chroot/boot не существует"
+
+    # Ищем ядро
+    KERNEL_FOUND=""
+    INITRD_FOUND=""
+
+    # Пробуем найти vmlinuz
     if ls "${CHROOT_DIR}"/boot/vmlinuz-* 1>/dev/null 2>&1; then
-        cp "$(ls -v "${CHROOT_DIR}"/boot/vmlinuz-* | tail -n 1)" "${IMAGE_DIR}/casper/vmlinuz"
-        cp "$(ls -v "${CHROOT_DIR}"/boot/initrd.img-* | tail -n 1)" "${IMAGE_DIR}/casper/initrd"
+        KERNEL_FOUND="$(ls -v "${CHROOT_DIR}"/boot/vmlinuz-* | tail -n 1)"
+        log "Найдено ядро: ${KERNEL_FOUND}"
+    elif [[ -f "${CHROOT_DIR}/boot/vmlinuz" ]]; then
+        KERNEL_FOUND="${CHROOT_DIR}/boot/vmlinuz"
+        log "Найдено ядро: vmlinuz (без версии)"
+    fi
+
+    # Пробуем найти initrd
+    if ls "${CHROOT_DIR}"/boot/initrd.img-* 1>/dev/null 2>&1; then
+        INITRD_FOUND="$(ls -v "${CHROOT_DIR}"/boot/initrd.img-* | tail -n 1)"
+        log "Найден initrd: ${INITRD_FOUND}"
+    elif [[ -f "${CHROOT_DIR}/boot/initrd.img" ]]; then
+        INITRD_FOUND="${CHROOT_DIR}/boot/initrd.img"
+        log "Найден initrd: initrd.img (без версии)"
+    fi
+
+    # Копируем если нашли
+    if [[ -n "${KERNEL_FOUND}" ]] && [[ -n "${INITRD_FOUND}" ]]; then
+        cp "${KERNEL_FOUND}" "${IMAGE_DIR}/casper/vmlinuz"
+        cp "${INITRD_FOUND}" "${IMAGE_DIR}/casper/initrd"
         # Также копируем в boot для совместимости
         cp "${IMAGE_DIR}/casper/vmlinuz" "${IMAGE_DIR}/boot/vmlinuz"
         cp "${IMAGE_DIR}/casper/initrd" "${IMAGE_DIR}/boot/initrd"
+        log "Ядро и initrd скопированы в casper/ и boot/"
     else
-        die "Ядро не найдено в chroot/boot"
+        log "ERROR: Ядро или initrd не найдены!"
+        log "Возможные причины:"
+        log "  1. Ядро не установилось в chroot (проблема с linux-image-generic)"
+        log "  2. Initramfs не обновился после установки ядра"
+        log ""
+        log "Попробуйте вручную установить ядро в chroot:"
+        log "  chroot ${CHROOT_DIR} apt-get install -y linux-image-generic linux-modules-generic"
+        log "  chroot ${CHROOT_DIR} update-initramfs -u"
+        die "Сборка прервана: ядро не найдено"
     fi
 
     # Шаг 7: Конфиг GRUB

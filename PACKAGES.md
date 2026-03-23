@@ -15,7 +15,7 @@
 ### VibeCode OS Minimal
 Минимальная консольная система для серверов, контейнеров и развёртывания.
 
-**Размер ISO:** ~500 МБ - 1 ГБ  
+**Размер ISO:** ~600-800 МБ (оптимизировано)
 **Размер после установки:** ~2-3 ГБ
 
 ---
@@ -204,68 +204,84 @@
 | Компонент | Версия / Описание |
 |-----------|-------------------|
 | **База** | Ubuntu 24.04 LTS (Noble Numbat) |
-| **Ядро** | linux-image-generic, linux-headers-generic |
+| **Ядро** | linux-image-generic, linux-headers-generic (опционально) |
 | **Live-поддержка** | casper, squashfs-tools |
 | **Initramfs** | initramfs-tools |
 
-### Консольные утилиты
+### Консольные утилиты (базовый набор)
 
 | Утилита | Назначение |
 |---------|------------|
 | **Zsh** | Оболочка по умолчанию |
 | **Tmux** | Терминальный мультиплексор |
-| **MC (Midnight Commander)** | Файловый менеджер |
-| **Vim-tiny** | Текстовый редактор |
 | **Nano** | Текстовый редактор |
+| **Vim-tiny** | Текстовый редактор |
 | **htop** | Монитор процессов |
-| **neofetch** | Информация о системе |
-| **curl** | Загрузка файлов |
+| **curl** | Загрузка файлов (HTTP/HTTPS) |
 | **wget** | Загрузка файлов |
-| **unzip / zip** | Архиваторы |
-| **p7zip-full** | Поддержка 7z |
-| **git** | Контроль версий |
-| **build-essential** | Компиляторы GCC, make |
+| **unzip** | Распаковка ZIP |
+| **git** | Контроль версий (опционально) |
+| **build-essential** | Компиляторы GCC, make (опционально) |
 | **ca-certificates** | SSL-сертификаты |
-| **software-properties-common** | Управление репозиториями |
 | **NetworkManager** | Управление сетью |
-| **virtualbox-guest-utils** | Поддержка VirtualBox |
-| **tree** | Визуализация дерева файлов |
-| **net-tools** | Сетевые утилиты |
 | **iputils-ping** | Утилита ping |
-| **traceroute** | Трассировка маршрутов |
+| **virtualbox-guest-utils** | Поддержка VirtualBox |
 | **sudo** | Выполнение от root |
+
+### Опциональные пакеты
+
+Могут быть добавлены раскомментированием в `scripts/base/minimal-packages.sh`:
+
+| Пакет | Назначение | Размер |
+|-------|------------|--------|
+| **linux-headers-generic** | Заголовки ядра для модулей | +~100 МБ |
+| **mc** | Midnight Commander | +~5 МБ |
+| **tree** | Визуализация дерева файлов | +~50 КБ |
+| **traceroute** | Трассировка маршрутов | +~100 КБ |
+| **net-tools** | ifconfig, netstat | +~200 КБ |
+| **zip, p7zip-full** | Дополнительные архиваторы | +~2 МБ |
+| **software-properties-common** | add-apt-repository | +~2 МБ |
+| **neofetch** | Информация о системе | +~500 КБ |
+
+**Подробнее:** `docs/MINIMAL-PACKAGES.md`
 
 ---
 
 ## 📋 Сравнение редакций
 
-| Пакет / Программа | Full | Minimal |
-|-------------------|------|---------|
-| MATE Desktop | ✅ | ❌ |
-| Kitty | ✅ | ❌ |
-| Zsh + Oh My Zsh | ✅ | ✅ |
-| Starship | ✅ | ❌ |
-| CLI-утилиты (eza, bat, fd, rg, fzf) | ✅ | ❌ |
-| Python + pyenv | ✅ | ❌ |
-| Node.js + nvm | ✅ | ❌ |
-| Rust + rustup | ✅ | ❌ |
-| Go | ✅ | ❌ |
-| Java + SDKMAN! | ✅ | ❌ |
-| VSCodium | ✅ | ❌ |
-| Neovim | ✅ | ✅ (базовый) |
-| Zed | ✅ | ❌ |
-| Git | ✅ | ✅ |
-| lazygit | ✅ | ❌ |
-| Docker | ✅ | ❌ |
-| Ollama | ✅ | ❌ |
-| Open WebUI | ✅ | ❌ |
-| ai-chat | ✅ | ❌ |
-| Aider | ✅ | ❌ |
-| ComfyUI | ✅ | ❌ |
-| Python AI-библиотеки | ✅ | ❌ |
-| Шрифты (JetBrains Mono, Fira Code) | ✅ | ❌ |
-| MC | ✅ | ✅ |
-| Tmux | ✅ | ✅ |
+| Пакет / Программа | Full | Minimal (базовый) | Minimal (опционально) |
+|-------------------|------|-------------------|----------------------|
+| MATE Desktop | ✅ | ❌ | ❌ |
+| Kitty | ✅ | ❌ | ❌ |
+| Zsh | ✅ | ✅ | ✅ |
+| Oh My Zsh | ✅ | ❌ | ❌ |
+| Starship | ✅ | ❌ | ❌ |
+| CLI-утилиты (eza, bat, fd, rg, fzf) | ✅ | ❌ | ❌ |
+| Python + pyenv | ✅ | ❌ | ❌ |
+| Node.js + nvm | ✅ | ❌ | ❌ |
+| Rust + rustup | ✅ | ❌ | ❌ |
+| Go | ✅ | ❌ | ❌ |
+| Java + SDKMAN! | ✅ | ❌ | ❌ |
+| VSCodium | ✅ | ❌ | ❌ |
+| Neovim | ✅ | ❌ | ❌ |
+| Zed | ✅ | ❌ | ❌ |
+| Git | ✅ | ❌ | ✅ |
+| Docker | ✅ | ❌ | ❌ |
+| Ollama | ✅ | ❌ | ❌ |
+| Open WebUI | ✅ | ❌ | ❌ |
+| ai-chat | ✅ | ❌ | ❌ |
+| Aider | ✅ | ❌ | ❌ |
+| ComfyUI | ✅ | ❌ | ❌ |
+| Python AI-библиотеки | ✅ | ❌ | ❌ |
+| Шрифты (JetBrains Mono, Fira Code) | ✅ | ❌ | ❌ |
+| Tmux | ✅ | ✅ | ✅ |
+| Nano | ✅ | ✅ | ✅ |
+| Vim-tiny | ✅ | ✅ | ✅ |
+| htop | ✅ | ✅ | ✅ |
+| MC | ✅ | ❌ | ✅ |
+| tree | ✅ | ❌ | ✅ |
+| build-essential | ✅ | ❌ | ✅ |
+| linux-headers | ✅ | ❌ | ✅ |
 
 ---
 
