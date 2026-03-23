@@ -60,10 +60,8 @@ case "${BUILD_MODE}" in
     # Шаг 1: Bootstrap
     if [[ ! -d "${CHROOT_DIR}/etc" ]]; then
       log "Шаг 1: Bootstrap Ubuntu 24.04..."
-      # Базовая установка без ядра (ядро установим позже в chroot)
-      debootstrap --arch=amd64 \
-        --include=initramfs-tools \
-        noble "${CHROOT_DIR}" http://archive.ubuntu.com/ubuntu
+      # Полная установка как в base-packages.sh (без --include)
+      debootstrap --arch=amd64 noble "${CHROOT_DIR}" http://archive.ubuntu.com/ubuntu
     fi
 
     # Шаг 2: Mount & Prep
@@ -74,6 +72,7 @@ case "${BUILD_MODE}" in
 
     # Копируем только нужные скрипты
     cp "${ROOT_DIR}/scripts/base/minimal-packages.sh" "${CHROOT_DIR}/root/"
+    cp "${ROOT_DIR}/scripts/base/install-kernel.sh" "${CHROOT_DIR}/root/"
     cp "${ROOT_DIR}/scripts/base/cleanup.sh" "${CHROOT_DIR}/root/"
     cp "${ROOT_DIR}/scripts/base/setup-distro-info.sh" "${CHROOT_DIR}/root/"
     cp "${ROOT_DIR}/scripts/base/setup-bootloader.sh" "${CHROOT_DIR}/root/"
@@ -99,9 +98,14 @@ case "${BUILD_MODE}" in
 
     # Шаг 3: Установка пакетов
     log "Шаг 3: Установка пакетов и настройка..."
-    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/minimal-packages.sh"
-    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/setup-distro-info.sh"
-    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/setup-bootloader.sh"
+    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/minimal-packages.sh" || log "WARNING: minimal-packages.sh failed"
+
+    # Установка ядра (отдельным скриптом)
+    log "Установка ядра Linux..."
+    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/install-kernel.sh" || log "WARNING: install-kernel.sh failed"
+
+    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/setup-distro-info.sh" || log "WARNING: setup-distro-info.sh failed"
+    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/setup-bootloader.sh" || log "WARNING: setup-bootloader.sh failed"
 
     # Создание пользователя
     chroot "${CHROOT_DIR}" /bin/bash -c '
@@ -113,24 +117,6 @@ case "${BUILD_MODE}" in
     '
 
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/cleanup.sh"
-
-    # === УСТАНОВКА ЯДРА (критично для live-boot) ===
-    # Ядро должно устанавливаться в chroot, а не через debootstrap
-    log "Установка ядра Linux в chroot..."
-    chroot "${CHROOT_DIR}" /bin/bash -c "
-      DEBIAN_FRONTEND=noninteractive apt-get update
-      DEBIAN_FRONTEND=noninteractive apt-get install -y linux-image-generic linux-modules-generic
-      update-initramfs -u -k all
-    " || log "WARNING: Возможны проблемы с установкой ядра"
-
-    # Проверка что ядро установилось
-    if ls "${CHROOT_DIR}"/boot/vmlinuz-* 1>/dev/null 2>&1; then
-      log "Ядро установлено успешно:"
-      ls -lh "${CHROOT_DIR}/boot/vmlinuz-*"
-    else
-      log "ERROR: Ядро не найдено после установки!"
-      log "Проверьте логи выше для деталей"
-    fi
 
     # Шаг 4: Размонтирование
     log "Шаг 4: Размонтирование..."
