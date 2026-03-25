@@ -21,6 +21,7 @@ apt-get update -y
 echo "[minimal-packages] Установка обязательных пакетов..."
 DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
   casper \
+  systemd-sysv \
   sudo \
   network-manager \
   iputils-ping \

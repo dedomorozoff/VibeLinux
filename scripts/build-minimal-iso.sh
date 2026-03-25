@@ -87,83 +87,100 @@ case "${BUILD_MODE}" in
     log "Запуск сборки Minimal ISO..."
     trap cleanup_mounts EXIT
 
-    # Шаг 1: Bootstrap
-    if [[ ! -d "${CHROOT_DIR}/etc" ]]; then
-      log "Шаг 1: Bootstrap Ubuntu 24.04..."
-      # Полная установка как в base-packages.sh (без --include)
-      debootstrap --arch=amd64 noble "${CHROOT_DIR}" http://archive.ubuntu.com/ubuntu
+    REUSE_CHROOT=0
+    if [[ "${KEEP_CHROOT:-0}" == "1" ]] && [[ -d "${CHROOT_DIR}/etc" ]] && have_boot_artifacts; then
+      REUSE_CHROOT=1
+      log "KEEP_CHROOT=1: используем существующий chroot и пропускаем bootstrap/apt-шаги"
     fi
 
-    mkdir -p "${CHROOT_DIR}/proc" "${CHROOT_DIR}/sys" "${CHROOT_DIR}/dev/pts" "${CHROOT_DIR}/run"
-
-    # Шаг 2: Mount & Prep
-    log "Шаг 2: Подготовка chroot..."
-    cleanup_mounts
-    mount -t proc proc "${CHROOT_DIR}/proc"
-    mount -t sysfs sys "${CHROOT_DIR}/sys"
-    mount -o bind /dev "${CHROOT_DIR}/dev"
-    mount -t devpts devpts "${CHROOT_DIR}/dev/pts"
-    mount -o bind /run "${CHROOT_DIR}/run"
-
-    # Копируем только нужные скрипты
-    cp "${ROOT_DIR}/scripts/base/minimal-packages.sh" "${CHROOT_DIR}/root/"
-    cp "${ROOT_DIR}/scripts/base/install-kernel.sh" "${CHROOT_DIR}/root/"
-    cp "${ROOT_DIR}/scripts/base/cleanup.sh" "${CHROOT_DIR}/root/"
-    cp "${ROOT_DIR}/scripts/base/setup-distro-info.sh" "${CHROOT_DIR}/root/"
-    cp "${ROOT_DIR}/scripts/base/setup-bootloader.sh" "${CHROOT_DIR}/root/"
-
-    # Копируем скрипт доустановки (minimal-upgrade.sh)
-    if [[ -f "${ROOT_DIR}/scripts/minimal-upgrade.sh" ]]; then
-        log "Копирование minimal-upgrade.sh в chroot..."
-        cp "${ROOT_DIR}/scripts/minimal-upgrade.sh" "${CHROOT_DIR}/usr/local/bin/vibecode-upgrade"
-        chmod +x "${CHROOT_DIR}/usr/local/bin/vibecode-upgrade"
-    fi
-
-    chmod +x "${CHROOT_DIR}/root"/*.sh
-
-    # Конвертация CRLF в LF (для Windows-систем)
-    log "Конвертация окончаний строк в Unix-формат..."
-    if command -v sed &>/dev/null; then
-      chroot "${CHROOT_DIR}" /bin/bash -c "
-        for f in /root/*.sh /usr/local/bin/vibecode-upgrade; do
-          [ -f \"\$f\" ] && sed -i 's/\r$//' \"\$f\" 2>/dev/null || true
-        done
-      "
-    fi
-
-    # Шаг 3: Установка пакетов
-    log "Шаг 3: Установка пакетов и настройка..."
-    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/minimal-packages.sh"
-
-    # Установка ядра (отдельным скриптом)
-    log "Установка ядра Linux..."
-    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/install-kernel.sh"
-
-    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/setup-distro-info.sh"
-    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/setup-bootloader.sh"
-
-    if ! have_boot_artifacts; then
-      log "Ядро или initrd отсутствуют после install-kernel.sh. Пробуем восстановить..."
-      chroot "${CHROOT_DIR}" /bin/bash -c "apt-get install -y --reinstall linux-generic initramfs-tools linux-firmware"
-      chroot "${CHROOT_DIR}" /bin/bash -c "update-initramfs -u -k all"
-    fi
-
-    have_boot_artifacts || die "После установки ядра /boot всё ещё пустой. Проверьте apt-логи внутри chroot."
-
-    # Создание пользователя
-    chroot "${CHROOT_DIR}" /bin/bash -c '
-      if ! id "vibecode" &>/dev/null; then
-        useradd -m -s /bin/bash vibecode
-        echo "vibecode:vibecode" | chpasswd
-        usermod -a -G sudo vibecode
+    if [[ ${REUSE_CHROOT} -eq 0 ]]; then
+      # Шаг 1: Bootstrap
+      if [[ ! -d "${CHROOT_DIR}/etc" ]]; then
+        log "Шаг 1: Bootstrap Ubuntu 24.04..."
+        # Полная установка как в base-packages.sh (без --include)
+        debootstrap --arch=amd64 noble "${CHROOT_DIR}" http://archive.ubuntu.com/ubuntu
       fi
-    '
 
-    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/cleanup.sh"
+      mkdir -p "${CHROOT_DIR}/proc" "${CHROOT_DIR}/sys" "${CHROOT_DIR}/dev/pts" "${CHROOT_DIR}/run"
 
-    # Шаг 4: Размонтирование
-    log "Шаг 4: Размонтирование..."
-    cleanup_mounts
+      # Шаг 2: Mount & Prep
+      log "Шаг 2: Подготовка chroot..."
+      cleanup_mounts
+      mount -t proc proc "${CHROOT_DIR}/proc"
+      mount -t sysfs sys "${CHROOT_DIR}/sys"
+      mount -o bind /dev "${CHROOT_DIR}/dev"
+      mount -t devpts devpts "${CHROOT_DIR}/dev/pts"
+      mount -o bind /run "${CHROOT_DIR}/run"
+
+      # Копируем только нужные скрипты
+      cp "${ROOT_DIR}/scripts/base/minimal-packages.sh" "${CHROOT_DIR}/root/"
+      cp "${ROOT_DIR}/scripts/base/install-kernel.sh" "${CHROOT_DIR}/root/"
+      cp "${ROOT_DIR}/scripts/base/cleanup.sh" "${CHROOT_DIR}/root/"
+      cp "${ROOT_DIR}/scripts/base/setup-distro-info.sh" "${CHROOT_DIR}/root/"
+      cp "${ROOT_DIR}/scripts/base/setup-bootloader.sh" "${CHROOT_DIR}/root/"
+
+      # Копируем скрипт доустановки (minimal-upgrade.sh)
+      if [[ -f "${ROOT_DIR}/scripts/minimal-upgrade.sh" ]]; then
+          log "Копирование minimal-upgrade.sh в chroot..."
+          cp "${ROOT_DIR}/scripts/minimal-upgrade.sh" "${CHROOT_DIR}/usr/local/bin/vibecode-upgrade"
+          chmod +x "${CHROOT_DIR}/usr/local/bin/vibecode-upgrade"
+      fi
+
+      chmod +x "${CHROOT_DIR}/root"/*.sh
+
+      # Конвертация CRLF в LF (для Windows-систем)
+      log "Конвертация окончаний строк в Unix-формат..."
+      if command -v sed &>/dev/null; then
+        chroot "${CHROOT_DIR}" /bin/bash -c "
+          for f in /root/*.sh /usr/local/bin/vibecode-upgrade; do
+            [ -f \"\$f\" ] && sed -i 's/\r$//' \"\$f\" 2>/dev/null || true
+          done
+        "
+      fi
+
+      # Шаг 3: Установка пакетов
+      log "Шаг 3: Установка пакетов и настройка..."
+      chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/minimal-packages.sh"
+
+      # Установка ядра (отдельным скриптом)
+      log "Установка ядра Linux..."
+      chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/install-kernel.sh"
+
+      chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/setup-distro-info.sh"
+      chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/setup-bootloader.sh"
+
+      if ! have_boot_artifacts; then
+        log "Ядро или initrd отсутствуют после install-kernel.sh. Пробуем восстановить..."
+        chroot "${CHROOT_DIR}" /bin/bash -c "apt-get install -y --reinstall linux-generic initramfs-tools linux-firmware"
+        chroot "${CHROOT_DIR}" /bin/bash -c "update-initramfs -u -k all"
+      fi
+
+      have_boot_artifacts || die "После установки ядра /boot всё ещё пустой. Проверьте apt-логи внутри chroot."
+      chroot "${CHROOT_DIR}" /bin/bash -c "test -x /sbin/init" || die "В chroot отсутствует исполняемый /sbin/init. Убедитесь, что установлен systemd-sysv."
+
+      # Создание пользователя
+      chroot "${CHROOT_DIR}" /bin/bash -c '
+        if ! id "vibecode" &>/dev/null; then
+          useradd -m -s /bin/bash vibecode
+          echo "vibecode:vibecode" | chpasswd
+          usermod -a -G sudo vibecode
+        fi
+      '
+
+      log "Генерация manifest для live-образа..."
+      mkdir -p "${IMAGE_DIR}/casper"
+      chroot "${CHROOT_DIR}" dpkg-query -W -f='${Package} ${Version}\n' > "${IMAGE_DIR}/casper/filesystem.manifest"
+      cp "${IMAGE_DIR}/casper/filesystem.manifest" "${IMAGE_DIR}/casper/filesystem.manifest-remove"
+
+      chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/cleanup.sh"
+
+      # Шаг 4: Размонтирование
+      log "Шаг 4: Размонтирование..."
+      cleanup_mounts
+    else
+      log "Пропускаем шаги 1-4 и переходим к пересборке образа"
+      [[ -x "${CHROOT_DIR}/sbin/init" ]] || die "KEEP_CHROOT=1, но в chroot нет /sbin/init. Нужен полный прогон без KEEP_CHROOT."
+    fi
 
     # Шаг 5: SquashFS
     log "Шаг 5: Создание SquashFS..."
@@ -179,6 +196,8 @@ case "${BUILD_MODE}" in
     mkdir -p "${IMAGE_DIR}/boot/grub/i386-pc"
     mkdir -p "${IMAGE_DIR}/boot/grub/x86_64-efi"
     mkdir -p "${IMAGE_DIR}/casper"
+    mkdir -p "${IMAGE_DIR}/.disk"
+    mkdir -p "${IMAGE_DIR}/EFI/boot"
 
     # Копирование ядра (используем относительные пути для casper)
     log "Копирование ядра и initrd..."
@@ -199,7 +218,7 @@ case "${BUILD_MODE}" in
         cp "${INITRD_FOUND}" "${IMAGE_DIR}/casper/initrd"
         # Также копируем в boot для совместимости
         cp "${IMAGE_DIR}/casper/vmlinuz" "${IMAGE_DIR}/boot/vmlinuz"
-        cp "${IMAGE_DIR}/casper/initrd" "${IMAGE_DIR}/boot/initrd"
+        cp "${IMAGE_DIR}/casper/initrd" "${IMAGE_DIR}/boot/initrd.img"
         log "Ядро и initrd скопированы в casper/ и boot/"
     else
         log "ERROR: Ядро или initrd не найдены!"
@@ -213,6 +232,13 @@ case "${BUILD_MODE}" in
         log "  chroot ${CHROOT_DIR} update-initramfs -u -k all"
         die "Сборка прервана: ядро не найдено"
     fi
+
+    log "Подготовка метаданных live-образа..."
+    du -sx "${CHROOT_DIR}" --block=1M | awk '{print $1}' > "${IMAGE_DIR}/casper/filesystem.size"
+    echo "VibeCode OS Minimal" > "${IMAGE_DIR}/.disk/info"
+    echo "system" > "${IMAGE_DIR}/.disk/cd_type"
+    date > "${IMAGE_DIR}/.disk/build_time"
+    echo "VibeCodeMinimal" > "${IMAGE_DIR}/.disk/ubuntu_dist"
 
     log "Копирование модулей GRUB для графического меню..."
     if [[ -d "/usr/lib/grub/i386-pc" ]]; then
@@ -241,74 +267,31 @@ case "${BUILD_MODE}" in
       done
     fi
 
-    # Создаём тему GRUB
-    log "Создание темы GRUB..."
-    mkdir -p "${IMAGE_DIR}/boot/grub/themes/vibecode"
-    cat > "${IMAGE_DIR}/boot/grub/themes/vibecode/theme.txt" << 'THEMEEOF'
-title-text: ""
-title-color: "#ffffff"
-message-font: "DejaVu Sans:16"
-message-color: "#ffffff"
-+ boot_menu {
-    left = 20%
-    top = 20%
-    width = 60%
-    height = 60%
-    item_height = 30px
-    padding = 20px
-    border = 0
-    border_color = "#2c3e50"
-    item_color = "#ffffff"
-    selected_item_color = "#3498db"
-    item_font = "DejaVu Sans:16"
-    selected_item_font = "DejaVu Sans:bold:16"
-}
-THEMEEOF
-
     cat > "${IMAGE_DIR}/boot/grub/grub.cfg" << 'GRUBEOF'
 set default=0
 set timeout=10
 set timeout_style=menu
+set gfxpayload=text
 
-# Загружаем шрифт и включаем графический режим
-if loadfont ${prefix}/fonts/unicode.pf2 ; then
-    set gfxmode=auto,1024x768,800x600,640x480
-    insmod all_video
-    insmod gfxterm
-    terminal_output gfxterm
-elif loadfont ${prefix}/fonts/DejaVuSans.pf2 ; then
-    set gfxmode=auto,1024x768,800x600,640x480
-    insmod all_video
-    insmod gfxterm
-    terminal_output gfxterm
-else
-    # Fallback на консоль если шрифт не загружен
-    terminal_output console
-fi
+terminal_output console
 
-# Применяем тему (если есть)
-if [ -f ${prefix}/themes/vibecode/theme.txt ]; then
-    set theme=${prefix}/themes/vibecode/theme.txt
-fi
-
-# Safe video режим для VirtualBox и проблемных видеокарт
 menuentry "VibeCode OS Minimal (Live)" {
-    linux /casper/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false quiet ---
+    linux /casper/vmlinuz boot=casper noprompt quiet ---
     initrd /casper/initrd
 }
 
 menuentry "VibeCode OS Minimal (safe graphics)" {
-    linux /casper/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false quiet splash ---
+    linux /casper/vmlinuz boot=casper noprompt nomodeset quiet ---
     initrd /casper/initrd
 }
 
 menuentry "VibeCode OS Minimal (rescue mode)" {
-    linux /casper/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false rescue ---
+    linux /casper/vmlinuz boot=casper noprompt rescue ---
     initrd /casper/initrd
 }
 
 menuentry "VibeCode OS Minimal (text mode)" {
-    linux /casper/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false textmode ---
+    linux /casper/vmlinuz boot=casper noprompt systemd.unit=multi-user.target ---
     initrd /casper/initrd
 }
 GRUBEOF
@@ -328,25 +311,15 @@ GRUBEOF
     # Создаём embed-конфиг для GRUB
     GRUB_EMBED_CFG="$(mktemp)"
     cat > "${GRUB_EMBED_CFG}" << 'GRUBEMBEDEOF'
-set echo=1
-echo "Searching for GRUB config (Minimal ISO)..."
-set root=
-search --no-floppy --file --set=root /boot/grub/grub.cfg
-if [ -z "$root" ]; then
-    search --no-floppy --file --set=root /casper/vmlinuz
+set root=(cd)
+set prefix=(cd)/boot/grub
+if [ -f ${prefix}/grub.cfg ]; then
+    configfile ${prefix}/grub.cfg
 fi
-if [ -z "$root" ]; then
-    search --no-floppy --label --set=root VibeCodeMinimal
-fi
-if [ -f ($root)/boot/grub/grub.cfg ]; then
-    echo "Found config on $root"
-    set prefix=($root)/boot/grub
-    configfile $prefix/grub.cfg
-else
-    echo "Config not found! Dropping to shell."
-    ls ($root)/
-    ls ($root)/boot/grub/
-fi
+
+search --set=root --file /boot/grub/grub.cfg
+set prefix=($root)/boot/grub
+configfile $prefix/grub.cfg
 GRUBEMBEDEOF
 
     # --- BIOS boot image ---
@@ -372,10 +345,9 @@ GRUBEMBEDEOF
     # --- UEFI boot image ---
     log "Создание UEFI boot image..."
 
-    # Создаём временную директорию для EFI образа с темой и шрифтами
+    # Создаём временную директорию для EFI образа
     EFI_TEMP_DIR="$(mktemp -d)"
     mkdir -p "${EFI_TEMP_DIR}/boot/grub/fonts"
-    mkdir -p "${EFI_TEMP_DIR}/boot/grub/themes/vibecode"
 
     # Копируем шрифты
     if [[ -f "${IMAGE_DIR}/boot/grub/fonts/unicode.pf2" ]]; then
@@ -383,11 +355,6 @@ GRUBEMBEDEOF
     fi
     if [[ -f "${IMAGE_DIR}/boot/grub/fonts/DejaVuSans.pf2" ]]; then
       cp "${IMAGE_DIR}/boot/grub/fonts/DejaVuSans.pf2" "${EFI_TEMP_DIR}/boot/grub/fonts/"
-    fi
-
-    # Копируем тему
-    if [[ -f "${IMAGE_DIR}/boot/grub/themes/vibecode/theme.txt" ]]; then
-      cp "${IMAGE_DIR}/boot/grub/themes/vibecode/theme.txt" "${EFI_TEMP_DIR}/boot/grub/themes/vibecode/"
     fi
 
     # Копируем основной grub.cfg для EFI
@@ -423,14 +390,12 @@ GRUBEMBEDEOF
 
     xorriso -as mkisofs \
       -iso-level 3 \
-      -full-iso9660-filenames \
-      -volid "VibeCodeMinimal" \
-      -output "${ISO_OUTPUT}" \
+      -r -V "VibeCodeMinimal" \
+      -J -joliet-long \
+      -o "${ISO_OUTPUT}" \
       --grub2-mbr "${GRUB_MBR}" \
       --mbr-force-bootable \
       -partition_offset 16 \
-      -isohybrid-mbr "${GRUB_MBR}" \
-      -isohybrid-gpt-basdat \
       -b boot/grub/bios.img \
         -no-emul-boot \
         -boot-load-size 4 \
@@ -439,7 +404,6 @@ GRUBEMBEDEOF
       -eltorito-alt-boot \
       -e boot/grub/efi.img \
         -no-emul-boot \
-        -isohybrid-gpt-basdat \
       -append_partition 2 0xef "${EFI_IMG}" \
       "${IMAGE_DIR}" \
       || die "Ошибка при создании ISO"
