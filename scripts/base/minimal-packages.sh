@@ -17,54 +17,31 @@ fi
 echo "[minimal-packages] Обновление списка пакетов..."
 apt-get update -y
 
-# БАЗОВАЯ СИСТЕМА: casper, sudo
-echo "[minimal-packages] Установка базовой системы..."
-DEBIAN_FRONTEND=noninteractive apt-get install -y \
+# Базовый набор нужен для live-сессии и дальнейшей настройки chroot.
+echo "[minimal-packages] Установка обязательных пакетов..."
+DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
   casper \
   sudo \
-  || true
-
-# СЕТЬ: network-manager, ping, curl, wget, SSL
-echo "[minimal-packages] Установка сетевых утилит..."
-DEBIAN_FRONTEND=noninteractive apt-get install -y \
   network-manager \
   iputils-ping \
   curl \
   wget \
   ca-certificates \
-  || true
-
-# ТЕРМИНАЛ И ОБОЛОЧКА: zsh, tmux
-echo "[minimal-packages] Установка оболочки и терминала..."
-DEBIAN_FRONTEND=noninteractive apt-get install -y \
   zsh \
   tmux \
-  || true
-
-# ТЕКСТОВЫЕ РЕДАКТОРЫ: nano, vim-tiny
-echo "[minimal-packages] Установка текстовых редакторов..."
-DEBIAN_FRONTEND=noninteractive apt-get install -y \
   nano \
   vim-tiny \
-  || true
-
-# МОНИТОРИНГ: htop
-echo "[minimal-packages] Установка утилит мониторинга..."
-DEBIAN_FRONTEND=noninteractive apt-get install -y \
   htop \
-  || true
+  unzip
 
-# АРХИВАТОРЫ: unzip
-echo "[minimal-packages] Установка архиваторов..."
-DEBIAN_FRONTEND=noninteractive apt-get install -y \
-  unzip \
-  || true
-
-# ВИРТУАЛИЗАЦИЯ: virtualbox-guest-utils
-echo "[minimal-packages] Установка утилит виртуализации..."
-DEBIAN_FRONTEND=noninteractive apt-get install -y \
+# VirtualBox guest tools не должны ломать сборку ISO, если пакет недоступен
+# или его postinst ведёт себя нестабильно в chroot.
+echo "[minimal-packages] Установка опциональных утилит виртуализации..."
+if ! DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
   virtualbox-guest-utils \
-  || true
+; then
+  echo "[minimal-packages] WARNING: virtualbox-guest-utils не установился, продолжаем без него"
+fi
 
 echo "[minimal-packages] Базовые серверные утилиты установлены."
 echo "[minimal-packages] Готово."

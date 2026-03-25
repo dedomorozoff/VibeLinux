@@ -25,6 +25,34 @@ ISO_OUTPUT="${ISO_OUTPUT:-${WORK_DIR}/VibeCodeOS-minimal.iso}"
 log() { echo "[build-minimal-iso] $*"; }
 die() { echo "[build-minimal-iso] ERROR: $*" >&2; exit 1; }
 
+cleanup_mounts() {
+  umount -l "${CHROOT_DIR}/proc" 2>/dev/null || true
+  umount -l "${CHROOT_DIR}/sys" 2>/dev/null || true
+  umount -l "${CHROOT_DIR}/run" 2>/dev/null || true
+  umount -l "${CHROOT_DIR}/dev/pts" 2>/dev/null || true
+  umount -l "${CHROOT_DIR}/dev" 2>/dev/null || true
+}
+
+latest_kernel_path() {
+  if ls "${CHROOT_DIR}"/boot/vmlinuz-* 1>/dev/null 2>&1; then
+    ls -v "${CHROOT_DIR}"/boot/vmlinuz-* | tail -n 1
+  elif [[ -f "${CHROOT_DIR}/boot/vmlinuz" ]]; then
+    echo "${CHROOT_DIR}/boot/vmlinuz"
+  fi
+}
+
+latest_initrd_path() {
+  if ls "${CHROOT_DIR}"/boot/initrd.img-* 1>/dev/null 2>&1; then
+    ls -v "${CHROOT_DIR}"/boot/initrd.img-* | tail -n 1
+  elif [[ -f "${CHROOT_DIR}/boot/initrd.img" ]]; then
+    echo "${CHROOT_DIR}/boot/initrd.img"
+  fi
+}
+
+have_boot_artifacts() {
+  [[ -n "$(latest_kernel_path)" ]] && [[ -n "$(latest_initrd_path)" ]]
+}
+
 need_cmd() {
   local cmd="$1"
   command -v "$cmd" >/dev/null 2>&1 || die "Не найдено: '$cmd'. Установите зависимости (debootstrap, mksquashfs, xorriso, grub-pc-bin, grub-efi-amd64-bin, mtools)."
@@ -45,6 +73,7 @@ case "${BUILD_MODE}" in
     need_cmd grub-mkstandalone
     need_cmd mkfs.vfat
     need_cmd mcopy
+    need_cmd mmd
 
     [[ -f "${ROOT_DIR}/scripts/base/minimal-packages.sh" ]] || die "Не найден скрипт minimal-packages.sh"
     log "OK: dry-run проверки пройдены."
@@ -56,6 +85,7 @@ case "${BUILD_MODE}" in
     fi
 
     log "Запуск сборки Minimal ISO..."
+    trap cleanup_mounts EXIT
 
     # Шаг 1: Bootstrap
     if [[ ! -d "${CHROOT_DIR}/etc" ]]; then
@@ -64,11 +94,16 @@ case "${BUILD_MODE}" in
       debootstrap --arch=amd64 noble "${CHROOT_DIR}" http://archive.ubuntu.com/ubuntu
     fi
 
+    mkdir -p "${CHROOT_DIR}/proc" "${CHROOT_DIR}/sys" "${CHROOT_DIR}/dev/pts" "${CHROOT_DIR}/run"
+
     # Шаг 2: Mount & Prep
     log "Шаг 2: Подготовка chroot..."
-    mount -t proc proc "${CHROOT_DIR}/proc" 2>/dev/null || true
-    mount -t sysfs sys "${CHROOT_DIR}/sys" 2>/dev/null || true
-    mount -o bind /dev "${CHROOT_DIR}/dev" 2>/dev/null || true
+    cleanup_mounts
+    mount -t proc proc "${CHROOT_DIR}/proc"
+    mount -t sysfs sys "${CHROOT_DIR}/sys"
+    mount -o bind /dev "${CHROOT_DIR}/dev"
+    mount -t devpts devpts "${CHROOT_DIR}/dev/pts"
+    mount -o bind /run "${CHROOT_DIR}/run"
 
     # Копируем только нужные скрипты
     cp "${ROOT_DIR}/scripts/base/minimal-packages.sh" "${CHROOT_DIR}/root/"
@@ -98,14 +133,22 @@ case "${BUILD_MODE}" in
 
     # Шаг 3: Установка пакетов
     log "Шаг 3: Установка пакетов и настройка..."
-    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/minimal-packages.sh" || log "WARNING: minimal-packages.sh failed"
+    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/minimal-packages.sh"
 
     # Установка ядра (отдельным скриптом)
     log "Установка ядра Linux..."
-    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/install-kernel.sh" || log "WARNING: install-kernel.sh failed"
+    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/install-kernel.sh"
 
-    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/setup-distro-info.sh" || log "WARNING: setup-distro-info.sh failed"
-    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/setup-bootloader.sh" || log "WARNING: setup-bootloader.sh failed"
+    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/setup-distro-info.sh"
+    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/setup-bootloader.sh"
+
+    if ! have_boot_artifacts; then
+      log "Ядро или initrd отсутствуют после install-kernel.sh. Пробуем восстановить..."
+      chroot "${CHROOT_DIR}" /bin/bash -c "apt-get install -y --reinstall linux-generic initramfs-tools linux-firmware"
+      chroot "${CHROOT_DIR}" /bin/bash -c "update-initramfs -u -k all"
+    fi
+
+    have_boot_artifacts || die "После установки ядра /boot всё ещё пустой. Проверьте apt-логи внутри chroot."
 
     # Создание пользователя
     chroot "${CHROOT_DIR}" /bin/bash -c '
@@ -120,9 +163,7 @@ case "${BUILD_MODE}" in
 
     # Шаг 4: Размонтирование
     log "Шаг 4: Размонтирование..."
-    umount -l "${CHROOT_DIR}/proc" || true
-    umount -l "${CHROOT_DIR}/sys" || true
-    umount -l "${CHROOT_DIR}/dev" || true
+    cleanup_mounts
 
     # Шаг 5: SquashFS
     log "Шаг 5: Создание SquashFS..."
@@ -135,6 +176,8 @@ case "${BUILD_MODE}" in
     # Шаг 6: Подготовка ISO структуры
     log "Шаг 6: Подготовка структуры ISO..."
     mkdir -p "${IMAGE_DIR}/boot/grub"
+    mkdir -p "${IMAGE_DIR}/boot/grub/i386-pc"
+    mkdir -p "${IMAGE_DIR}/boot/grub/x86_64-efi"
     mkdir -p "${IMAGE_DIR}/casper"
 
     # Копирование ядра (используем относительные пути для casper)
@@ -144,27 +187,11 @@ case "${BUILD_MODE}" in
     log "Содержимое chroot/boot:"
     ls -lh "${CHROOT_DIR}/boot/" 2>/dev/null || log "WARNING: chroot/boot не существует"
 
-    # Ищем ядро
-    KERNEL_FOUND=""
-    INITRD_FOUND=""
+    KERNEL_FOUND="$(latest_kernel_path)"
+    INITRD_FOUND="$(latest_initrd_path)"
 
-    # Пробуем найти vmlinuz
-    if ls "${CHROOT_DIR}"/boot/vmlinuz-* 1>/dev/null 2>&1; then
-        KERNEL_FOUND="$(ls -v "${CHROOT_DIR}"/boot/vmlinuz-* | tail -n 1)"
-        log "Найдено ядро: ${KERNEL_FOUND}"
-    elif [[ -f "${CHROOT_DIR}/boot/vmlinuz" ]]; then
-        KERNEL_FOUND="${CHROOT_DIR}/boot/vmlinuz"
-        log "Найдено ядро: vmlinuz (без версии)"
-    fi
-
-    # Пробуем найти initrd
-    if ls "${CHROOT_DIR}"/boot/initrd.img-* 1>/dev/null 2>&1; then
-        INITRD_FOUND="$(ls -v "${CHROOT_DIR}"/boot/initrd.img-* | tail -n 1)"
-        log "Найден initrd: ${INITRD_FOUND}"
-    elif [[ -f "${CHROOT_DIR}/boot/initrd.img" ]]; then
-        INITRD_FOUND="${CHROOT_DIR}/boot/initrd.img"
-        log "Найден initrd: initrd.img (без версии)"
-    fi
+    [[ -n "${KERNEL_FOUND}" ]] && log "Найдено ядро: ${KERNEL_FOUND}"
+    [[ -n "${INITRD_FOUND}" ]] && log "Найден initrd: ${INITRD_FOUND}"
 
     # Копируем если нашли
     if [[ -n "${KERNEL_FOUND}" ]] && [[ -n "${INITRD_FOUND}" ]]; then
@@ -177,13 +204,22 @@ case "${BUILD_MODE}" in
     else
         log "ERROR: Ядро или initrd не найдены!"
         log "Возможные причины:"
-        log "  1. Ядро не установилось в chroot (проблема с linux-image-generic)"
+        log "  1. Ядро не установилось в chroot (ошибка apt/dpkg внутри install-kernel.sh)"
         log "  2. Initramfs не обновился после установки ядра"
+        log "  3. /dev, /dev/pts или /run были недоступны внутри chroot"
         log ""
         log "Попробуйте вручную установить ядро в chroot:"
-        log "  chroot ${CHROOT_DIR} apt-get install -y linux-image-generic linux-modules-generic"
-        log "  chroot ${CHROOT_DIR} update-initramfs -u"
+        log "  chroot ${CHROOT_DIR} apt-get install -y linux-generic initramfs-tools linux-firmware"
+        log "  chroot ${CHROOT_DIR} update-initramfs -u -k all"
         die "Сборка прервана: ядро не найдено"
+    fi
+
+    log "Копирование модулей GRUB для графического меню..."
+    if [[ -d "/usr/lib/grub/i386-pc" ]]; then
+      cp -r /usr/lib/grub/i386-pc/*.mod "${IMAGE_DIR}/boot/grub/i386-pc/" 2>/dev/null || true
+    fi
+    if [[ -d "/usr/lib/grub/x86_64-efi" ]]; then
+      cp -r /usr/lib/grub/x86_64-efi/*.mod "${IMAGE_DIR}/boot/grub/x86_64-efi/" 2>/dev/null || true
     fi
 
     # Шаг 7: Конфиг GRUB
@@ -320,8 +356,8 @@ GRUBEMBEDEOF
     grub-mkstandalone \
       --format=i386-pc \
       --output="${WORK_DIR}/core.img" \
-      --install-modules="linux normal iso9660 biosdisk memdisk search search_fs_file search_label tar ls part_gpt part_msdos fat ntfs configfile loopback" \
-      --modules="linux normal iso9660 biosdisk search search_fs_file search_label configfile part_gpt part_msdos" \
+      --install-modules="linux normal iso9660 biosdisk memdisk search search_fs_file search_label tar ls part_gpt part_msdos fat ntfs configfile loopback gfxterm all_video font png jpeg gettext gfxmenu" \
+      --modules="linux normal iso9660 biosdisk search search_fs_file search_label configfile part_gpt part_msdos fat gfxterm all_video font png jpeg gfxmenu" \
       --locales="" \
       --fonts="" \
       "boot/grub/grub.cfg=${GRUB_EMBED_CFG}"
@@ -360,8 +396,8 @@ GRUBEMBEDEOF
     grub-mkstandalone \
       --format=x86_64-efi \
       --output="${WORK_DIR}/bootx64.efi" \
-      --install-modules="linux normal iso9660 search search_fs_file search_label tar ls part_gpt part_msdos fat ntfs configfile loopback" \
-      --modules="linux normal iso9660 search search_fs_file search_label configfile part_gpt part_msdos fat" \
+      --install-modules="linux normal iso9660 search search_fs_file search_label tar ls part_gpt part_msdos fat ntfs configfile loopback gfxterm all_video font png jpeg gettext gfxmenu" \
+      --modules="linux normal iso9660 search search_fs_file search_label configfile part_gpt part_msdos fat gfxterm all_video font png jpeg gfxmenu" \
       --locales="" \
       --fonts="" \
       "boot/grub/grub.cfg=${GRUB_EMBED_CFG}"
@@ -409,6 +445,7 @@ GRUBEMBEDEOF
       || die "Ошибка при создании ISO"
 
     log "✅ Minimal ISO собран: ${ISO_OUTPUT}"
+    trap - EXIT
     ;;
 
   *)

@@ -13,16 +13,26 @@ apt-get update -y
 
 echo "[install-kernel] Установка ядра Linux..."
 DEBIAN_FRONTEND=noninteractive apt-get install -y \
-  linux-image-generic \
-  linux-modules-generic \
+  linux-generic \
   initramfs-tools \
-  || true
+  linux-firmware
 
 echo "[install-kernel] Обновление initramfs..."
 if command -v update-initramfs &>/dev/null; then
-  update-initramfs -u -k all || echo "[install-kernel] Warning: Failed to update initramfs"
+  update-initramfs -u -k all
 else
-  echo "[install-kernel] update-initramfs not found"
+  echo "[install-kernel] ERROR: update-initramfs not found"
+  exit 1
 fi
 
-echo "[install-kernel] Ядро установлено."
+if ! ls /boot/vmlinuz-* >/dev/null 2>&1; then
+  echo "[install-kernel] ERROR: После установки не найдено ядро в /boot"
+  exit 1
+fi
+
+if ! ls /boot/initrd.img-* >/dev/null 2>&1; then
+  echo "[install-kernel] ERROR: После установки не найден initrd в /boot"
+  exit 1
+fi
+
+echo "[install-kernel] Ядро и initrd успешно установлены."
