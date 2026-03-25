@@ -4,11 +4,9 @@ set -euo pipefail
 # Скрипт установки расширений VSCodium для VibeCode OS
 
 USER_NAME="${SUDO_USER:-$USER}"
-USER_HOME="$(getent passwd "$USER_NAME" | cut -d: -f6)"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-
-EXTENSIONS_FILE="${ROOT_DIR}/scripts/dev/configs/vscodium-extensions.txt"
+DEV_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+EXTENSIONS_FILE="${VSCODIUM_EXTENSIONS_FILE:-${DEV_DIR}/configs/vscodium-extensions.txt}"
 
 if [[ ! -f "$EXTENSIONS_FILE" ]]; then
   echo "[install-vscodium-extensions] ERROR: Файл расширений не найден: $EXTENSIONS_FILE"
@@ -27,7 +25,7 @@ while IFS= read -r line || [[ -n "$line" ]]; do
   
   if [[ -n "$extension_id" ]]; then
     echo "[install-vscodium-extensions] Установка: $extension_id"
-    sudo -u "$USER_NAME" bash -lc "codium --install-extension '$extension_id' 2>/dev/null || true"
+    su - "$USER_NAME" -c "codium --install-extension '$extension_id'" 2>/dev/null || true
   fi
 done < "$EXTENSIONS_FILE"
 

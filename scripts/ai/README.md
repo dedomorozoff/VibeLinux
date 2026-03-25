@@ -61,6 +61,15 @@ sudo ./setup-ai-stack.sh
 **install-github-copilot-cli.sh**
 - GitHub Copilot CLI (требует подписку)
 
+**install-codex-cli.sh**
+- OpenAI Codex CLI
+
+**install-claude-code.sh**
+- Anthropic Claude Code
+
+**install-qwen-code.sh**
+- Qwen Code
+
 **install-terminal-ai.sh**
 - Дополнительные терминальные AI-утилиты
 

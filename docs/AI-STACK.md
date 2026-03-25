@@ -40,6 +40,12 @@
 - Установка: `scripts/ai/install-aider.sh`.
 - Запуск: `aider`.
 
+**Современные agentic CLI (опционально)**
+- **Codex CLI** — `scripts/ai/install-codex-cli.sh`
+- **Claude Code** — `scripts/ai/install-claude-code.sh`
+- **Qwen Code** — `scripts/ai/install-qwen-code.sh`
+- Рекомендуется держать их как опциональный слой поверх локального Ollama/Aider, а не тянуть в базовый ISO по умолчанию.
+
 ---
 
 ### **AI в редакторах**
@@ -104,8 +110,10 @@ pip install torch torchvision torchaudio --index-url https://download.pytorch.or
 - Требует GitHub аккаунт и подписку
 
 **Другие инструменты**
+- Codex CLI — локальный агент OpenAI в терминале
+- Claude Code — агент Anthropic для codebase/terminal workflows
+- Qwen Code — open-source terminal agent с поддержкой OpenAI/Anthropic-compatible API
 - Cursor — проприетарный IDE с AI
-- Claude — через веб или API
 - Warp — терминал с AI-функциями
 
 Документация по интеграции в `docs/AI-STACK.md`

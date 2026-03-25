@@ -9,7 +9,17 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 USER_NAME="${1:-root}"
-USER_HOME="/home/${USER_NAME}"
+USER_HOME=""
+if command -v getent >/dev/null 2>&1; then
+  USER_HOME="$(getent passwd "${USER_NAME}" | cut -d: -f6)"
+fi
+if [[ -z "${USER_HOME}" ]]; then
+  if [[ "${USER_NAME}" == "root" ]]; then
+    USER_HOME="/root"
+  else
+    USER_HOME="/home/${USER_NAME}"
+  fi
+fi
 BRANDING_DIR="/root/branding"
 
 echo "[setup-terminal] Установка Kitty..."
@@ -34,10 +44,9 @@ chown -R "$USER_NAME:$USER_NAME" "${USER_HOME}/.config/kitty" 2>/dev/null || tru
 echo "[setup-terminal] Установка шрифтов для кодинга..."
 DEBIAN_FRONTEND=noninteractive apt-get install -y \
   fonts-jetbrains-mono \
-  fonts-fira-code \
+  fonts-firacode \
   fonts-cascadia-code \
   fonts-hack \
   || true
 
 echo "[setup-terminal] Готово."
-

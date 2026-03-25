@@ -64,7 +64,7 @@
 ### Внутри chroot (`scripts/dev/chroot-configs/`):
 - `kitty.conf` — копируется в `/root/.config/kitty/`
 - `vscodium-settings.json` — копируется в `/root/.config/codium/User/`
-- `vscodium-extensions.txt` — копируется в `/root/dev-configs/`
+- `vscodium-extensions.txt` — копируется в `/root/configs/`
 
 ---
 

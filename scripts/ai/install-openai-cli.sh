@@ -23,6 +23,6 @@ cat <<'EOF'
   1. Получить API-ключ OpenAI.
   2. Экспортировать переменную окружения:
      export OPENAI_API_KEY="ваш_ключ"
-  3. Использовать команды вида:
-     openai chat.completions.create -m gpt-4.1 -g "help me with..."
+  3. Использовать OpenAI CLI для запросов к API или установить Codex CLI:
+     sudo ./scripts/ai/install-codex-cli.sh
 EOF

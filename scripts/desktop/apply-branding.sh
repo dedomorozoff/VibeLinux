@@ -34,8 +34,11 @@ if [[ -d "${BRANDING_DIR}/wallpapers" ]]; then
   # Убедимся что файл называется правильно для dconf
   if [[ -f /usr/share/backgrounds/vibecode-dark.svg ]]; then
     : # already copied
-  elif [[ -f /usr/share/backgrounds/*.svg ]]; then
-    cp /usr/share/backgrounds/*.svg /usr/share/backgrounds/vibecode-dark.svg 2>/dev/null || true
+  else
+    first_system_wallpaper="$(find /usr/share/backgrounds -maxdepth 1 -type f -name '*.svg' | head -n 1)"
+    if [[ -n "${first_system_wallpaper}" ]]; then
+      cp "${first_system_wallpaper}" /usr/share/backgrounds/vibecode-dark.svg 2>/dev/null || true
+    fi
   fi
 fi
 
@@ -173,11 +176,6 @@ fi
 cp "/home/${TARGET_USER}/.config/vibecodeos-dconf.sh" /etc/skel/.config/ 2>/dev/null || true
 chmod +x /etc/skel/.config/vibecodeos-dconf.sh
 
-# Копируем autostart в /etc/skel (после того как он создан)
-if [[ -f "/home/${TARGET_USER}/.config/autostart/vibecodeos-theme.desktop" ]]; then
-  cp "/home/${TARGET_USER}/.config/autostart/vibecodeos-theme.desktop" /etc/skel/.config/autostart/ 2>/dev/null || true
-fi
-
 # Настройки dconf на уровне системы (/etc/dconf/db/local.d/)
 echo "[branding] Настройка системных dconf..."
 mkdir -p /etc/dconf/db/local.d
@@ -217,6 +215,9 @@ Hidden=false
 NoDisplay=true
 X-MATE-Autostart-enabled=true
 EOF
+
+# Копируем autostart в /etc/skel после создания файла
+cp "/home/${TARGET_USER}/.config/autostart/vibecodeos-theme.desktop" /etc/skel/.config/autostart/ 2>/dev/null || true
 
 # Настройка neofetch для показа ASCII-логотипа
 if [[ -f "${BRANDING_DIR}/logos/ascii-logo.txt" ]]; then

@@ -10,9 +10,9 @@
 - **Инструменты:**
   - `debootstrap` — создание минимальной Ubuntu 24.04 (noble) в chroot.
   - `squashfs-tools` (`mksquashfs`) — упаковка rootfs в SquashFS.
-  - `xorriso` — подготовка образа.
-  - `grub-mkrescue` (пакеты `grub-pc-bin`, `grub-efi-amd64-bin`) — создание загрузочного ISO.
-  - `mtools` (`mformat` и др.) — вспомогательные утилиты, которые использует `grub-mkrescue`.
+  - `grub-mkstandalone` (пакеты `grub-pc-bin`, `grub-efi-amd64-bin`) — сборка BIOS/UEFI загрузчиков.
+  - `xorriso` — сборка hybrid ISO c BIOS + UEFI.
+  - `mtools` (`mcopy` и др.) + `dosfstools` (`mkfs.vfat`) — создание EFI System Partition.
   - `grub-common` (`grub-mkfont`) — создание шрифтов для GRUB.
   - `fonts-dejavu-core` — шрифты для графического режима GRUB.
 - **Причины выбора:**
@@ -87,10 +87,13 @@ sudo BUILD_MODE=full ./scripts/build-minimal-iso.sh
 
 ```bash
 sudo apt install -y \
+  debootstrap \
+  squashfs-tools \
   grub-common \
   grub-pc-bin \
   grub-efi-amd64-bin \
   fonts-dejavu-core \
+  dosfstools \
   mtools \
   xorriso
 ```
@@ -115,7 +118,8 @@ sudo apt install -y \
      - `$IMAGE_DIR/casper/filesystem.squashfs`
      - служебные файлы для live-сессии (аналогично стандартной разметке Ubuntu LiveCD).
 4. **Создание ISO:**
-   - `grub-mkrescue -o "$ISO_OUTPUT" "$IMAGE_DIR"`.
+   - `grub-mkstandalone` для `bios.img` и `bootx64.efi`.
+   - `xorriso -as mkisofs ...` для BIOS/UEFI hybrid ISO.
 
 На этапе alpha CI будет выполнять только dry-run, а полноценная сборка (включая live-окружение) может запускаться вручную на более мощной машине.
 

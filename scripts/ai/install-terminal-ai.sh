@@ -18,4 +18,4 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 echo "[install-terminal-ai] Установка ai-chat в /usr/local/bin..."
 install -m 0755 "${SCRIPT_DIR}/ai-chat" /usr/local/bin/ai-chat
 
-echo "[install-terminal-ai] Готово. Используйте команду: ai-chat "ваш запрос""
+echo '[install-terminal-ai] Готово. Используйте команду: ai-chat "ваш запрос"'

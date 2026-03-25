@@ -13,7 +13,17 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 USER_NAME="${1:-root}"
-USER_HOME="/home/${USER_NAME}"
+USER_HOME=""
+if command -v getent >/dev/null 2>&1; then
+  USER_HOME="$(getent passwd "${USER_NAME}" | cut -d: -f6)"
+fi
+if [[ -z "${USER_HOME}" ]]; then
+  if [[ "${USER_NAME}" == "root" ]]; then
+    USER_HOME="/root"
+  else
+    USER_HOME="/home/${USER_NAME}"
+  fi
+fi
 
 # Проверка доступности интернета
 check_network() {
@@ -88,14 +98,18 @@ fi
 
 # Установка расширений если есть файл со списком
 if [[ -n "$VSCODIUM_EXTENSIONS" ]] && [[ -f "$VSCODIUM_EXTENSIONS" ]]; then
-  while IFS= read -r line || [[ -n "$line" ]]; do
-    [[ -z "$line" || "$line" =~ ^# ]] && continue
-    extension_id=$(echo "$line" | awk '{print $1}')
-    if [[ -n "$extension_id" ]]; then
-      codium --install-extension "$extension_id" 2>/dev/null || true
-    fi
-  done < "$VSCODIUM_EXTENSIONS"
-  echo "[setup-editors] VSCodium extensions installed from: $VSCODIUM_EXTENSIONS"
+  if command -v codium >/dev/null 2>&1; then
+    while IFS= read -r line || [[ -n "$line" ]]; do
+      [[ -z "$line" || "$line" =~ ^# ]] && continue
+      extension_id=$(echo "$line" | awk '{print $1}')
+      if [[ -n "$extension_id" ]]; then
+        su - "$USER_NAME" -c "codium --install-extension '$extension_id'" 2>/dev/null || true
+      fi
+    done < "$VSCODIUM_EXTENSIONS"
+    echo "[setup-editors] VSCodium extensions installed from: $VSCODIUM_EXTENSIONS"
+  else
+    echo "[setup-editors] Пропуск установки расширений VSCodium: codium не найден в PATH"
+  fi
 fi
 
 echo "[setup-editors] Готово."

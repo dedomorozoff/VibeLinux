@@ -144,7 +144,7 @@ install_terminal() {
     apt-get install -y kitty
 
     echo -e "${CYAN}Установка шрифтов...${NC}"
-    apt-get install -y fonts-jetbrains-mono fonts-fira-code fonts-hack
+    apt-get install -y fonts-jetbrains-mono fonts-firacode fonts-hack
 
     echo -e "${CYAN}Настройка Zsh...${NC}"
     apt-get install -y zsh

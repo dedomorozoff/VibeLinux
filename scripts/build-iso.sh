@@ -63,6 +63,9 @@ case "${BUILD_MODE}" in
     need_cmd debootstrap
     need_cmd mksquashfs
     need_cmd xorriso
+    need_cmd grub-mkstandalone
+    need_cmd mkfs.vfat
+    need_cmd mcopy
     need_cmd mformat
 
     # Базовая структура scripts/
@@ -600,8 +603,13 @@ EOF
     cat > "${GRUB_EMBED_CFG}" << 'GRUBEMBEDEOF'
 set echo=1
 echo "Searching for GRUB config..."
+set root=
+search --no-floppy --file --set=root /boot/grub/grub.cfg
 if [ -z "$root" ]; then
-    search --file --set=root /boot/grub/grub.cfg
+    search --no-floppy --file --set=root /casper/vmlinuz
+fi
+if [ -z "$root" ]; then
+    search --no-floppy --label --set=root VibeCodeOS
 fi
 if [ -f ($root)/boot/grub/grub.cfg ]; then
     echo "Found config on $root"
@@ -618,8 +626,8 @@ GRUBEMBEDEOF
     grub-mkstandalone \
       --format=i386-pc \
       --output="${WORK_DIR}/core.img" \
-      --install-modules="linux normal iso9660 biosdisk memdisk search tar ls part_gpt part_msdos fat ntfs configfile loopback" \
-      --modules="linux normal iso9660 biosdisk search configfile part_gpt part_msdos" \
+      --install-modules="linux normal iso9660 biosdisk memdisk search search_fs_file search_label tar ls part_gpt part_msdos fat ntfs configfile loopback" \
+      --modules="linux normal iso9660 biosdisk search search_fs_file search_label configfile part_gpt part_msdos" \
       --locales="" \
       --fonts="" \
       "boot/grub/grub.cfg=${GRUB_EMBED_CFG}"
@@ -631,8 +639,8 @@ GRUBEMBEDEOF
     grub-mkstandalone \
       --format=x86_64-efi \
       --output="${WORK_DIR}/bootx64.efi" \
-      --install-modules="linux normal iso9660 search tar ls part_gpt part_msdos fat ntfs configfile loopback" \
-      --modules="linux normal iso9660 search configfile part_gpt part_msdos fat" \
+      --install-modules="linux normal iso9660 search search_fs_file search_label tar ls part_gpt part_msdos fat ntfs configfile loopback" \
+      --modules="linux normal iso9660 search search_fs_file search_label configfile part_gpt part_msdos fat" \
       --locales="" \
       --fonts="" \
       "boot/grub/grub.cfg=${GRUB_EMBED_CFG}"

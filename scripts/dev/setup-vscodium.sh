@@ -3,6 +3,8 @@ set -euo pipefail
 
 # Скрипт настройки VSCodium после установки
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 USER_NAME="${SUDO_USER:-$USER}"
 USER_HOME="$(getent passwd "$USER_NAME" | cut -d: -f6)"
 
@@ -24,4 +26,3 @@ fi
 bash "${ROOT_DIR}/scripts/dev/utils/install-vscodium-extensions.sh" || echo "[setup-vscodium] Warning: Extension installation failed"
 
 echo "[setup-vscodium] Готово."
-
