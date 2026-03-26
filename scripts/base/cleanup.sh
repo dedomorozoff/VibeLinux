@@ -47,7 +47,7 @@ if [ ! -f /lib/systemd/systemd ]; then
 fi
 
 # Проверка что casper на месте (критично для live ISO!)
-if [ ! -f /lib/casper/casper-init ]; then
+if [ ! -f /usr/lib/casper/casper-md5check ]; then
     echo "WARNING: casper отсутствует, восстанавливаем..."
     DEBIAN_FRONTEND=noninteractive apt-get install -y casper || true
 fi

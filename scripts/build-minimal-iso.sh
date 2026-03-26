@@ -178,11 +178,11 @@ case "${BUILD_MODE}" in
           echo "ERROR: casper не установлен! Установка..."
           apt-get install -y casper
         fi
-        if [ ! -f /lib/casper/casper-init ]; then
-          echo "ERROR: /lib/casper/casper-init не найден!"
+        if [ ! -f /usr/lib/casper/casper-md5check ]; then
+          echo "ERROR: /usr/lib/casper/casper-md5check не найден!"
           exit 1
         fi
-        echo "OK: casper установлен, /lib/casper/casper-init существует"
+        echo "OK: casper установлен, /usr/lib/casper/casper-md5check существует"
       '
 
       chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/cleanup.sh"
@@ -289,7 +289,7 @@ set gfxpayload=text
 terminal_output console
 
 # Для live-образа casper сам управляет init-процессом
-# Не передаём init= явно - casper использует /lib/casper/casper-init
+# Не передаём init= явно - casper использует встроенный механизм
 menuentry "VibeCode OS Minimal (Live)" {
     linux /casper/vmlinuz boot=casper noprompt quiet ---
     initrd /casper/initrd
@@ -307,6 +307,16 @@ menuentry "VibeCode OS Minimal (rescue mode)" {
 
 menuentry "VibeCode OS Minimal (text mode)" {
     linux /casper/vmlinuz boot=casper noprompt systemd.unit=multi-user.target ---
+    initrd /casper/initrd
+}
+
+menuentry "VibeCode OS Minimal (DEBUG - break=bottom)" {
+    linux /casper/vmlinuz boot=casper noprompt break=bottom ---
+    initrd /casper/initrd
+}
+
+menuentry "VibeCode OS Minimal (DEBUG - emergency)" {
+    linux /casper/vmlinuz boot=casper noprompt emergency ---
     initrd /casper/initrd
 }
 

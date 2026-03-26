@@ -559,7 +559,7 @@ fi
 
 # Safe video режим по умолчанию для VirtualBox и проблемных видеокарт
 # quiet splash - могут быть удалены для отладки
-# ВАЖНО: не указываем init= явно - casper использует собственный /lib/casper/casper-init
+# ВАЖНО: не указываем init= явно - casper использует собственный механизм
 menuentry "VibeCode OS (Live)" {
     linux /casper/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false quiet splash --
     initrd /casper/initrd
@@ -601,7 +601,7 @@ if [ -f ${prefix}/themes/vibecode/theme.txt ]; then
 fi
 
 # Safe video режим по умолчанию
-# ВАЖНО: не указываем init= явно - casper использует собственный /lib/casper/casper-init
+# ВАЖНО: не указываем init= явно - casper использует собственный механизм
 menuentry "VibeCode OS (Live)" {
     linux /casper/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false quiet splash --
     initrd /casper/initrd
