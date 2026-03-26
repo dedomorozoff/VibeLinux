@@ -46,4 +46,10 @@ if [ ! -f /lib/systemd/systemd ]; then
     DEBIAN_FRONTEND=noninteractive apt-get install -y systemd systemd-sysv || true
 fi
 
+# Проверка что casper на месте (критично для live ISO!)
+if [ ! -f /lib/casper/casper-init ]; then
+    echo "WARNING: casper отсутствует, восстанавливаем..."
+    DEBIAN_FRONTEND=noninteractive apt-get install -y casper || true
+fi
+
 echo "[cleanup] Готово."

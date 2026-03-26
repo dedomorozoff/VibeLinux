@@ -558,25 +558,25 @@ if [ -f ${prefix}/themes/vibecode/theme.txt ]; then
 fi
 
 # Safe video режим по умолчанию для VirtualBox и проблемных видеокарт
-# init=/lib/systemd/systemd - явное указание init-процесса (критично для live ISO!)
 # quiet splash - могут быть удалены для отладки
+# ВАЖНО: не указываем init= явно - casper использует собственный /lib/casper/casper-init
 menuentry "VibeCode OS (Live)" {
-    linux /casper/vmlinuz boot=casper init=/lib/systemd/systemd noprompt nomodeset vga=normal fb=false quiet splash --
+    linux /casper/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false quiet splash --
     initrd /casper/initrd
 }
 
 menuentry "VibeCode OS Live Try" {
-    linux /casper/vmlinuz boot=casper init=/lib/systemd/systemd only-ubiquity nomodeset vga=normal fb=false quiet splash --
+    linux /casper/vmlinuz boot=casper only-ubiquity nomodeset vga=normal fb=false quiet splash --
     initrd /casper/initrd
 }
 
 menuentry "VibeCode OS (compatibility mode)" {
-    linux /casper/vmlinuz boot=casper init=/lib/systemd/systemd noprompt nomodeset vga=normal fb=false ---
+    linux /casper/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false ---
     initrd /casper/initrd
 }
 
 menuentry "VibeCode OS (rescue mode)" {
-    linux /casper/vmlinuz boot=casper init=/lib/systemd/systemd noprompt nomodeset vga=normal fb=false rescue ---
+    linux /casper/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false rescue ---
     initrd /casper/initrd
 }
 GRUBEOF
@@ -601,24 +601,24 @@ if [ -f ${prefix}/themes/vibecode/theme.txt ]; then
 fi
 
 # Safe video режим по умолчанию
-# init=/lib/systemd/systemd - явное указание init-процесса (критично для live ISO!)
+# ВАЖНО: не указываем init= явно - casper использует собственный /lib/casper/casper-init
 menuentry "VibeCode OS (Live)" {
-    linux /casper/vmlinuz boot=casper init=/lib/systemd/systemd noprompt nomodeset vga=normal fb=false quiet splash --
+    linux /casper/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false quiet splash --
     initrd /casper/initrd
 }
 
 menuentry "VibeCode OS (Live - Try VibeCode OS without installing)" {
-    linux /casper/vmlinuz boot=casper init=/lib/systemd/systemd only-ubiquity nomodeset vga=normal fb=false quiet splash --
+    linux /casper/vmlinuz boot=casper only-ubiquity nomodeset vga=normal fb=false quiet splash --
     initrd /casper/initrd
 }
 
 menuentry "VibeCode OS (compatibility mode)" {
-    linux /casper/vmlinuz boot=casper init=/lib/systemd/systemd noprompt nomodeset vga=normal fb=false ---
+    linux /casper/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false ---
     initrd /casper/initrd
 }
 
 menuentry "VibeCode OS (rescue mode)" {
-    linux /casper/vmlinuz boot=casper init=/lib/systemd/systemd noprompt nomodeset vga=normal fb=false rescue ---
+    linux /casper/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false rescue ---
     initrd /casper/initrd
 }
 EOF

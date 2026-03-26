@@ -34,14 +34,26 @@ ls -la /sbin/init
 
 **Проблема:** Casper не может найти правильный init-процесс.
 
-**Решение:** Добавьте `init=/lib/systemd/systemd` в параметры ядра:
+**Решение:** Для live ISO **НЕ добавляйте** `init=/lib/systemd/systemd` явно!
 
+Casper использует собственный init-процесс (`/lib/casper/casper-init`) для разворачивания squashfs в RAM.
+
+Правильные параметры для live ISO:
 ```grub
 menuentry "VibeCode OS (Live)" {
-    linux /casper/vmlinuz boot=casper init=/lib/systemd/systemd noprompt nomodeset ...
+    linux /casper/vmlinuz boot=casper noprompt nomodeset quiet splash --
     initrd /casper/initrd
 }
 ```
+
+**Почему `init=/lib/systemd/systemd` ломает live ISO:**
+- Параметр `init=` переопределяет casper-init
+- Squashfs не разворачивается в RAM
+- systemd пытается запуститься без корневой ФС → kernel panic
+
+**Когда можно использовать `init=/lib/systemd/systemd`:**
+- Только для **установленной** системы (не live ISO)
+- После установки на жёсткий диск
 
 ### 3. Повреждённый initrd
 
@@ -121,11 +133,11 @@ ls -la build/image/casper/
 
 # 2. Проверка GRUB
 cat build/image/boot/grub/grub.cfg
-# Проверьте наличие init=/lib/systemd/systemd
+# Проверьте ОТСУТСТВИЕ init=/lib/systemd/systemd (для live ISO!)
 
 # 3. Проверка squashfs
 unsquashfs -l build/image/casper/filesystem.squashfs | head -20
-# Проверьте что /lib/systemd/systemd существует внутри squashfs
+# Проверьте что /lib/casper/casper-init существует внутри squashfs
 ```
 
 ---
@@ -166,23 +178,27 @@ exec /lib/systemd/systemd
 
 ## Внесённые исправления (commit 2026-03-26)
 
-### Файл: `scripts/base/base-packages.sh`
-- ✅ Добавлены пакеты `systemd` и `systemd-sysv`
-- ✅ Добавлен пакет `live-tools` для live-сессии
-
-### Файл: `scripts/build-iso.sh`
-- ✅ Добавлена проверка systemd и `/sbin/init` после установки пакетов
-- ✅ Добавлен параметр `init=/lib/systemd/systemd` в GRUB конфигурацию
-- ✅ Добавлены комментарии для отладки (удаление `quiet splash`)
-
-### Файл: `scripts/desktop/install-mate.sh`
-- ✅ Использован флаг `--important` для `autoremove`
-- ✅ Добавлена проверка systemd после `autoremove`
-- ✅ Добавлено восстановление symlink `/sbin/init`
+### Файл: `scripts/base/minimal-packages.sh`
+- ✅ Добавлен пакет `casper` для live-сессии
+- ✅ Добавлен пакет `live-config` для live-конфигурации
 
 ### Файл: `scripts/base/cleanup.sh`
 - ✅ Удалён опасный `autoremove`
-- ✅ Добавлена проверка systemd в конце скрипта
+- ✅ Добавлена проверка systemd после очистки
+- ✅ Добавлена проверка casper (критично для live ISO!)
+
+### Файл: `scripts/build-minimal-iso.sh`
+- ✅ Добавлена проверка установки casper перед генерацией manifest
+- ✅ Добавлена проверка `/lib/casper/casper-init`
+- ✅ GRUB конфигурация **не содержит** `init=/lib/systemd/systemd`
+
+### Файл: `scripts/build-iso.sh` (Full версия)
+- ✅ Убран параметр `init=/lib/systemd/systemd` из GRUB конфигурации
+- ✅ Добавлен комментарий о том что casper использует собственный init
+
+### Файл: `docs/DEBUG-LIVE-ISO.md`
+- ✅ Обновлена документация о правильных параметрах ядра для live ISO
+- ✅ Добавлено объяснение почему `init=/lib/systemd/systemd` ломает live-систему
 
 ---
 

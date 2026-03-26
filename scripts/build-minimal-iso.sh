@@ -171,6 +171,20 @@ case "${BUILD_MODE}" in
       chroot "${CHROOT_DIR}" dpkg-query -W -f='${Package} ${Version}\n' > "${IMAGE_DIR}/casper/filesystem.manifest"
       cp "${IMAGE_DIR}/casper/filesystem.manifest" "${IMAGE_DIR}/casper/filesystem.manifest-remove"
 
+      # === Критическая проверка: casper для live-сессии ===
+      log "Проверка установки casper..."
+      chroot "${CHROOT_DIR}" /bin/bash -c '
+        if ! dpkg -l | grep -q "^ii  casper "; then
+          echo "ERROR: casper не установлен! Установка..."
+          apt-get install -y casper
+        fi
+        if [ ! -f /lib/casper/casper-init ]; then
+          echo "ERROR: /lib/casper/casper-init не найден!"
+          exit 1
+        fi
+        echo "OK: casper установлен, /lib/casper/casper-init существует"
+      '
+
       chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/cleanup.sh"
 
       # Шаг 4: Размонтирование
