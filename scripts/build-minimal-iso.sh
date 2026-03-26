@@ -157,39 +157,6 @@ case "${BUILD_MODE}" in
 
       have_boot_artifacts || die "После установки ядра /boot всё ещё пустой. Проверьте apt-логи внутри chroot."
 
-      # === Критическая проверка: systemd и /sbin/init ===
-      log "Проверка установки systemd и init-процесса..."
-      chroot "${CHROOT_DIR}" /bin/bash -c '
-        if [ ! -f /lib/systemd/systemd ]; then
-          echo "ERROR: /lib/systemd/systemd не найден! Установка systemd..."
-          apt-get install -y systemd systemd-sysv
-        fi
-
-        # Проверяем symlink /sbin/init
-        if [ ! -e /sbin/init ]; then
-          echo "Creating /sbin/init symlink to /lib/systemd/systemd"
-          ln -sf /lib/systemd/systemd /sbin/init
-        fi
-
-        # Проверяем что symlink правильный
-        if [ -L /sbin/init ]; then
-          INIT_TARGET=$(readlink /sbin/init)
-          echo "OK: /sbin/init -> $INIT_TARGET"
-        else
-          echo "WARNING: /sbin/init не является symlink"
-        fi
-
-        # Проверка что systemd исполняемый
-        if [ -x /lib/systemd/systemd ]; then
-          echo "OK: /lib/systemd/systemd исполняемый"
-        else
-          echo "ERROR: /lib/systemd/systemd не исполняемый!"
-          exit 1
-        fi
-      '
-
-      chroot "${CHROOT_DIR}" /bin/bash -c "test -x /sbin/init" || die "В chroot отсутствует исполняемый /sbin/init. Убедитесь, что установлен systemd-sysv."
-
       # Создание пользователя
       chroot "${CHROOT_DIR}" /bin/bash -c '
         if ! id "vibecode" &>/dev/null; then
@@ -307,24 +274,30 @@ set gfxpayload=text
 
 terminal_output console
 
-# init=/lib/systemd/systemd - критично для запуска init-процесса!
+# Для live-образа casper сам управляет init-процессом
+# Не передаём init= явно - casper использует /lib/casper/casper-init
 menuentry "VibeCode OS Minimal (Live)" {
-    linux /casper/vmlinuz boot=casper init=/lib/systemd/systemd noprompt quiet ---
+    linux /casper/vmlinuz boot=casper noprompt quiet ---
     initrd /casper/initrd
 }
 
 menuentry "VibeCode OS Minimal (safe graphics)" {
-    linux /casper/vmlinuz boot=casper init=/lib/systemd/systemd noprompt nomodeset quiet ---
+    linux /casper/vmlinuz boot=casper noprompt nomodeset quiet ---
     initrd /casper/initrd
 }
 
 menuentry "VibeCode OS Minimal (rescue mode)" {
-    linux /casper/vmlinuz boot=casper init=/lib/systemd/systemd noprompt rescue ---
+    linux /casper/vmlinuz boot=casper noprompt rescue systemd.unit=rescue.target ---
     initrd /casper/initrd
 }
 
 menuentry "VibeCode OS Minimal (text mode)" {
-    linux /casper/vmlinuz boot=casper init=/lib/systemd/systemd noprompt systemd.unit=multi-user.target ---
+    linux /casper/vmlinuz boot=casper noprompt systemd.unit=multi-user.target ---
+    initrd /casper/initrd
+}
+
+menuentry "VibeCode OS Minimal (debug mode)" {
+    linux /casper/vmlinuz boot=casper noprompt break=init systemd.log_level=debug systemd.log_target=console ---
     initrd /casper/initrd
 }
 GRUBEOF

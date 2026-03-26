@@ -2,7 +2,22 @@
 
 ## [Unreleased]
 
+### Fixed
+- **Minimal ISO:** Убран параметр `init=/lib/systemd/systemd` из GRUB-конфига live-образа
+  - Этот параметр конфликтовал с casper и вызывал kernel panic (`exitcode=0x00000100`)
+  - Теперь casper сам управляет init-процессом через `/lib/casper/casper-init`
+- **Minimal ISO:** Добавлен режим отладки (Debug mode) в GRUB
+  - Включает подробное логирование systemd для диагностики
+- **Minimal ISO:** Обновлены зависимости в minimal-packages.sh
+  - `live-tools` → `live-config`, `live-config-doc` (актуально для Ubuntu 24.04)
+  - Добавлен `squashfs-tools` для работы с SquashFS
+
 ### Added
+- **Docs:** Создан `docs/MINIMAL-DEBUG.md` — полное руководство по отладке kernel panic
+  - Диагностика причин и решений
+  - Чек-лист перед сборкой
+  - Команды для проверки chroot и ISO
+  - Примеры запуска в QEMU с отладочными параметрами
 
 **Core OS:**
 - Настройка GRUB и Plymouth с брендингом VibeCode OS
