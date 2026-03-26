@@ -196,6 +196,37 @@ case "${BUILD_MODE}" in
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/cleanup.sh"
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/install-mate.sh"
 
+    # === Критическая проверка: systemd и /sbin/init ===
+    log "Проверка установки systemd и init-процесса..."
+    chroot "${CHROOT_DIR}" /bin/bash -c '
+      if [ ! -f /lib/systemd/systemd ]; then
+        echo "ERROR: /lib/systemd/systemd не найден! Установка systemd..."
+        apt-get install -y systemd systemd-sysv
+      fi
+
+      # Проверяем symlink /sbin/init
+      if [ ! -e /sbin/init ]; then
+        echo "Creating /sbin/init symlink to /lib/systemd/systemd"
+        ln -sf /lib/systemd/systemd /sbin/init
+      fi
+
+      # Проверяем что symlink правильный
+      if [ -L /sbin/init ]; then
+        INIT_TARGET=$(readlink /sbin/init)
+        echo "OK: /sbin/init -> $INIT_TARGET"
+      else
+        echo "WARNING: /sbin/init не является symlink"
+      fi
+
+      # Проверка что systemd исполняемый
+      if [ -x /lib/systemd/systemd ]; then
+        echo "OK: /lib/systemd/systemd исполняемый"
+      else
+        echo "ERROR: /lib/systemd/systemd не исполняемый!"
+        exit 1
+      fi
+    '
+
     # Создаём пользователя vibecode ДО установки dev-инструментов
     log "Создание пользователя vibecode..."
     chroot "${CHROOT_DIR}" /bin/bash -c '
@@ -527,23 +558,25 @@ if [ -f ${prefix}/themes/vibecode/theme.txt ]; then
 fi
 
 # Safe video режим по умолчанию для VirtualBox и проблемных видеокарт
+# init=/lib/systemd/systemd - явное указание init-процесса (критично для live ISO!)
+# quiet splash - могут быть удалены для отладки
 menuentry "VibeCode OS (Live)" {
-    linux /casper/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false quiet splash --
+    linux /casper/vmlinuz boot=casper init=/lib/systemd/systemd noprompt nomodeset vga=normal fb=false quiet splash --
     initrd /casper/initrd
 }
 
 menuentry "VibeCode OS Live Try" {
-    linux /casper/vmlinuz boot=casper only-ubiquity nomodeset vga=normal fb=false quiet splash --
+    linux /casper/vmlinuz boot=casper init=/lib/systemd/systemd only-ubiquity nomodeset vga=normal fb=false quiet splash --
     initrd /casper/initrd
 }
 
 menuentry "VibeCode OS (compatibility mode)" {
-    linux /casper/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false ---
+    linux /casper/vmlinuz boot=casper init=/lib/systemd/systemd noprompt nomodeset vga=normal fb=false ---
     initrd /casper/initrd
 }
 
 menuentry "VibeCode OS (rescue mode)" {
-    linux /casper/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false rescue ---
+    linux /casper/vmlinuz boot=casper init=/lib/systemd/systemd noprompt nomodeset vga=normal fb=false rescue ---
     initrd /casper/initrd
 }
 GRUBEOF
@@ -568,23 +601,24 @@ if [ -f ${prefix}/themes/vibecode/theme.txt ]; then
 fi
 
 # Safe video режим по умолчанию
+# init=/lib/systemd/systemd - явное указание init-процесса (критично для live ISO!)
 menuentry "VibeCode OS (Live)" {
-    linux /casper/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false quiet splash --
+    linux /casper/vmlinuz boot=casper init=/lib/systemd/systemd noprompt nomodeset vga=normal fb=false quiet splash --
     initrd /casper/initrd
 }
 
 menuentry "VibeCode OS (Live - Try VibeCode OS without installing)" {
-    linux /casper/vmlinuz boot=casper only-ubiquity nomodeset vga=normal fb=false quiet splash --
+    linux /casper/vmlinuz boot=casper init=/lib/systemd/systemd only-ubiquity nomodeset vga=normal fb=false quiet splash --
     initrd /casper/initrd
 }
 
 menuentry "VibeCode OS (compatibility mode)" {
-    linux /casper/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false ---
+    linux /casper/vmlinuz boot=casper init=/lib/systemd/systemd noprompt nomodeset vga=normal fb=false ---
     initrd /casper/initrd
 }
 
 menuentry "VibeCode OS (rescue mode)" {
-    linux /casper/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false rescue ---
+    linux /casper/vmlinuz boot=casper init=/lib/systemd/systemd noprompt nomodeset vga=normal fb=false rescue ---
     initrd /casper/initrd
 }
 EOF

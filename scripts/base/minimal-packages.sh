@@ -20,8 +20,10 @@ apt-get update -y
 # Базовый набор нужен для live-сессии и дальнейшей настройки chroot.
 echo "[minimal-packages] Установка обязательных пакетов..."
 DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-  casper \
+  systemd \
   systemd-sysv \
+  casper \
+  live-tools \
   sudo \
   network-manager \
   iputils-ping \

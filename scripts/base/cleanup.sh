@@ -29,7 +29,8 @@ TO_REMOVE=(
 
 apt-get update -y
 DEBIAN_FRONTEND=noninteractive apt-get remove --purge -y "${TO_REMOVE[@]}" || true
-DEBIAN_FRONTEND=noninteractive apt-get autoremove -y
+# Не вызываем autoremove здесь - это может удалить критические пакеты
+# Очистка будет выполнена после установки всех пакетов
 
 echo "[cleanup] Очистка кэша APT и временных файлов..."
 apt-get clean
@@ -38,5 +39,11 @@ rm -rf /tmp/*
 rm -rf /var/tmp/*
 rm -rf /root/.cache/*
 rm -rf /home/vibecode/.cache/* 2>/dev/null || true
+
+# Проверка что systemd на месте
+if [ ! -f /lib/systemd/systemd ]; then
+    echo "WARNING: systemd отсутствует, восстанавливаем..."
+    DEBIAN_FRONTEND=noninteractive apt-get install -y systemd systemd-sysv || true
+fi
 
 echo "[cleanup] Готово."

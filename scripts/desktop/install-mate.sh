@@ -87,8 +87,19 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y language-pack-ru-base
 locale-gen ru_RU.UTF-8 || true
 update-locale LANG=ru_RU.UTF-8 || true
 
-echo "[desktop/mate] Очистка ненужных пакетов..."
-apt-get autoremove -y
+echo "[desktop/mate] Очистка ненужных пакетов (с защитой systemd)..."
+# Используем --important для защиты критических пакетов
+apt-get autoremove -y --important
+
+# Проверка что systemd на месте после autoremove
+if [ ! -f /lib/systemd/systemd ]; then
+    echo "ERROR: systemd был удалён! Восстанавливаем..."
+    apt-get install -y systemd systemd-sysv
+fi
+
+# Восстанавливаем symlink /sbin/init если нужен
+if [ ! -e /sbin/init ]; then
+    ln -sf /lib/systemd/systemd /sbin/init
+fi
 
 echo "[desktop/mate] Готово. Список пакетов и конфигурация будут уточняться по мере развития alpha-образа."
-

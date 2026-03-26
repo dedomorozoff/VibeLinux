@@ -19,19 +19,22 @@ apt-get update -y
 
 echo "[base-packages] Установка базовых утилит + VirtualBox guest + шрифты..."
 DEBIAN_FRONTEND=noninteractive apt-get install -y\
+  systemd \
+  systemd-sysv \
   htop \
   curl \
   wget \
   unzip \
   git \
   build-essential \
- ca-certificates\
+  ca-certificates \
   software-properties-common \
   linux-image-generic \
   linux-headers-generic \
   initramfs-tools \
   squashfs-tools \
- casper \
+  casper \
+  live-tools \
   virtualbox-guest-utils \
   virtualbox-guest-desktop \
   fonts-dejavu \
@@ -71,4 +74,3 @@ echo "  - lightdm, themes ✓"
 echo "  - caja, atril, eom ✓"
 
 echo "[base-packages] Готово."
-
