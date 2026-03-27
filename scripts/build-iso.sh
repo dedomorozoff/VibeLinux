@@ -358,6 +358,138 @@ MATEPANELEOF
     log "Установка casper для live-сессии..."
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive apt-get install -y casper"
 
+    # === КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Пересборка initrd с casper hook ===
+    log "Пересборка initrd с casper hook для live-образа..."
+    
+    # Исправляем casper hook для копирования всех скриптов
+    cat > "${CHROOT_DIR}/usr/share/initramfs-tools/hooks/casper" << 'CASPERHOOK'
+#!/bin/sh -e
+# initramfs hook for casper - FIXED version
+
+PREREQS=""
+
+prereqs()
+{
+       echo "$PREREQS"
+}
+
+case "$1" in
+    prereqs)
+       prereqs
+       exit 0
+       ;;
+esac
+
+. /usr/share/initramfs-tools/hook-functions
+
+manual_add_modules overlay
+
+copy_exec /sbin/losetup /sbin
+copy_exec /sbin/mkfs.ext4 /sbin
+copy_exec /sbin/sfdisk /sbin
+
+mkdir -p ${DESTDIR}/lib/casper
+copy_exec /usr/share/casper/casper-reconfigure /bin
+copy_exec /usr/share/casper/casper-preseed /bin
+copy_exec /usr/share/casper/casper-set-selections /bin
+
+mkdir -p ${DESTDIR}/lib/udev/rules.d
+cp -p /lib/udev/rules.d/60-cdrom_id.rules ${DESTDIR}/lib/udev/rules.d/
+copy_exec /lib/udev/cdrom_id /lib/udev
+copy_exec /usr/bin/eject /bin
+copy_exec /sbin/swapon /sbin
+
+if [ -x /sbin/mount.cifs ]; then
+    copy_exec /sbin/mount.cifs /sbin
+    for x in cifs md4 des_generic; do
+        manual_add_modules ${x}
+    done
+fi
+
+if [ -x /usr/bin/hmcdrvfs ]; then
+    mkdir -p ${DESTDIR}/usr/bin
+    copy_exec /usr/bin/hmcdrvfs /usr/bin
+    manual_add_modules hmcdrv
+fi
+
+manual_add_modules squashfs
+manual_add_modules loop
+manual_add_modules vfat
+manual_add_modules ext3
+manual_add_modules ext4
+manual_add_modules btrfs
+manual_add_modules nls_cp437
+manual_add_modules nls_utf8
+manual_add_modules nls_iso8859-1
+manual_add_modules sr_mod
+manual_add_modules ide-cd
+manual_add_modules sbp2
+manual_add_modules ohci1394
+
+# Копируем основные скрипты casper
+cp /usr/share/initramfs-tools/scripts/casper-functions $DESTDIR/scripts/
+cp /usr/share/initramfs-tools/scripts/casper-helpers $DESTDIR/scripts/
+cp /usr/share/initramfs-tools/scripts/casper $DESTDIR/scripts/
+chmod +x $DESTDIR/scripts/casper
+
+# Копируем casper-premount скрипты
+mkdir -p $DESTDIR/scripts/casper-premount
+cp /usr/share/initramfs-tools/scripts/casper-premount/* $DESTDIR/scripts/casper-premount/
+chmod +x $DESTDIR/scripts/casper-premount/*
+
+# Копируем casper-bottom скрипты
+mkdir -p $DESTDIR/scripts/casper-bottom
+cp /usr/share/initramfs-tools/scripts/casper-bottom/* $DESTDIR/scripts/casper-bottom/
+chmod +x $DESTDIR/scripts/casper-bottom/*
+
+auto_add_modules net
+
+if [ -e /etc/casper.conf ]; then
+    mkdir -p ${DESTDIR}/etc
+    cp /etc/casper.conf ${DESTDIR}/etc
+fi
+
+if [ "$CASPER_GENERATE_UUID" ]; then
+    mkdir -p $DESTDIR/conf $DESTDIR/conf/conf.d
+    uuidgen -r > $DESTDIR/conf/uuid.conf
+    cat <<EOF > $DESTDIR/conf/conf.d/default-boot-to-casper.conf
+if [ -z "\$BOOT" ]; then
+    export BOOT=casper
+fi
+EOF
+fi
+CASPERHOOK
+
+    # Создаём conf.d/casper для включения casper hook
+    cat > "${CHROOT_DIR}/etc/initramfs-tools/conf.d/casper.conf" << 'CASPERCONF'
+# Casper hook для live-образа
+BOOT=casper
+CASPERFLAGS="noprompt"
+CASPERCONF
+
+    # Получаем версию ядра
+    KERNEL_VER=$(chroot "${CHROOT_DIR}" bash -c 'ls -1 /lib/modules/ | head -n1')
+    if [[ -z "$KERNEL_VER" ]]; then
+      die "Не найдено ядро в /lib/modules/"
+    fi
+    log "Используем ядро: $KERNEL_VER"
+    
+    # Генерируем initrd с casper hook
+    log "Генерация initrd с casper hook..."
+    chroot "${CHROOT_DIR}" mkinitramfs -o /boot/initrd.img.new "$KERNEL_VER" || die "Ошибка mkinitramfs"
+    
+    # Проверяем что initrd содержит casper скрипты
+    if ! chroot "${CHROOT_DIR}" lsinitramfs /boot/initrd.img.new 2>/dev/null | grep -q "^scripts/casper$"; then
+      die "initrd не содержит scripts/casper - ошибка hook"
+    fi
+    
+    # Заменяем старый initrd
+    chroot "${CHROOT_DIR}" mv /boot/initrd.img.new /boot/initrd.img-"$KERNEL_VER"
+    chroot "${CHROOT_DIR}" ln -sf initrd.img-"$KERNEL_VER" /boot/initrd.img
+    chroot "${CHROOT_DIR}" ln -sf initrd.img-"$KERNEL_VER" /boot/initrd.img.old
+    
+    log "OK: initrd создан с casper hook"
+
     # Генерируем манифест пакетов (нужен chroot с /proc)
     log "Генерация манифеста пакетов..."
     mkdir -p "${IMAGE_DIR}/casper"
@@ -559,7 +691,6 @@ fi
 
 # Safe video режим по умолчанию для VirtualBox и проблемных видеокарт
 # quiet splash - могут быть удалены для отладки
-# ВАЖНО: не указываем init= явно - casper использует собственный механизм
 menuentry "VibeCode OS (Live)" {
     linux /casper/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false quiet splash --
     initrd /casper/initrd
@@ -601,7 +732,6 @@ if [ -f ${prefix}/themes/vibecode/theme.txt ]; then
 fi
 
 # Safe video режим по умолчанию
-# ВАЖНО: не указываем init= явно - casper использует собственный механизм
 menuentry "VibeCode OS (Live)" {
     linux /casper/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false quiet splash --
     initrd /casper/initrd

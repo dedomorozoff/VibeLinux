@@ -23,8 +23,7 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
   systemd \
   systemd-sysv \
   casper \
-  live-config \
-  live-config-doc \
+  live-tools \
   sudo \
   network-manager \
   iputils-ping \
@@ -37,7 +36,11 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
   vim-tiny \
   htop \
   unzip \
-  squashfs-tools
+  zstd \
+  linux-generic \
+  linux-modules-extra-generic \
+  initramfs-tools \
+  linux-firmware
 
 # VirtualBox guest tools не должны ломать сборку ISO, если пакет недоступен
 # или его postinst ведёт себя нестабильно в chroot.

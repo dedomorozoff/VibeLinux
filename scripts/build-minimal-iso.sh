@@ -97,7 +97,6 @@ case "${BUILD_MODE}" in
       # Шаг 1: Bootstrap
       if [[ ! -d "${CHROOT_DIR}/etc" ]]; then
         log "Шаг 1: Bootstrap Ubuntu 24.04..."
-        # Полная установка как в base-packages.sh (без --include)
         debootstrap --arch=amd64 noble "${CHROOT_DIR}" http://archive.ubuntu.com/ubuntu
       fi
 
@@ -114,7 +113,6 @@ case "${BUILD_MODE}" in
 
       # Копируем только нужные скрипты
       cp "${ROOT_DIR}/scripts/base/minimal-packages.sh" "${CHROOT_DIR}/root/"
-      cp "${ROOT_DIR}/scripts/base/install-kernel.sh" "${CHROOT_DIR}/root/"
       cp "${ROOT_DIR}/scripts/base/cleanup.sh" "${CHROOT_DIR}/root/"
       cp "${ROOT_DIR}/scripts/base/setup-distro-info.sh" "${CHROOT_DIR}/root/"
       cp "${ROOT_DIR}/scripts/base/setup-bootloader.sh" "${CHROOT_DIR}/root/"
@@ -142,22 +140,84 @@ case "${BUILD_MODE}" in
       log "Шаг 3: Установка пакетов и настройка..."
       chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/minimal-packages.sh"
 
-      # Установка ядра (отдельным скриптом)
-      log "Установка ядра Linux..."
-      chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/install-kernel.sh"
+      # === КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Пересоздание initrd с casper для live-образа ===
+      log "Пересоздание initrd с casper для live-образа..."
 
-      chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/setup-distro-info.sh"
-      chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/setup-bootloader.sh"
+      # Создаём symlink /sbin/init для systemd
+      chroot "${CHROOT_DIR}" /bin/bash -c '
+        if [ ! -e /sbin/init ]; then
+          ln -sf /lib/systemd/systemd /sbin/init
+        fi
+      '
 
-      if ! have_boot_artifacts; then
-        log "Ядро или initrd отсутствуют после install-kernel.sh. Пробуем восстановить..."
-        chroot "${CHROOT_DIR}" /bin/bash -c "apt-get install -y --reinstall linux-generic initramfs-tools linux-firmware"
-        chroot "${CHROOT_DIR}" /bin/bash -c "update-initramfs -u -k all"
+      # Получаем версию ядра
+      KERNEL_VERSION=$(chroot "${CHROOT_DIR}" ls /lib/modules/ | head -n 1)
+      log "Версия ядра: ${KERNEL_VERSION}"
+
+      # === Конфигурация initramfs для casper ===
+      log "Настройка initramfs для casper..."
+      
+      # Создаём conf.d/casper.conf для включения casper hook
+      chroot "${CHROOT_DIR}" /bin/bash -c "
+        mkdir -p /etc/initramfs-tools/conf.d
+        echo 'BOOT=casper' > /etc/initramfs-tools/conf.d/casper.conf
+        echo 'CASPERFLAGS=\"noprompt\"' >> /etc/initramfs-tools/conf.d/casper.conf
+      "
+      
+      # Добавляем необходимые модули для live-системы
+      chroot "${CHROOT_DIR}" /bin/bash -c "
+        mkdir -p /etc/initramfs-tools/modules
+        cat >> /etc/initramfs-tools/modules << 'MODULES'
+overlay
+squashfs
+loop
+aufs
+MODULES
+      "
+
+      # Генерируем initrd (стандартный hook из пакета casper автоматически включается)
+      log "Генерация initrd..."
+      chroot "${CHROOT_DIR}" /bin/bash -c "update-initramfs -u -k ${KERNEL_VERSION}" || die "Ошибка update-initramfs"
+
+      # Используем правильное имя initrd для этой версии ядра
+      INITRD_BASE="initrd.img-${KERNEL_VERSION}"
+      log "Initrd: ${INITRD_BASE}"
+
+      # Проверяем что initrd существует
+      if ! chroot "${CHROOT_DIR}" test -f "/boot/${INITRD_BASE}"; then
+        die "initrd не был создан: /boot/${INITRD_BASE}"
       fi
 
-      have_boot_artifacts || die "После установки ядра /boot всё ещё пустой. Проверьте apt-логи внутри chroot."
+      if chroot "${CHROOT_DIR}" lsinitramfs "/boot/${INITRD_BASE}" 2>/dev/null | grep -q "scripts/casper"; then
+        log "OK: initrd содержит casper скрипты"
+      else
+        log "WARNING: initrd не содержит scripts/casper — проверяем casper hook"
+        # Пробуем пересоздать с явным указанием casper
+        chroot "${CHROOT_DIR}" /bin/bash -c "
+          echo 'BOOT=casper' > /etc/initramfs-tools/conf.d/casper.conf
+          update-initramfs -u -k ${KERNEL_VERSION}
+        " || true
+      fi
 
-      # Создание пользователя
+      # Обновляем symlink на initrd
+      chroot "${CHROOT_DIR}" ln -sf "${INITRD_BASE}" /boot/initrd.img
+
+      # === Проверка: systemd и /sbin/init ===
+      log "Проверка /sbin/init..."
+      chroot "${CHROOT_DIR}" /bin/bash -c '
+        if [ ! -x /lib/systemd/systemd ]; then
+          echo "ERROR: /lib/systemd/systemd не найден!"
+          exit 1
+        fi
+        if [ ! -e /sbin/init ]; then
+          ln -sf /lib/systemd/systemd /sbin/init
+        fi
+        echo "OK: /sbin/init -> $(readlink /sbin/init)"
+      '
+
+      chroot "${CHROOT_DIR}" /bin/bash -c "test -x /sbin/init" || die "В chroot отсутствует исполняемый /sbin/init"
+
+      # Создание пользователя vibecode (casper использует его как шаблон)
       chroot "${CHROOT_DIR}" /bin/bash -c '
         if ! id "vibecode" &>/dev/null; then
           useradd -m -s /bin/bash vibecode
@@ -170,20 +230,6 @@ case "${BUILD_MODE}" in
       mkdir -p "${IMAGE_DIR}/casper"
       chroot "${CHROOT_DIR}" dpkg-query -W -f='${Package} ${Version}\n' > "${IMAGE_DIR}/casper/filesystem.manifest"
       cp "${IMAGE_DIR}/casper/filesystem.manifest" "${IMAGE_DIR}/casper/filesystem.manifest-remove"
-
-      # === Критическая проверка: casper для live-сессии ===
-      log "Проверка установки casper..."
-      chroot "${CHROOT_DIR}" /bin/bash -c '
-        if ! dpkg -l | grep -q "^ii  casper "; then
-          echo "ERROR: casper не установлен! Установка..."
-          apt-get install -y casper
-        fi
-        if [ ! -f /usr/lib/casper/casper-md5check ]; then
-          echo "ERROR: /usr/lib/casper/casper-md5check не найден!"
-          exit 1
-        fi
-        echo "OK: casper установлен, /usr/lib/casper/casper-md5check существует"
-      '
 
       chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/cleanup.sh"
 
@@ -205,19 +251,15 @@ case "${BUILD_MODE}" in
 
     # Шаг 6: Подготовка ISO структуры
     log "Шаг 6: Подготовка структуры ISO..."
+    mkdir -p "${IMAGE_DIR}/casper"
     mkdir -p "${IMAGE_DIR}/boot/grub"
     mkdir -p "${IMAGE_DIR}/boot/grub/i386-pc"
     mkdir -p "${IMAGE_DIR}/boot/grub/x86_64-efi"
-    mkdir -p "${IMAGE_DIR}/casper"
     mkdir -p "${IMAGE_DIR}/.disk"
     mkdir -p "${IMAGE_DIR}/EFI/boot"
 
-    # Копирование ядра (используем относительные пути для casper)
+    # Копирование ядра и initrd
     log "Копирование ядра и initrd..."
-
-    # Проверяем что есть в chroot/boot
-    log "Содержимое chroot/boot:"
-    ls -lh "${CHROOT_DIR}/boot/" 2>/dev/null || log "WARNING: chroot/boot не существует"
 
     KERNEL_FOUND="$(latest_kernel_path)"
     INITRD_FOUND="$(latest_initrd_path)"
@@ -225,24 +267,17 @@ case "${BUILD_MODE}" in
     [[ -n "${KERNEL_FOUND}" ]] && log "Найдено ядро: ${KERNEL_FOUND}"
     [[ -n "${INITRD_FOUND}" ]] && log "Найден initrd: ${INITRD_FOUND}"
 
-    # Копируем если нашли
     if [[ -n "${KERNEL_FOUND}" ]] && [[ -n "${INITRD_FOUND}" ]]; then
         cp "${KERNEL_FOUND}" "${IMAGE_DIR}/casper/vmlinuz"
         cp "${INITRD_FOUND}" "${IMAGE_DIR}/casper/initrd"
-        # Также копируем в boot для совместимости
         cp "${IMAGE_DIR}/casper/vmlinuz" "${IMAGE_DIR}/boot/vmlinuz"
         cp "${IMAGE_DIR}/casper/initrd" "${IMAGE_DIR}/boot/initrd.img"
         log "Ядро и initrd скопированы в casper/ и boot/"
     else
         log "ERROR: Ядро или initrd не найдены!"
         log "Возможные причины:"
-        log "  1. Ядро не установилось в chroot (ошибка apt/dpkg внутри install-kernel.sh)"
+        log "  1. Ядро не установилось в chroot"
         log "  2. Initramfs не обновился после установки ядра"
-        log "  3. /dev, /dev/pts или /run были недоступны внутри chroot"
-        log ""
-        log "Попробуйте вручную установить ядро в chroot:"
-        log "  chroot ${CHROOT_DIR} apt-get install -y linux-generic initramfs-tools linux-firmware"
-        log "  chroot ${CHROOT_DIR} update-initramfs -u -k all"
         die "Сборка прервана: ядро не найдено"
     fi
 
@@ -253,7 +288,7 @@ case "${BUILD_MODE}" in
     date > "${IMAGE_DIR}/.disk/build_time"
     echo "VibeCodeMinimal" > "${IMAGE_DIR}/.disk/ubuntu_dist"
 
-    log "Копирование модулей GRUB для графического меню..."
+    log "Копирование модулей GRUB..."
     if [[ -d "/usr/lib/grub/i386-pc" ]]; then
       cp -r /usr/lib/grub/i386-pc/*.mod "${IMAGE_DIR}/boot/grub/i386-pc/" 2>/dev/null || true
     fi
@@ -264,13 +299,11 @@ case "${BUILD_MODE}" in
     # Шаг 7: Конфиг GRUB
     log "Шаг 7: Настройка GRUB..."
 
-    # Копируем шрифт для GRUB (если есть в системе)
     log "Копирование шрифта GRUB..."
     mkdir -p "${IMAGE_DIR}/boot/grub/fonts"
     if [[ -f /usr/share/grub/unicode.pf2 ]]; then
       cp /usr/share/grub/unicode.pf2 "${IMAGE_DIR}/boot/grub/fonts/unicode.pf2"
     elif command -v grub-mkfont >/dev/null 2>&1; then
-      # Пробуем создать шрифт из системных
       for font in /usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf \
                   /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf \
                   /usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf; do
@@ -288,40 +321,28 @@ set gfxpayload=text
 
 terminal_output console
 
-# Для live-образа casper сам управляет init-процессом
-# Не передаём init= явно - casper использует встроенный механизм
 menuentry "VibeCode OS Minimal (Live)" {
-    linux /casper/vmlinuz boot=casper noprompt quiet ---
+    linux /casper/vmlinuz boot=casper noprompt quiet username=vibecode hostname=vibecode-minimal ---
+    initrd /casper/initrd
+}
+
+menuentry "VibeCode OS Minimal (Live - toram)" {
+    linux /casper/vmlinuz boot=casper toram noprompt quiet username=vibecode hostname=vibecode-minimal ---
     initrd /casper/initrd
 }
 
 menuentry "VibeCode OS Minimal (safe graphics)" {
-    linux /casper/vmlinuz boot=casper noprompt nomodeset quiet ---
+    linux /casper/vmlinuz boot=casper noprompt nomodeset quiet username=vibecode hostname=vibecode-minimal ---
     initrd /casper/initrd
 }
 
 menuentry "VibeCode OS Minimal (rescue mode)" {
-    linux /casper/vmlinuz boot=casper noprompt rescue systemd.unit=rescue.target ---
-    initrd /casper/initrd
-}
-
-menuentry "VibeCode OS Minimal (text mode)" {
-    linux /casper/vmlinuz boot=casper noprompt systemd.unit=multi-user.target ---
-    initrd /casper/initrd
-}
-
-menuentry "VibeCode OS Minimal (DEBUG - break=bottom)" {
-    linux /casper/vmlinuz boot=casper noprompt break=bottom ---
-    initrd /casper/initrd
-}
-
-menuentry "VibeCode OS Minimal (DEBUG - emergency)" {
-    linux /casper/vmlinuz boot=casper noprompt emergency ---
+    linux /casper/vmlinuz boot=casper noprompt rescue username=vibecode hostname=vibecode-minimal ---
     initrd /casper/initrd
 }
 
 menuentry "VibeCode OS Minimal (debug mode)" {
-    linux /casper/vmlinuz boot=casper noprompt break=init systemd.log_level=debug systemd.log_target=console ---
+    linux /casper/vmlinuz boot=casper noprompt debug break=bottom username=vibecode hostname=vibecode-minimal ---
     initrd /casper/initrd
 }
 GRUBEOF
@@ -329,16 +350,14 @@ GRUBEOF
     # Шаг 8: Создание загрузочных образов GRUB
     log "Шаг 8: Создание загрузочных образов GRUB..."
 
-    # Проверяем наличие GRUB файлов
     GRUB_MBR="/usr/lib/grub/i386-pc/boot_hybrid.img"
     if [[ ! -f "${GRUB_MBR}" ]]; then
       GRUB_MBR="/usr/lib/grub/i386-pc/boot.img"
     fi
     if [[ ! -f "${GRUB_MBR}" ]]; then
-      die "Не найден GRUB MBR (boot_hybrid.img или boot.img). Установите grub-pc-bin."
+      die "Не найден GRUB MBR. Установите grub-pc-bin."
     fi
 
-    # Создаём embed-конфиг для GRUB
     GRUB_EMBED_CFG="$(mktemp)"
     cat > "${GRUB_EMBED_CFG}" << 'GRUBEMBEDEOF'
 set root=(cd)
@@ -352,34 +371,26 @@ set prefix=($root)/boot/grub
 configfile $prefix/grub.cfg
 GRUBEMBEDEOF
 
-    # --- BIOS boot image ---
     log "Создание BIOS boot image..."
-    # Для i386-pc в режиме CD/DVD (El Torito) часто лучше использовать grub-mkstandalone
-    # создающий полный образ, включая cdboot.img
     grub-mkstandalone \
       --format=i386-pc \
       --output="${WORK_DIR}/core.img" \
-      --install-modules="linux normal iso9660 biosdisk memdisk search search_fs_file search_label tar ls part_gpt part_msdos fat ntfs configfile loopback gfxterm all_video font png jpeg gettext gfxmenu" \
-      --modules="linux normal iso9660 biosdisk search search_fs_file search_label configfile part_gpt part_msdos fat gfxterm all_video font png jpeg gfxmenu" \
+      --install-modules="linux normal iso9660 biosdisk memdisk search search_fs_file search_label configfile part_gpt part_msdos fat all_video font" \
+      --modules="linux normal iso9660 biosdisk search search_fs_file configfile part_gpt part_msdos fat all_video font" \
       --locales="" \
       --fonts="" \
       "boot/grub/grub.cfg=${GRUB_EMBED_CFG}"
 
-    # Для El Torito i386-pc нам нужен cdboot.img в начале
     if [[ -f "/usr/lib/grub/i386-pc/cdboot.img" ]]; then
       cat /usr/lib/grub/i386-pc/cdboot.img "${WORK_DIR}/core.img" > "${IMAGE_DIR}/boot/grub/bios.img"
     else
       die "Не найден /usr/lib/grub/i386-pc/cdboot.img. Установите grub-pc-bin."
     fi
 
-    # --- UEFI boot image ---
     log "Создание UEFI boot image..."
-
-    # Создаём временную директорию для EFI образа
     EFI_TEMP_DIR="$(mktemp -d)"
     mkdir -p "${EFI_TEMP_DIR}/boot/grub/fonts"
 
-    # Копируем шрифты
     if [[ -f "${IMAGE_DIR}/boot/grub/fonts/unicode.pf2" ]]; then
       cp "${IMAGE_DIR}/boot/grub/fonts/unicode.pf2" "${EFI_TEMP_DIR}/boot/grub/fonts/"
     fi
@@ -387,19 +398,17 @@ GRUBEMBEDEOF
       cp "${IMAGE_DIR}/boot/grub/fonts/DejaVuSans.pf2" "${EFI_TEMP_DIR}/boot/grub/fonts/"
     fi
 
-    # Копируем основной grub.cfg для EFI
     cp "${IMAGE_DIR}/boot/grub/grub.cfg" "${EFI_TEMP_DIR}/boot/grub/"
 
     grub-mkstandalone \
       --format=x86_64-efi \
       --output="${WORK_DIR}/bootx64.efi" \
-      --install-modules="linux normal iso9660 search search_fs_file search_label tar ls part_gpt part_msdos fat ntfs configfile loopback gfxterm all_video font png jpeg gettext gfxmenu" \
-      --modules="linux normal iso9660 search search_fs_file search_label configfile part_gpt part_msdos fat gfxterm all_video font png jpeg gfxmenu" \
+      --install-modules="linux normal iso9660 search search_fs_file configfile part_gpt part_msdos fat all_video font" \
+      --modules="linux normal iso9660 search search_fs_file configfile part_gpt part_msdos fat all_video font" \
       --locales="" \
       --fonts="" \
       "boot/grub/grub.cfg=${GRUB_EMBED_CFG}"
 
-    # Создаём FAT-образ EFI System Partition
     EFI_IMG="${IMAGE_DIR}/boot/grub/efi.img"
     mkdir -p "${IMAGE_DIR}/EFI/boot"
     dd if=/dev/zero of="${EFI_IMG}" bs=1M count=4 2>/dev/null
@@ -407,12 +416,8 @@ GRUBEMBEDEOF
     mmd -i "${EFI_IMG}" ::/EFI ::/EFI/boot
     mcopy -i "${EFI_IMG}" "${WORK_DIR}/bootx64.efi" ::/EFI/boot/bootx64.efi
 
-    # Копируем EFI-загрузчик в дерево ISO
     cp "${WORK_DIR}/bootx64.efi" "${IMAGE_DIR}/EFI/boot/bootx64.efi"
-
-    # Очищаем временную директорию
     rm -rf "${EFI_TEMP_DIR}"
-
     rm -f "${GRUB_EMBED_CFG}"
 
     # Шаг 9: Создание ISO через xorriso (BIOS + UEFI hybrid)
