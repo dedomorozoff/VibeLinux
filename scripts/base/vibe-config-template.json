@@ -1,0 +1,20 @@
+{
+  "distro": "ubuntu-24.04",
+  "build_type": "full",
+  "user": "vibe",
+  "hostname": "vibelinux",
+  "editors": ["zed", "vscode", "neovim", "helix"],
+  "agents": ["aider", "ollama", "continue", "cline"],
+  "runtimes": ["node-lts", "python-3.12", "rust-stable", "bun", "go-1.22", "deno"],
+  "tools": ["git", "gh", "tmux", "fzf", "ripgrep", "jq", "docker", "podman"],
+  "flatpak": true,
+  "nvidia": false,
+  "ollama": true,
+  "locale": "ru_RU.UTF-8",
+  "keyboard": {
+    "layouts": "us,ru",
+    "options": "grp:alt_shift_toggle"
+  },
+  "autologin": true,
+  "packages_extra": []
+}

@@ -15,7 +15,10 @@ venv/
 # Node / фронтенд
 node_modules/
 dist/
+
+# Build artifacts (но не scripts/build/ — там скрипты сборки)
 build/
+!scripts/build/
 
 # IDE
 .idea/
