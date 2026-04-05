@@ -1,0 +1,38 @@
+[global]
+    font = JetBrains Mono 12
+    format = <b>%s</b>\n%b
+    frame_color = "#4CC9F0"
+    frame_width = 2
+    separator_color = "#7209B7"
+    separator_height = 2
+    horizontal_padding = 8
+    vertical_padding = 8
+    width = 320
+    height = 120
+    offset = 10x30
+    origin = top-right
+    transparency = 10
+    line_height = 18
+    margins = 10
+    border = 2
+    border_radius = 12
+    corner_radius = 12
+    mouse_left_click = close_all
+    mouse_middle_click = do_action
+    mouse_right_click = close_current
+
+[urgency_low]
+    background = "rgba(11, 16, 32, 0.95)"
+    foreground = "#4CC9F0"
+    timeout = 5
+
+[urgency_normal]
+    background = "rgba(11, 16, 32, 0.95)"
+    foreground = "#e0e0e0"
+    timeout = 10
+
+[urgency_critical]
+    background = "rgba(255, 100, 100, 0.3)"
+    foreground = "#ff6b6b"
+    frame_color = "#ff6b6b"
+    timeout = 0

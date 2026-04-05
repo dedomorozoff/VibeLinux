@@ -40,6 +40,25 @@ need_cmd() {
   local cmd="$1"
   command -v "$cmd" >/dev/null 2>&1 || die "Не найдено: '$cmd'. Установите зависимости (см. docs/BUILD-ISO.md и .github/workflows/build-iso.yml)."
 }
+
+install_deps() {
+  log "Проверка и установка недостающих зависимостей (debootstrap, squashfs-tools, xorriso, grub-common, mtools)..."
+  local deps=()
+  command -v debootstrap >/dev/null 2>&1 || deps+=(debootstrap)
+  command -v mksquashfs >/dev/null 2>&1 || deps+=(squashfs-tools)
+  command -v xorriso >/dev/null 2>&1 || deps+=(xorriso)
+  command -v grub-mkstandalone >/dev/null 2>&1 || deps+=(grub-common)
+  command -v mkfs.vfat >/dev/null 2>&1 || deps+=(dosfstools)
+  command -v mcopy >/dev/null 2>&1 || deps+=(mtools)
+
+  if [ ${#deps[@]} -ne 0 ]; then
+    log "Установка: ${deps[*]}"
+    apt-get update
+    DEBIAN_FRONTEND=noninteractive apt-get install -y "${deps[@]}"
+  else
+    log "Все зависимости на хосте уже установлены."
+  fi
+}
 need_file() {
   local path="$1"
   [[ -f "$path" ]] || die "Не найден файл: ${path#"$ROOT_DIR"/}"
@@ -74,8 +93,7 @@ case "${BUILD_MODE}" in
     need_file "${ROOT_DIR}/scripts/base/cleanup.sh"
     need_file "${ROOT_DIR}/scripts/base/setup-distro-info.sh"
     need_file "${ROOT_DIR}/scripts/base/setup-bootloader.sh"
-    need_file "${ROOT_DIR}/scripts/desktop/install-mate.sh"
-    need_file "${ROOT_DIR}/scripts/desktop/configure-mate-panel.sh"
+    need_file "${ROOT_DIR}/scripts/desktop/install-hyprland.sh"
     need_file "${ROOT_DIR}/scripts/desktop/setup-installer.sh"
     need_file "${ROOT_DIR}/scripts/desktop/apply-branding.sh"
     need_file "${ROOT_DIR}/scripts/drivers/install-nvidia.sh"
@@ -96,6 +114,7 @@ case "${BUILD_MODE}" in
     fi
 
     log "Запуск пайплайна сборки alpha-ISO VibeCode OS..."
+    install_deps
 
     # Поддержка KEEP_CHROOT для экономии времени при повторной сборке
     # Проверяем, что chroot валидный (есть /root, /etc)
@@ -148,8 +167,7 @@ case "${BUILD_MODE}" in
     cp "${ROOT_DIR}/scripts/base/cleanup.sh" "${CHROOT_DIR}/root/cleanup.sh"
     cp "${ROOT_DIR}/scripts/base/setup-distro-info.sh" "${CHROOT_DIR}/root/setup-distro-info.sh"
     cp "${ROOT_DIR}/scripts/base/setup-bootloader.sh" "${CHROOT_DIR}/root/setup-bootloader.sh"
-    cp "${ROOT_DIR}/scripts/desktop/install-mate.sh" "${CHROOT_DIR}/root/install-mate.sh"
-    cp "${ROOT_DIR}/scripts/desktop/configure-mate-panel.sh" "${CHROOT_DIR}/root/configure-mate-panel.sh"
+    cp "${ROOT_DIR}/scripts/desktop/install-hyprland.sh" "${CHROOT_DIR}/root/install-hyprland.sh"
     cp "${ROOT_DIR}/scripts/desktop/setup-installer.sh" "${CHROOT_DIR}/root/setup-installer.sh"
     cp "${ROOT_DIR}/scripts/desktop/apply-branding.sh" "${CHROOT_DIR}/root/apply-branding.sh"
     cp "${ROOT_DIR}/scripts/drivers/install-nvidia.sh" "${CHROOT_DIR}/root/install-nvidia.sh"
@@ -194,7 +212,7 @@ case "${BUILD_MODE}" in
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/setup-distro-info.sh"
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/setup-bootloader.sh"
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/cleanup.sh"
-    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/install-mate.sh"
+    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/install-hyprland.sh"
 
     # === Критическая проверка: systemd и /sbin/init ===
     log "Проверка установки systemd и init-процесса..."
@@ -295,52 +313,63 @@ case "${BUILD_MODE}" in
     echo "LANG=ru_RU.UTF-8" > "${CHROOT_DIR}/etc/default/locale"
     echo "LANGUAGE=ru_RU.UTF-8" >> "${CHROOT_DIR}/etc/default/locale"
 
-    # Настройка LightDM для autologin - полное отключение greeter
-    mkdir -p "${CHROOT_DIR}/etc/lightdm"
-    cat > "${CHROOT_DIR}/etc/lightdm/lightdm.conf" << 'LIGHTDMEOF'
-[Seat:*]
-autologin-user=vibecode
-autologin-user-timeout=0
-autologin-guest=false
-allow-guest=false
-greeter-session=lightdm-gtk-greeter
-user-session=mate
-LIGHTDMEOF
+    # Настройка SDDM для autologin (Hyprland)
+    mkdir -p "${CHROOT_DIR}/etc/sddm.conf.d"
+    cat > "${CHROOT_DIR}/etc/sddm.conf.d/vibecode.conf" << 'SDDMEOF'
+[Theme]
+Current=malva
 
-    # Настройка пользовательских настроек MATE
-    log "Настройка MATE панели..."
+[Autologin]
+User=vibecode
+Session=hyprland
 
-    # Создаём директорию для настроек
-    mkdir -p "${CHROOT_DIR}/home/vibecode/.config/mate-panel"
-    mkdir -p "${CHROOT_DIR}/home/vibecode/.config/dconf"
+[Users]
+DefaultPath=/usr/local/bin:/usr/bin:/bin
 
-    # Dconf настройки для MATE - часы с датой (пропускаем, настроим позже)
-    # Настройки панели будут применены при первом входе пользователя
+[General]
+Numlock=on
+SDDMEOF
 
-    # Создаём backup настроек панели
-    cat > "${CHROOT_DIR}/home/vibecode/.config/mate-panel/default-layout" << 'MATEPANELEOF'
-[top]
-orientation=bottom
-size=24
-expand=true
-auto-hide=false
+    # Настройка пользовательских конфигов Hyprland
+    log "Настройка Hyprland конфигурации..."
 
-[Object:clock]
-applet-iid=ClockAppletFactory::ClockApplet
-toplevel=top
-position=1000
-clock-format=24h
-clock-show-date=true
-MATEPANELEOF
+    # Создаём директорию для настроек Hyprland
+    mkdir -p "${CHROOT_DIR}/home/vibecode/.config/hypr"
+    mkdir -p "${CHROOT_DIR}/home/vibecode/.config/waybar"
+    mkdir -p "${CHROOT_DIR}/home/vibecode/.config/wofi"
+    mkdir -p "${CHROOT_DIR}/home/vibecode/.config/dunst"
+    mkdir -p "${CHROOT_DIR}/home/vibecode/.config/kitty"
+
+    # Копирование конфигураций из scripts/desktop/configs/
+    if [[ -d "${ROOT_DIR}/scripts/desktop/configs/hyprland" ]]; then
+      log "Копирование конфигурации Hyprland..."
+      cp -r "${ROOT_DIR}/scripts/desktop/configs/hyprland/"* "${CHROOT_DIR}/home/vibecode/.config/hypr/"
+    fi
+
+    if [[ -d "${ROOT_DIR}/scripts/desktop/configs/waybar" ]]; then
+      log "Копирование конфигурации Waybar..."
+      cp -r "${ROOT_DIR}/scripts/desktop/configs/waybar/"* "${CHROOT_DIR}/home/vibecode/.config/waybar/"
+    fi
+
+    if [[ -d "${ROOT_DIR}/scripts/desktop/configs/wofi" ]]; then
+      log "Копирование конфигурации Wofi..."
+      cp -r "${ROOT_DIR}/scripts/desktop/configs/wofi/"* "${CHROOT_DIR}/home/vibecode/.config/wofi/"
+    fi
+
+    if [[ -d "${ROOT_DIR}/scripts/desktop/configs/dunst" ]]; then
+      log "Копирование конфигурации Dunst..."
+      cp -r "${ROOT_DIR}/scripts/desktop/configs/dunst/"* "${CHROOT_DIR}/home/vibecode/.config/dunst/"
+    fi
+
+    if [[ -d "${ROOT_DIR}/scripts/desktop/configs/kitty" ]]; then
+      log "Копирование конфигурации Kitty..."
+      cp -r "${ROOT_DIR}/scripts/desktop/configs/kitty/"* "${CHROOT_DIR}/home/vibecode/.config/kitty/"
+    fi
 
     # Устанавливаем права на файлы настроек
     chroot "${CHROOT_DIR}" /bin/bash -c '
-      chown -R vibecode:vibecode /home/vibecode
+      chown -R vibecode:vibecode /home/vibecode/.config
     '
-
-    # Настройка панели MATE
-    log "Настройка панели MATE..."
-    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/configure-mate-panel.sh vibecode"
 
     # Установка и настройка установщика
     log "Установка установщика (ubiquity)..."
@@ -349,10 +378,6 @@ MATEPANELEOF
     # Применение брендинга
     log "Применение брендинга VibeCode OS..."
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/apply-branding.sh /root/branding vibecode"
-
-    # Обновляем dconf базу для применения системных настроек
-    log "Обновление dconf базы..."
-    chroot "${CHROOT_DIR}" /bin/bash -c "dconf update"
 
     # Устанавливаем casper для live-сессии (до размонтирования!)
     log "Установка casper для live-сессии..."

@@ -1,0 +1,28 @@
+{
+  "window": {
+    "width": 500,
+    "height": 400,
+    "layer": "overlay",
+    "anchor": "center"
+  },
+  "matching": {
+    "async": true
+  },
+  "filter": {
+    "min": 0
+  },
+  "actions": {
+    "enter": "exec",
+    "ctrl-enter": "exec"
+  },
+  "fields": ["name", "generic"],
+  "show": "drun",
+  "display-generic-name": false,
+  "display-icons": true,
+  "icon-size": 32,
+  "display-type": false,
+  "hide-scroll": true,
+  "prompt": "🚀 ",
+  "drun-display-parse-options": false,
+  "drun-show-actions": false
+}

@@ -1,0 +1,278 @@
+/* ============================================================================
+   VibeCode OS — Waybar Style
+   ============================================================================
+   Цветовая палитра VibeCode:
+   - Background: #0B1020
+   - Primary: #4CC9F0 (neon blue)
+   - Accent: #7209B7 (purple)
+   - Success: #2EC4B6 (mint)
+   - Warning: #FFE066 (yellow)
+   ============================================================================ */
+
+* {
+    border: none;
+    border-radius: 8px;
+    font-family: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
+    font-size: 13px;
+    min-height: 0;
+}
+
+window#waybar {
+    background: rgba(11, 16, 32, 0.85);
+    color: #e0e0e0;
+    border-radius: 12px;
+    padding: 5px 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+tooltip {
+    background: rgba(11, 16, 32, 0.95);
+    border: 1px solid rgba(76, 201, 240, 0.3);
+    border-radius: 8px;
+    padding: 8px;
+}
+
+tooltip label {
+    color: #e0e0e0;
+    padding: 4px;
+}
+
+/* === Modules === */
+
+#workspaces {
+    background: rgba(27, 35, 64, 0.6);
+    padding: 4px 8px;
+    margin: 2px 5px;
+    border-radius: 8px;
+}
+
+#workspaces button {
+    padding: 4px 12px;
+    margin: 2px 3px;
+    color: #8892b0;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+}
+
+#workspaces button.active {
+    background: linear-gradient(135deg, #4CC9F0, #7209B7);
+    color: #ffffff;
+    font-weight: bold;
+    box-shadow: 0 0 10px rgba(76, 201, 240, 0.5);
+}
+
+#workspaces button:hover {
+    background: rgba(76, 201, 240, 0.2);
+    color: #4CC9F0;
+}
+
+#workspaces button.urgent {
+    background: rgba(255, 224, 102, 0.3);
+    color: #FFE066;
+    animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { box-shadow: 0 0 5px rgba(255, 224, 102, 0.5); }
+    50% { box-shadow: 0 0 15px rgba(255, 224, 102, 0.8); }
+}
+
+#window {
+    background: transparent;
+    padding: 4px 8px;
+    color: #8892b0;
+}
+
+#custom-launcher,
+#custom-vibe {
+    background: linear-gradient(135deg, #4CC9F0, #7209B7);
+    color: #ffffff;
+    padding: 4px 12px;
+    margin: 2px 5px;
+    border-radius: 8px;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+#custom-launcher:hover,
+#custom-vibe:hover {
+    box-shadow: 0 0 15px rgba(76, 201, 240, 0.6);
+    transform: scale(1.05);
+}
+
+/* System modules */
+#cpu,
+#memory,
+#temperature {
+    background: rgba(27, 35, 64, 0.6);
+    padding: 4px 10px;
+    margin: 2px 3px;
+    border-radius: 6px;
+    color: #8892b0;
+}
+
+#cpu {
+    color: #4CC9F0;
+}
+
+#memory {
+    color: #2EC4B6;
+}
+
+#temperature {
+    color: #FFE066;
+}
+
+#temperature.critical {
+    background: rgba(255, 100, 100, 0.3);
+    color: #ff6b6b;
+}
+
+#disk {
+    background: rgba(27, 35, 64, 0.6);
+    padding: 4px 10px;
+    margin: 2px 3px;
+    border-radius: 6px;
+    color: #8892b0;
+}
+
+#network {
+    background: rgba(27, 35, 64, 0.6);
+    padding: 4px 10px;
+    margin: 2px 3px;
+    border-radius: 6px;
+    color: #2EC4B6;
+}
+
+#network.disconnected {
+    color: #ff6b6b;
+    background: rgba(255, 100, 100, 0.2);
+}
+
+#bluetooth {
+    background: rgba(27, 35, 64, 0.6);
+    padding: 4px 10px;
+    margin: 2px 3px;
+    border-radius: 6px;
+    color: #4CC9F0;
+}
+
+#bluetooth.off {
+    color: #8892b0;
+}
+
+#pulseaudio {
+    background: rgba(27, 35, 64, 0.6);
+    padding: 4px 10px;
+    margin: 2px 3px;
+    border-radius: 6px;
+    color: #2EC4B6;
+}
+
+#pulseaudio.muted {
+    color: #ff6b6b;
+    background: rgba(255, 100, 100, 0.2);
+}
+
+#backlight {
+    background: rgba(27, 35, 64, 0.6);
+    padding: 4px 10px;
+    margin: 2px 3px;
+    border-radius: 6px;
+    color: #FFE066;
+}
+
+#battery {
+    background: rgba(27, 35, 64, 0.6);
+    padding: 4px 10px;
+    margin: 2px 3px;
+    border-radius: 6px;
+    color: #2EC4B6;
+}
+
+#battery.charging {
+    color: #2EC4B6;
+}
+
+#battery.warning:not(.charging) {
+    color: #FFE066;
+    background: rgba(255, 224, 102, 0.2);
+}
+
+#battery.critical:not(.charging) {
+    color: #ff6b6b;
+    background: rgba(255, 100, 100, 0.3);
+    animation: pulse 1s ease-in-out infinite;
+}
+
+#clock {
+    background: rgba(27, 35, 64, 0.6);
+    padding: 4px 12px;
+    margin: 2px 5px;
+    border-radius: 8px;
+    color: #4CC9F0;
+    font-weight: bold;
+}
+
+#clock.date {
+    color: #7209B7;
+}
+
+#custom-power {
+    background: rgba(255, 100, 100, 0.2);
+    color: #ff6b6b;
+    padding: 4px 12px;
+    margin: 2px 5px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+#custom-power:hover {
+    background: rgba(255, 100, 100, 0.4);
+    box-shadow: 0 0 10px rgba(255, 100, 100, 0.5);
+}
+
+#tray {
+    background: rgba(27, 35, 64, 0.6);
+    padding: 4px 8px;
+    margin: 2px 5px;
+    border-radius: 8px;
+}
+
+#tray > widget {
+    margin: 0 3px;
+}
+
+#tray > widget:hover {
+    opacity: 0.8;
+}
+
+#language {
+    background: rgba(27, 35, 64, 0.6);
+    padding: 4px 10px;
+    margin: 2px 3px;
+    border-radius: 6px;
+    color: #FFE066;
+    font-weight: bold;
+}
+
+#idle_inhibitor {
+    background: rgba(27, 35, 64, 0.6);
+    padding: 4px 10px;
+    margin: 2px 3px;
+    border-radius: 6px;
+    color: #2EC4B6;
+}
+
+#idle_inhibitor.activated {
+    background: rgba(255, 224, 102, 0.3);
+    color: #FFE066;
+}
+
+#custom-notification {
+    background: rgba(27, 35, 64, 0.6);
+    padding: 4px 10px;
+    margin: 2px 3px;
+    border-radius: 6px;
+    color: #7209B7;
+}
