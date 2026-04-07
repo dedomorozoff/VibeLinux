@@ -58,6 +58,25 @@ need_cmd() {
   command -v "$cmd" >/dev/null 2>&1 || die "Не найдено: '$cmd'. Установите зависимости (debootstrap, mksquashfs, xorriso, grub-pc-bin, grub-efi-amd64-bin, mtools)."
 }
 
+install_deps() {
+  log "Проверка и установка недостающих зависимостей (debootstrap, squashfs-tools, xorriso, grub-common, mtools)..."
+  local deps=()
+  command -v debootstrap >/dev/null 2>&1 || deps+=(debootstrap)
+  command -v mksquashfs >/dev/null 2>&1 || deps+=(squashfs-tools)
+  command -v xorriso >/dev/null 2>&1 || deps+=(xorriso)
+  command -v grub-mkstandalone >/dev/null 2>&1 || deps+=(grub-common)
+  command -v mkfs.vfat >/dev/null 2>&1 || deps+=(dosfstools)
+  command -v mcopy >/dev/null 2>&1 || deps+=(mtools)
+
+  if [ ${#deps[@]} -ne 0 ]; then
+    log "Установка: ${deps[*]}"
+    apt-get update
+    DEBIAN_FRONTEND=noninteractive apt-get install -y "${deps[@]}"
+  else
+    log "Все зависимости на хосте уже установлены."
+  fi
+}
+
 mkdir -p "${WORK_DIR}"
 
 log "ROOT_DIR=${ROOT_DIR}"
@@ -85,6 +104,7 @@ case "${BUILD_MODE}" in
     fi
 
     log "Запуск сборки Minimal ISO..."
+    install_deps
     trap cleanup_mounts EXIT
 
     REUSE_CHROOT=0
@@ -143,20 +163,69 @@ case "${BUILD_MODE}" in
       # === КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Пересоздание initrd с casper для live-образа ===
       log "Пересоздание initrd с casper для live-образа..."
 
-      # Создаём symlink /sbin/init для systemd
-      chroot "${CHROOT_DIR}" /bin/bash -c '
-        if [ ! -e /sbin/init ]; then
-          ln -sf /lib/systemd/systemd /sbin/init
-        fi
-      '
+      # Исправляем casper hook для гарантированного копирования всех скриптов
+      # Стандартный hook иногда пропускает нужные части в chroot
+      cat > "${CHROOT_DIR}/usr/share/initramfs-tools/hooks/casper" << 'CASPERHOOK'
+#!/bin/sh -e
+# initramfs hook for casper - FIXED version for VibeCode OS
 
-      # Получаем версию ядра
-      KERNEL_VERSION=$(chroot "${CHROOT_DIR}" ls /lib/modules/ | head -n 1)
-      log "Версия ядра: ${KERNEL_VERSION}"
+PREREQS=""
 
-      # === Конфигурация initramfs для casper ===
-      log "Настройка initramfs для casper..."
-      
+prereqs()
+{
+       echo "$PREREQS"
+}
+
+case "$1" in
+    prereqs)
+       prereqs
+       exit 0
+       ;;
+esac
+
+. /usr/share/initramfs-tools/hook-functions
+
+manual_add_modules overlay
+manual_add_modules squashfs
+manual_add_modules loop
+manual_add_modules vfat
+manual_add_modules ext4
+manual_add_modules isofs
+
+copy_exec /sbin/losetup /sbin
+copy_exec /sbin/mkfs.ext4 /sbin
+
+mkdir -p ${DESTDIR}/lib/casper
+[ -f /usr/share/casper/casper-reconfigure ] && copy_exec /usr/share/casper/casper-reconfigure /bin
+[ -f /usr/share/casper/casper-preseed ] && copy_exec /usr/share/casper/casper-preseed /bin
+
+mkdir -p ${DESTDIR}/lib/udev/rules.d
+[ -f /lib/udev/rules.d/60-cdrom_id.rules ] && cp -p /lib/udev/rules.d/60-cdrom_id.rules ${DESTDIR}/lib/udev/rules.d/
+[ -f /lib/udev/cdrom_id ] && copy_exec /lib/udev/cdrom_id /lib/udev
+
+# Копируем основные скрипты casper
+cp /usr/share/initramfs-tools/scripts/casper-functions $DESTDIR/scripts/
+cp /usr/share/initramfs-tools/scripts/casper-helpers $DESTDIR/scripts/
+cp /usr/share/initramfs-tools/scripts/casper $DESTDIR/scripts/
+chmod +x $DESTDIR/scripts/casper
+
+# Копируем casper-premount скрипты
+mkdir -p $DESTDIR/scripts/casper-premount
+cp /usr/share/initramfs-tools/scripts/casper-premount/* $DESTDIR/scripts/casper-premount/ 2>/dev/null || true
+chmod +x $DESTDIR/scripts/casper-premount/* 2>/dev/null || true
+
+# Копируем casper-bottom скрипты
+mkdir -p $DESTDIR/scripts/casper-bottom
+cp /usr/share/initramfs-tools/scripts/casper-bottom/* $DESTDIR/scripts/casper-bottom/ 2>/dev/null || true
+chmod +x $DESTDIR/scripts/casper-bottom/* 2>/dev/null || true
+
+if [ -e /etc/casper.conf ]; then
+    mkdir -p ${DESTDIR}/etc
+    cp /etc/casper.conf ${DESTDIR}/etc
+fi
+CASPERHOOK
+      chmod +x "${CHROOT_DIR}/usr/share/initramfs-tools/hooks/casper"
+
       # Создаём conf.d/casper.conf для включения casper hook
       chroot "${CHROOT_DIR}" /bin/bash -c "
         mkdir -p /etc/initramfs-tools/conf.d
@@ -171,12 +240,14 @@ case "${BUILD_MODE}" in
 overlay
 squashfs
 loop
-aufs
+isofs
+vfat
 MODULES
       "
 
       # Генерируем initrd (стандартный hook из пакета casper автоматически включается)
       log "Генерация initrd..."
+      KERNEL_VERSION=$(chroot "${CHROOT_DIR}" ls /lib/modules/ | head -n 1)
       chroot "${CHROOT_DIR}" /bin/bash -c "update-initramfs -u -k ${KERNEL_VERSION}" || die "Ошибка update-initramfs"
 
       # Используем правильное имя initrd для этой версии ядра
@@ -322,27 +393,27 @@ set gfxpayload=text
 terminal_output console
 
 menuentry "VibeCode OS Minimal (Live)" {
-    linux /casper/vmlinuz boot=casper noprompt quiet username=vibecode hostname=vibecode-minimal ---
+    linux /casper/vmlinuz boot=casper noprompt nomodeset quiet username=vibecode hostname=vibecode-minimal --
     initrd /casper/initrd
 }
 
 menuentry "VibeCode OS Minimal (Live - toram)" {
-    linux /casper/vmlinuz boot=casper toram noprompt quiet username=vibecode hostname=vibecode-minimal ---
+    linux /casper/vmlinuz boot=casper toram noprompt nomodeset quiet username=vibecode hostname=vibecode-minimal --
     initrd /casper/initrd
 }
 
 menuentry "VibeCode OS Minimal (safe graphics)" {
-    linux /casper/vmlinuz boot=casper noprompt nomodeset quiet username=vibecode hostname=vibecode-minimal ---
+    linux /casper/vmlinuz boot=casper noprompt nomodeset quiet username=vibecode hostname=vibecode-minimal --
     initrd /casper/initrd
 }
 
 menuentry "VibeCode OS Minimal (rescue mode)" {
-    linux /casper/vmlinuz boot=casper noprompt rescue username=vibecode hostname=vibecode-minimal ---
+    linux /casper/vmlinuz boot=casper noprompt rescue nomodeset username=vibecode hostname=vibecode-minimal --
     initrd /casper/initrd
 }
 
 menuentry "VibeCode OS Minimal (debug mode)" {
-    linux /casper/vmlinuz boot=casper noprompt debug break=bottom username=vibecode hostname=vibecode-minimal ---
+    linux /casper/vmlinuz boot=casper noprompt debug break=bottom nomodeset username=vibecode hostname=vibecode-minimal --
     initrd /casper/initrd
 }
 GRUBEOF
@@ -360,15 +431,25 @@ GRUBEOF
 
     GRUB_EMBED_CFG="$(mktemp)"
     cat > "${GRUB_EMBED_CFG}" << 'GRUBEMBEDEOF'
-set root=(cd)
-set prefix=(cd)/boot/grub
-if [ -f ${prefix}/grub.cfg ]; then
-    configfile ${prefix}/grub.cfg
+set echo=1
+echo "Searching for GRUB config..."
+set root=
+search --no-floppy --file --set=root /boot/grub/grub.cfg
+if [ -z "$root" ]; then
+    search --no-floppy --file --set=root /casper/vmlinuz
 fi
-
-search --set=root --file /boot/grub/grub.cfg
-set prefix=($root)/boot/grub
-configfile $prefix/grub.cfg
+if [ -z "$root" ]; then
+    search --no-floppy --label --set=root VibeCodeMinimal
+fi
+if [ -f ($root)/boot/grub/grub.cfg ]; then
+    echo "Found config on $root"
+    set prefix=($root)/boot/grub
+    configfile $prefix/grub.cfg
+else
+    echo "Config not found! Dropping to shell."
+    ls ($root)/
+    ls ($root)/boot/grub/
+fi
 GRUBEMBEDEOF
 
     log "Создание BIOS boot image..."
@@ -425,12 +506,15 @@ GRUBEMBEDEOF
 
     xorriso -as mkisofs \
       -iso-level 3 \
+      -full-iso9660-filenames \
       -r -V "VibeCodeMinimal" \
       -J -joliet-long \
       -o "${ISO_OUTPUT}" \
-      --grub2-mbr "${GRUB_MBR}" \
+      --grub2-mbr "/usr/lib/grub/i386-pc/boot_hybrid.img" \
       --mbr-force-bootable \
       -partition_offset 16 \
+      -isohybrid-mbr "/usr/lib/grub/i386-pc/boot_hybrid.img" \
+      -isohybrid-gpt-basdat \
       -b boot/grub/bios.img \
         -no-emul-boot \
         -boot-load-size 4 \
@@ -439,6 +523,7 @@ GRUBEMBEDEOF
       -eltorito-alt-boot \
       -e boot/grub/efi.img \
         -no-emul-boot \
+        -isohybrid-gpt-basdat \
       -append_partition 2 0xef "${EFI_IMG}" \
       "${IMAGE_DIR}" \
       || die "Ошибка при создании ISO"

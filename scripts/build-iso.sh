@@ -93,7 +93,7 @@ case "${BUILD_MODE}" in
     need_file "${ROOT_DIR}/scripts/base/cleanup.sh"
     need_file "${ROOT_DIR}/scripts/base/setup-distro-info.sh"
     need_file "${ROOT_DIR}/scripts/base/setup-bootloader.sh"
-    need_file "${ROOT_DIR}/scripts/desktop/install-hyprland.sh"
+    need_file "${ROOT_DIR}/scripts/desktop/install-i3wm.sh"
     need_file "${ROOT_DIR}/scripts/desktop/setup-installer.sh"
     need_file "${ROOT_DIR}/scripts/desktop/apply-branding.sh"
     need_file "${ROOT_DIR}/scripts/drivers/install-nvidia.sh"
@@ -167,7 +167,7 @@ case "${BUILD_MODE}" in
     cp "${ROOT_DIR}/scripts/base/cleanup.sh" "${CHROOT_DIR}/root/cleanup.sh"
     cp "${ROOT_DIR}/scripts/base/setup-distro-info.sh" "${CHROOT_DIR}/root/setup-distro-info.sh"
     cp "${ROOT_DIR}/scripts/base/setup-bootloader.sh" "${CHROOT_DIR}/root/setup-bootloader.sh"
-    cp "${ROOT_DIR}/scripts/desktop/install-hyprland.sh" "${CHROOT_DIR}/root/install-hyprland.sh"
+    cp "${ROOT_DIR}/scripts/desktop/install-i3wm.sh" "${CHROOT_DIR}/root/install-i3wm.sh"
     cp "${ROOT_DIR}/scripts/desktop/setup-installer.sh" "${CHROOT_DIR}/root/setup-installer.sh"
     cp "${ROOT_DIR}/scripts/desktop/apply-branding.sh" "${CHROOT_DIR}/root/apply-branding.sh"
     cp "${ROOT_DIR}/scripts/drivers/install-nvidia.sh" "${CHROOT_DIR}/root/install-nvidia.sh"
@@ -212,7 +212,7 @@ case "${BUILD_MODE}" in
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/setup-distro-info.sh"
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/setup-bootloader.sh"
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/cleanup.sh"
-    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/install-hyprland.sh"
+    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/install-i3wm.sh"
 
     # === Критическая проверка: systemd и /sbin/init ===
     log "Проверка установки systemd и init-процесса..."
@@ -313,52 +313,39 @@ case "${BUILD_MODE}" in
     echo "LANG=ru_RU.UTF-8" > "${CHROOT_DIR}/etc/default/locale"
     echo "LANGUAGE=ru_RU.UTF-8" >> "${CHROOT_DIR}/etc/default/locale"
 
-    # Настройка SDDM для autologin (Hyprland)
-    mkdir -p "${CHROOT_DIR}/etc/sddm.conf.d"
-    cat > "${CHROOT_DIR}/etc/sddm.conf.d/vibecode.conf" << 'SDDMEOF'
-[Theme]
-Current=malva
+    # Настройка LightDM для autologin (i3wm)
+    mkdir -p "${CHROOT_DIR}/etc/lightdm/lightdm.conf.d"
+    cat > "${CHROOT_DIR}/etc/lightdm/lightdm.conf.d/vibecode.conf" << 'LIGHTDMEOF'
+[Seat:*]
+autologin-user=vibecode
+autologin-user-timeout=0
+user-session=i3
 
-[Autologin]
-User=vibecode
-Session=hyprland
+LIGHTDMEOF
 
-[Users]
-DefaultPath=/usr/local/bin:/usr/bin:/bin
+    # Настройка пользовательских конфигов i3wm
+    log "Настройка i3wm конфигурации..."
 
-[General]
-Numlock=on
-SDDMEOF
-
-    # Настройка пользовательских конфигов Hyprland
-    log "Настройка Hyprland конфигурации..."
-
-    # Создаём директорию для настроек Hyprland
-    mkdir -p "${CHROOT_DIR}/home/vibecode/.config/hypr"
-    mkdir -p "${CHROOT_DIR}/home/vibecode/.config/waybar"
-    mkdir -p "${CHROOT_DIR}/home/vibecode/.config/wofi"
-    mkdir -p "${CHROOT_DIR}/home/vibecode/.config/dunst"
+    # Создаём директорию для настроек i3
+    mkdir -p "${CHROOT_DIR}/home/vibecode/.config/i3"
+    mkdir -p "${CHROOT_DIR}/home/vibecode/.config/picom"
+    mkdir -p "${CHROOT_DIR}/home/vibecode/.config/i3status"
     mkdir -p "${CHROOT_DIR}/home/vibecode/.config/kitty"
 
     # Копирование конфигураций из scripts/desktop/configs/
-    if [[ -d "${ROOT_DIR}/scripts/desktop/configs/hyprland" ]]; then
-      log "Копирование конфигурации Hyprland..."
-      cp -r "${ROOT_DIR}/scripts/desktop/configs/hyprland/"* "${CHROOT_DIR}/home/vibecode/.config/hypr/"
+    if [[ -d "${ROOT_DIR}/scripts/desktop/configs/i3wm" ]]; then
+      log "Копирование конфигурации i3wm..."
+      cp -r "${ROOT_DIR}/scripts/desktop/configs/i3wm/"* "${CHROOT_DIR}/home/vibecode/.config/i3/"
     fi
 
-    if [[ -d "${ROOT_DIR}/scripts/desktop/configs/waybar" ]]; then
-      log "Копирование конфигурации Waybar..."
-      cp -r "${ROOT_DIR}/scripts/desktop/configs/waybar/"* "${CHROOT_DIR}/home/vibecode/.config/waybar/"
+    if [[ -d "${ROOT_DIR}/scripts/desktop/configs/i3status" ]]; then
+      log "Копирование конфигурации i3status..."
+      cp -r "${ROOT_DIR}/scripts/desktop/configs/i3status/"* "${CHROOT_DIR}/home/vibecode/.config/i3status/"
     fi
 
-    if [[ -d "${ROOT_DIR}/scripts/desktop/configs/wofi" ]]; then
-      log "Копирование конфигурации Wofi..."
-      cp -r "${ROOT_DIR}/scripts/desktop/configs/wofi/"* "${CHROOT_DIR}/home/vibecode/.config/wofi/"
-    fi
-
-    if [[ -d "${ROOT_DIR}/scripts/desktop/configs/dunst" ]]; then
-      log "Копирование конфигурации Dunst..."
-      cp -r "${ROOT_DIR}/scripts/desktop/configs/dunst/"* "${CHROOT_DIR}/home/vibecode/.config/dunst/"
+    if [[ -d "${ROOT_DIR}/scripts/desktop/configs/picom" ]]; then
+      log "Копирование конфигурации picom..."
+      cp -r "${ROOT_DIR}/scripts/desktop/configs/picom/"* "${CHROOT_DIR}/home/vibecode/.config/picom/"
     fi
 
     if [[ -d "${ROOT_DIR}/scripts/desktop/configs/kitty" ]]; then

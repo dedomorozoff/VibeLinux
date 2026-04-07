@@ -1,36 +1,35 @@
-# VibeCode OS — Hyprland Edition
+# VibeCode OS — i3wm Edition
 
-## 🚀 Что такое Hyprland?
+## 🚀 Что такое i3wm?
 
-**Hyprland** — это современный Wayland композитор с:
-- ✨ Красивыми анимациями "из коробки"
-- 🎯 Тайлингом окон (dwl-style)
-- 🎨 Гибкой кастомизацией
+**i3wm** — это популярный тайловый оконный менеджер для X11 с:
+- ⚡ Минимальным потреблением ресурсов
+- 🎯 Эффективным тайлингом окон
+- 🎨 Гибкой кастомизацией через конфиги
 - ⌨️ Keyboard-first подходом
-- 🔥 Отличной производительностью
+- 🔥 Отличной стабильностью
 
 Для "вайбкодинга" это идеальный выбор — ничто не отвлекает от потока.
 
 ## 📦 Что включено
 
 ### Базовые компоненты
-- **Hyprland** — Wayland композитор
-- **SDDM** — дисплей менеджер с темой
-- **PipeWire + WirePlumber** — аудио система
-- **XDG Portals** — интеграция с приложениями
+- **i3wm** — тайловый оконный менеджер
+- **LightDM** — дисплей менеджер с autologin
+- **Xorg** — X11 сервер
+- **Picom** — композитор (тени, прозрачность)
 
 ### Пользовательский интерфейс
-- **Waybar** — стильная панель с системными модулями
-- **Wofi** — лаунчер приложений (аналог rofi для Wayland)
-- **Dunst** — система уведомлений
-- **Kitty** — GPU-ускоренный терминал
+- **i3status** — статусная строка
+- **dmenu** — лаунчер приложений
+- **i3lock** — блокировка экрана
+- **Kitty** — терминал
 
 ### Утилиты
-- **grim + slurp + swappy** — скриншоты
-- **wl-clipboard** — буфер обмена
-- **brightnessctl** — управление яркостью
+- **feh** — установка обоев
 - **pavucontrol** — управление звуком
 - **Thunar** — файловый менеджер
+- **lxappearance** — настройка тем GTK
 
 ### Шрифты и иконки
 - JetBrains Mono
@@ -41,57 +40,37 @@
 
 ## ⌨️ Горячие клавиши
 
+Модификатор: **Super (Win)**
+
 ### Основные
 | Клавиша | Действие |
 |---------|----------|
-| `SUPER + Return` | Открыть терминал (Kitty) |
-| `SUPER + Space` | Лаунчер приложений (Wofi) |
+| `SUPER + Return` | Открыть терминал |
+| `SUPER + D` | Лаунчер приложений (dmenu) |
 | `SUPER + E` | Файловый менеджер (Thunar) |
 | `SUPER + Q` | Закрыть окно |
-| `SUPER + P` | Скриншот |
+| `SUPER + SHIFT + R` | Перезапустить i3 |
 
 ### Управление окнами
 | Клавиша | Действие |
 |---------|----------|
+| `SUPER + H` | Горизонтальное разделение |
+| `SUPER + V` | Вертикальное разделение |
 | `SUPER + F` | Полноэкранный режим |
-| `SUPER + G` | Плавающее окно |
 | `SUPER + стрелки` | Переместить фокус |
-| `SUPER + CTRL + стрелки` | Изменить размер окна |
+| `SUPER + SHIFT + стрелки` | Переместить окно |
 
 ### Рабочие пространства
 | Клавиша | Действие |
 |---------|----------|
-| `SUPER + 1-9` | Переключение на workspace |
-| `SUPER + SHIFT + 1-9` | Переместить окно на workspace |
-| `SUPER + S` | Special workspace (scratchpad) |
-| `SUPER + scroll` | Прокрутка workspace |
-
-### Мультимедиа
-| Клавиша | Действие |
-|---------|----------|
-| `XF86AudioRaise/Lower` | Громкость +/- |
-| `XF86AudioMute` | Mute |
-| `XF86AudioPlay/Next/Prev` | Управление плеером |
-| `XF86MonBrightness` | Яркость |
+| `SUPER + 1-0` | Переключение на workspace |
+| `SUPER + SHIFT + 1-0` | Переместить окно на workspace |
 
 ### Системные
 | Клавиша | Действие |
 |---------|----------|
-| `SUPER + Escape` | Блокировка экрана |
-| `SUPER + SHIFT + Q` | Меню питания |
-
-## 🎨 Цветовая схема VibeCode
-
-```
-Background:  #0B1020 (тёмный сине-чёрный)
-Primary:     #4CC9F0 (неоновый голубой)
-Accent:      #7209B7 (фиолетовый)
-Success:     #2EC4B6 (мятный)
-Warning:     #FFE066 (жёлтый)
-Error:       #ff6b6b (красный)
-```
-
-Активная рамка окна имеет градиент от голубого к фиолетовому с анимацией!
+| `SUPER + SHIFT + L` | Блокировка экрана |
+| `SUPER + J/K/L/;` | Навигация (hjkl) |
 
 ## ⚙️ Настройка
 
@@ -101,99 +80,86 @@ Error:       #ff6b6b (красный)
 
 ```
 ~/.config/
-├── hypr/
-│   └── hyprland.conf      # Основной конфиг Hyprland
-├── waybar/
-│   ├── config.jsonc       # Конфиг панели
-│   └── style.css          # Стили панели
-├── wofi/
-│   ├── config             # Конфиг лаунчера
-│   └── style.css          # Стили лаунчера
-├── dunst/
-│   └── dunstrc            # Конфиг уведомлений
+├── i3/
+│   └── config           # Основной конфиг i3wm
+├── i3status/
+│   └── config           # Конфиг статусной строки
+├── picom/
+│   └── picom.conf       # Конфиг композитора
 └── kitty/
-    └── kitty.conf          # Конфиг терминала
+    └── kitty.conf       # Конфиг терминала
 ```
 
 ### Быстрые изменения
 
 #### Изменить раскладку клавиатуры
 ```bash
-# В ~/.config/hypr/hyprland.conf
-input {
-    kb_layout = us,ru
-    kb_options = grp:alt_shift_toggle
-}
+# Добавь в ~/.config/i3/config:
+exec --no-startup-id setxkbmap -layout "us,ru" -option "grp:alt_shift_toggle"
 ```
 
-#### Изменить размер шрифта
+#### Изменить шрифт
 ```bash
-# В ~/.config/hypr/hyprland.conf
-general {
-    gaps_in = 5      # Внутренние отступы
-    gaps_out = 10    # Внешние отступы
-    border_size = 2  # Размер рамки
-}
+# В ~/.config/i3/config:
+font pango:JetBrains Mono 10
 ```
 
-#### Отключить анимации
+#### Изменить цвета окон
 ```bash
-# В ~/.config/hypr/hyprland.conf
-animations {
-    enabled = false
-}
+# В ~/.config/i3/config:
+client.focused          #4c7899 #4c7899 #ffffff #4c7899
+client.unfocused        #333333 #222222 #888888 #292d2e
 ```
 
 ## 🐛 Решение проблем
 
-### Hyprland не запускается
+### i3wm не запускается
 ```bash
 # Проверь логи
-journalctl -u sddm
-cat ~/.local/share/hyprland/hyprland.log
+cat ~/.xsession-errors
 
-# Проверь что Wayland поддерживается
-echo $XDG_SESSION_TYPE
+# Проверь что Xorg работает
+echo $DISPLAY
 ```
 
 ### Нет звука
 ```bash
-# Перезапусти PipeWire
-systemctl --user restart pipewire pipewire-pulse wireplumber
+# Проверь PulseAudio/PipeWire
+pactl list sinks
 ```
 
 ### Не работает лаунчер
 ```bash
-# Проверь что wofi установлен
-which wofi
+# Проверь что dmenu установлен
+which dmenu
 
 # Запусти вручную
-wofi --show drun
+dmenu_run
 ```
 
-### Скриншоты не работают
+### Обои не загружаются
 ```bash
-# Убедись что grim и slurp установлены
-which grim slurp
+# Проверь путь к обоям
+ls -l /usr/share/backgrounds/vibecode/
 
-# Проверь скрипт
-cat /usr/local/bin/vibe-screenshot
+# Установи обои вручную
+feh --bg-fill /usr/share/backgrounds/vibecode/default.jpg
 ```
 
 ## 🔗 Полезные ссылки
 
-- [Hyprland Wiki](https://wiki.hyprland.org/)
-- [Hyprland конфиги сообщества](https://github.com/hyprland-community/hyprland-configs)
-- [Waybar документация](https://github.com/Alexays/Waybar/wiki)
-- [Wofi документация](https://hg.sr.ht/~scoopta/wofi)
+- [i3wm Documentation](https://i3wm.org/docs/)
+- [i3wm User Guide](https://i3wm.org/docs/userguide.html)
+- [i3wm GitHub](https://github.com/i3/i3)
+- [i3status Documentation](https://i3wm.org/docs/i3status.html)
 
 ## 💡 Советы для вайбкодинга
 
-1. **Используй special workspace** как scratchpad для заметок
+1. **Используй клавиатуру** — всё управление через горячие клавиши
 2. **Настрой autostart** для часто используемых приложений
-3. **Используй pseudotiling** для быстрого ресайза
-4. **Горячие клавиши можно кастомизировать** под себя
-5. **Создай свой стиль** в waybar/style.css
+3. **Создай свои конфиги** в `~/.config/i3/config`
+4. **Используй dmenu** для быстрого запуска приложений
+5. **Настрой статусную строку** в `~/.config/i3status/config`
 
 ---
 
