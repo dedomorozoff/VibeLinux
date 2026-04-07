@@ -208,6 +208,40 @@ case "${BUILD_MODE}" in
     # Установка переменных для избежания интерактивных запросов
     export DEBIAN_FRONTEND=noninteractive
 
+    # === КРИТИЧЕСКОЕ: Установка ядра в chroot ===
+    # Ядро должно быть установлено ДО выполнения base-packages.sh
+    log "Установка ядра Linux в chroot..."
+    chroot "${CHROOT_DIR}" /bin/bash -c "
+      DEBIAN_FRONTEND=noninteractive apt-get update
+      DEBIAN_FRONTEND=noninteractive apt-get install -y \
+        linux-image-generic \
+        linux-headers-generic \
+        linux-modules-extra-generic \
+        || true
+
+      # Проверяем что ядро установлено
+      if ls /lib/modules/*/vmlinuz 1>/dev/null 2>&1; then
+        echo '✅ Ядро найдено: ' \$(ls -1 /lib/modules/ | head -n1)
+      else
+        echo '⚠️ Ядро не найдено после установки, пробуем конкретную версию...'
+        # Попробуем установить конкретное ядро для Ubuntu 24.04
+        KERNEL_PKG=\$(apt-cache search linux-image- | grep 'linux-image-[0-9]' | grep generic | head -n1 | cut -d' ' -f1)
+        if [[ -n \"\$KERNEL_PKG\" ]]; then
+          DEBIAN_FRONTEND=noninteractive apt-get install -y \"\$KERNEL_PKG\" || true
+        fi
+      fi
+    "
+
+    # Проверка что ядро установлено
+    KERNEL_VER=$(chroot "${CHROOT_DIR}" bash -c 'ls -1 /lib/modules/ 2>/dev/null | head -n1')
+    if [[ -z "$KERNEL_VER" ]]; then
+      log "ERROR: Ядро не установлено в chroot"
+      chroot "${CHROOT_DIR}" bash -c 'dpkg -l | grep linux-image || true'
+      chroot "${CHROOT_DIR}" bash -c 'ls -la /lib/modules/ 2>/dev/null || echo "/lib/modules/ пуст или отсутствует"'
+      die "Не найдено ядро в /lib/modules/ - проверьте установку ядра выше"
+    fi
+    log "✅ Ядро установлено: $KERNEL_VER"
+
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/base-packages.sh"
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/setup-distro-info.sh"
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/setup-bootloader.sh"
@@ -479,15 +513,18 @@ BOOT=casper
 CASPERFLAGS="noprompt"
 CASPERCONF
 
-    # Получаем версию ядра
-    KERNEL_VER=$(chroot "${CHROOT_DIR}" bash -c 'ls -1 /lib/modules/ 2>/dev/null | head -n1')
+    # Получаем версию ядра (должно быть установлено выше)
     if [[ -z "$KERNEL_VER" ]]; then
-      log "ERROR: Ядро не установлено в chroot"
+      KERNEL_VER=$(chroot "${CHROOT_DIR}" bash -c 'ls -1 /lib/modules/ 2>/dev/null | head -n1')
+    fi
+    
+    if [[ -z "$KERNEL_VER" ]]; then
+      log "ERROR: Ядро не найдено на этапе mkinitramfs"
       chroot "${CHROOT_DIR}" bash -c 'dpkg -l | grep linux-image || true'
       chroot "${CHROOT_DIR}" bash -c 'ls -la /lib/modules/ 2>/dev/null || echo "/lib/modules/ пуст или отсутствует"'
-      die "Не найдено ядро в /lib/modules/ - проверьте base-packages.sh"
+      die "Не найдено ядро в /lib/modules/ - проверьте установку ядра выше"
     fi
-    log "Используем ядро: $KERNEL_VER"
+    log "Генерация initrd для ядра: $KERNEL_VER"
     
     # Генерируем initrd с casper hook
     log "Генерация initrd с casper hook..."
