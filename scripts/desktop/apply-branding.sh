@@ -29,6 +29,7 @@ mkdir -p "/home/${TARGET_USER}/.themes"
 # Копируем обои
 if [[ -d "${BRANDING_DIR}/wallpapers" ]]; then
   echo "[branding] Копирование обоев..."
+  mkdir -p /usr/share/backgrounds
   cp -r "${BRANDING_DIR}/wallpapers"/* "/home/${TARGET_USER}/.local/share/backgrounds/" 2>/dev/null || true
   cp -r "${BRANDING_DIR}/wallpapers"/* /usr/share/backgrounds/ 2>/dev/null || true
   # Убедимся что файл называется правильно для dconf

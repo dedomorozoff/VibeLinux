@@ -30,6 +30,14 @@ build/
 *.img
 *.qcow2
 
+# Временные директории
+temp/
+
+# AI assistants
+.junie/
+.qwen/
+.qoder/
+
 # Прочее
 /.env
 /.env.local
