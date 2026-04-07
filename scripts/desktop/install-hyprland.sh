@@ -73,30 +73,139 @@ apt-get remove --purge -y \
 apt-get autoremove -y --important 2>/dev/null || true
 
 # ============================================================================
-# Установка Hyprland и компонентов
+# Установка Hyprland из исходников
 # ============================================================================
 
-log "Установка Hyprland ($PROFILE профиль)..."
+log "Установка Hyprland из исходников ($PROFILE профиль)..."
+log "Внимание: это займёт значительное время (компиляция C++ проекта)..."
 
-# Базовые компоненты Wayland
-log "Установка базовых компонентов Wayland..."
-DEBIAN_FRONTEND=noninteractive apt-get install -y \
-  hyprland \
-  wayland-protocols \
-  libwayland-client0 \
-  libwayland-server0 \
-  xdg-desktop-portal \
-  xdg-desktop-portal-gtk \
-  xdg-desktop-portal-hyprland \
-  pipewire \
-  pipewire-audio \
-  pipewire-pulse \
-  wireplumber \
-  || {
-    err "Ошибка установки базовых компонентов"
-    warn "Hyprland требует Ubuntu 24.04+ или Debian testing+"
+# ---------------------------------------------------------------------------
+# Шаг 1: Установка системных зависимостей
+# ---------------------------------------------------------------------------
+
+log "Шаг 1/5: Установка системных зависимостей..."
+
+# Обновляем компиляторы (Hyprland требует gcc >= 15 или clang >= 19 для C++26)
+log "Добавление PPA для свежего gcc..."
+add-apt-repository -y ppa:ubuntu-toolchain-r/test -y 2>/dev/null || true
+apt-get update -y
+DEBIAN_FRONTEND=noninteractive apt-get install -y gcc-15 g++-15 || {
+  warn "gcc-15 недоступен, пробуем clang..."
+  DEBIAN_FRONTEND=noninteractive apt-get install -y clang-19 || {
+    err "Не удалось установить современный компилятор (gcc-15 или clang-19)"
+    err "Hyprland требует C++26, который поддерживается gcc >= 15 или clang >= 19"
     exit 1
   }
+  export CC=clang-19
+  export CXX=clang++-19
+}
+export CC=gcc-15
+export CXX=g++-15
+
+DEBIAN_FRONTEND=noninteractive apt-get install -y \
+  meson wget build-essential ninja-build cmake-extras cmake \
+  fontconfig libfontconfig-dev libffi-dev libxml2-dev libdrm-dev \
+  libxkbcommon-x11-dev libxkbregistry-dev libxkbcommon-dev \
+  libpixman-1-dev libudev-dev libseat-dev seatd \
+  libxcb-dri3-dev libegl-dev libgles2 libegl1-mesa-dev \
+  glslang-tools libinput-bin libinput-dev libxcb-composite0-dev \
+  libavutil-dev libavcodec-dev libavformat-dev \
+  libxcb-ewmh2 libxcb-ewmh-dev libxcb-present-dev \
+  libxcb-icccm4-dev libxcb-render-util0-dev libxcb-res0-dev \
+  libxcb-xinput-dev libtomlplusplus3 libre2-dev \
+  pkg-config libpango1.0-dev libcairo2-dev libgtk-3-dev \
+  wayland-protocols xdg-desktop-portal-wlr \
+  pipewire pipewire-audio pipewire-pulse wireplumber \
+  || {
+    err "Ошибка установки системных зависимостей"
+    exit 1
+  }
+
+# ---------------------------------------------------------------------------
+# Шаг 2: Сборка внутренних зависимостей hypr*
+# ---------------------------------------------------------------------------
+
+log "Шаг 2/5: Сборка внутренних зависимостей Hyprland..."
+
+HYPR_BUILD_DIR="/tmp/hypr-build"
+mkdir -p "$HYPR_BUILD_DIR"
+cd "$HYPR_BUILD_DIR"
+
+# Порядок сборки: hyprutils → hyprlang → hyprcursor → hyprgraphics → hyprwayland-scanner → aquamarine → Hyprland
+HYPR_DEPS=("hyprutils" "hyprlang" "hyprcursor" "hyprgraphics" "hyprwayland-scanner" "aquamarine")
+
+for dep in "${HYPR_DEPS[@]}"; do
+  log "Сборка $dep..."
+  if [[ -d "$HYPR_BUILD_DIR/$dep" ]]; then
+    rm -rf "$HYPR_BUILD_DIR/$dep"
+  fi
+  
+  git clone --recursive "https://github.com/hyprwm/$dep" "$HYPR_BUILD_DIR/$dep" || {
+    err "Не удалось клонировать $dep"
+    exit 1
+  }
+  
+  cd "$HYPR_BUILD_DIR/$dep"
+  cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=$CC -DCMAKE_CXX_COMPILER=$CXX -B build || {
+    err "Ошибка конфигурации $dep"
+    exit 1
+  }
+  cmake --build ./build --config Release -j$(nproc) || {
+    err "Ошибка сборки $dep"
+    exit 1
+  }
+  cmake --install ./build || {
+    err "Ошибка установки $dep"
+    exit 1
+  }
+  
+  log "✓ $dep установлен"
+done
+
+# ---------------------------------------------------------------------------
+# Шаг 3: Сборка и установка Hyprland
+# ---------------------------------------------------------------------------
+
+log "Шаг 3/5: Сборка и установка Hyprland (это займёт время)..."
+
+cd "$HYPR_BUILD_DIR"
+if [[ -d "$HYPR_BUILD_DIR/Hyprland" ]]; then
+  rm -rf "$HYPR_BUILD_DIR/Hyprland"
+fi
+
+git clone --recursive "https://github.com/hyprwm/Hyprland" "$HYPR_BUILD_DIR/Hyprland" || {
+  err "Не удалось клонировать Hyprland"
+  exit 1
+}
+
+cd "$HYPR_BUILD_DIR/Hyprland"
+cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=$CC -DCMAKE_CXX_COMPILER=$CXX -B build || {
+  err "Ошибка конфигурации Hyprland"
+  exit 1
+}
+cmake --build ./build --config Release --target all -j$(nproc) || {
+  err "Ошибка сборки Hyprland"
+  exit 1
+}
+cmake --install ./build || {
+  err "Ошибка установки Hyprland"
+  exit 1
+}
+
+log "✓ Hyprland установлен"
+
+# ---------------------------------------------------------------------------
+# Шаг 4: Очистка временных файлов сборки
+# ---------------------------------------------------------------------------
+
+log "Шаг 4/5: Очистка временных файлов..."
+rm -rf "$HYPR_BUILD_DIR"
+
+# ---------------------------------------------------------------------------
+# Шаг 5: Установка дополнительных компонентов
+# ---------------------------------------------------------------------------
+
+log "Шаг 5/5: Установка дополнительных компонентов..."
 
 # Дисплей менеджер (SDDM для Wayland)
 log "Установка SDDM (Wayland-compatible DM)..."
