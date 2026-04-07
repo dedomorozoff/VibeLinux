@@ -50,9 +50,22 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y\
 
 echo "[base-packages] Обновление initramfs для live-boot..."
 if command -v update-initramfs &>/dev/null; then
-  update-initramfs -u || echo "[base-packages] Warning: Failed to update initramfs"
+  update-initramfs -u -k all || echo "[base-packages] Warning: Failed to update initramfs"
 else
  echo "[base-packages] Skipping initramfs update (command not found)"
+fi
+
+# Проверка что ядро установлено
+echo "[base-packages] Проверка установки ядра..."
+if ls /lib/modules/*/vmlinuz 1>/dev/null 2>&1; then
+  echo "[base-packages] ✅ Ядро найдено: $(ls -1 /lib/modules/ | head -n1)"
+else
+  echo "[base-packages] ⚠️ Ядро не найдено, пробуем установить явно..."
+  DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    linux-image-generic \
+    linux-headers-generic \
+    linux-modules-extra-generic \
+    || true
 fi
 
 echo "[base-packages] Установка дополнительных полезных утилит..."

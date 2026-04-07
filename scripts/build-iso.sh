@@ -480,9 +480,12 @@ CASPERFLAGS="noprompt"
 CASPERCONF
 
     # Получаем версию ядра
-    KERNEL_VER=$(chroot "${CHROOT_DIR}" bash -c 'ls -1 /lib/modules/ | head -n1')
+    KERNEL_VER=$(chroot "${CHROOT_DIR}" bash -c 'ls -1 /lib/modules/ 2>/dev/null | head -n1')
     if [[ -z "$KERNEL_VER" ]]; then
-      die "Не найдено ядро в /lib/modules/"
+      log "ERROR: Ядро не установлено в chroot"
+      chroot "${CHROOT_DIR}" bash -c 'dpkg -l | grep linux-image || true'
+      chroot "${CHROOT_DIR}" bash -c 'ls -la /lib/modules/ 2>/dev/null || echo "/lib/modules/ пуст или отсутствует"'
+      die "Не найдено ядро в /lib/modules/ - проверьте base-packages.sh"
     fi
     log "Используем ядро: $KERNEL_VER"
     
