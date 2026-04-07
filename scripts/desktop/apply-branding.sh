@@ -58,9 +58,11 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y \
   arc-theme \
   papirus-icon-theme \
   materia-gtk-theme \
-  dconf-cli \
-  plymouth-theme-script \
+  plymouth-themes \
   || true
+
+# Устанавливаем dconf-cli отдельно (гарантированно)
+DEBIAN_FRONTEND=noninteractive apt-get install -y dconf-cli || true
 
 # Настройка Plymouth темы загрузки
 echo "[branding] Настройка Plymouth темы загрузки..."
@@ -203,7 +205,9 @@ foreground-color='#4CC9F0'
 DCONFSYSEOF
 
 # Обновляем dconf базу
-dconf update
+if command -v dconf &>/dev/null; then
+  dconf update
+fi
 
 # Добавляем автозапуск настройки темы
 mkdir -p "/home/${TARGET_USER}/.config/autostart"
