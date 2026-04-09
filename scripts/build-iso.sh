@@ -428,6 +428,15 @@ esac
 
 . /usr/share/initramfs-tools/hook-functions
 
+# DESTDIR устанавливается initramfs-tools автоматически
+# Если не установлена, используем /tmp/initrd-workaround
+DESTDIR="${DESTDIR:-}"
+if [ -z "$DESTDIR" ]; then
+    echo "WARNING: DESTDIR not set, using workaround"
+    DESTDIR="/tmp/initrd-root"
+    mkdir -p "$DESTDIR"
+fi
+
 manual_add_modules overlay
 
 copy_exec /sbin/losetup /sbin
@@ -440,8 +449,8 @@ copy_exec /usr/share/casper/casper-preseed /bin
 copy_exec /usr/share/casper/casper-set-selections /bin
 
 mkdir -p ${DESTDIR}/lib/udev/rules.d
-cp -p /lib/udev/rules.d/60-cdrom_id.rules ${DESTDIR}/lib/udev/rules.d/
-copy_exec /lib/udev/cdrom_id /lib/udev
+cp -p /lib/udev/rules.d/60-cdrom_id.rules ${DESTDIR}/lib/udev/rules.d/ 2>/dev/null || true
+copy_exec /lib/udev/cdrom_id /lib/udev 2>/dev/null || true
 copy_exec /usr/bin/eject /bin
 copy_exec /sbin/swapon /sbin
 
@@ -472,27 +481,51 @@ manual_add_modules ide-cd
 manual_add_modules sbp2
 manual_add_modules ohci1394
 
-# Копируем основные скрипты casper
-cp /usr/share/initramfs-tools/scripts/casper-functions $DESTDIR/scripts/
-cp /usr/share/initramfs-tools/scripts/casper-helpers $DESTDIR/scripts/
-cp /usr/share/initramfs-tools/scripts/casper $DESTDIR/scripts/
-chmod +x $DESTDIR/scripts/casper
+# Копируем основные скрипты casper В ОБЯЗАТЕЛЬНОМ ПОРЯДКЕ
+echo "[casper hook] Copying casper scripts to $DESTDIR/scripts/"
+mkdir -p $DESTDIR/scripts
+
+if [ -f /usr/share/initramfs-tools/scripts/casper ]; then
+    cp /usr/share/initramfs-tools/scripts/casper $DESTDIR/scripts/
+    chmod +x $DESTDIR/scripts/casper
+    echo "[casper hook] OK: scripts/casper copied"
+else
+    echo "[casper hook] ERROR: /usr/share/initramfs-tools/scripts/casper not found!"
+    ls -la /usr/share/initramfs-tools/scripts/ || true
+fi
+
+if [ -f /usr/share/initramfs-tools/scripts/casper-functions ]; then
+    cp /usr/share/initramfs-tools/scripts/casper-functions $DESTDIR/scripts/
+    echo "[casper hook] OK: scripts/casper-functions copied"
+fi
+
+if [ -f /usr/share/initramfs-tools/scripts/casper-helpers ]; then
+    cp /usr/share/initramfs-tools/scripts/casper-helpers $DESTDIR/scripts/
+    echo "[casper hook] OK: scripts/casper-helpers copied"
+fi
 
 # Копируем casper-premount скрипты
-mkdir -p $DESTDIR/scripts/casper-premount
-cp /usr/share/initramfs-tools/scripts/casper-premount/* $DESTDIR/scripts/casper-premount/
-chmod +x $DESTDIR/scripts/casper-premount/*
+if ls /usr/share/initramfs-tools/scripts/casper-premount/* >/dev/null 2>&1; then
+    mkdir -p $DESTDIR/scripts/casper-premount
+    cp /usr/share/initramfs-tools/scripts/casper-premount/* $DESTDIR/scripts/casper-premount/
+    chmod +x $DESTDIR/scripts/casper-premount/*
+    echo "[casper hook] OK: casper-premount copied"
+fi
 
 # Копируем casper-bottom скрипты
-mkdir -p $DESTDIR/scripts/casper-bottom
-cp /usr/share/initramfs-tools/scripts/casper-bottom/* $DESTDIR/scripts/casper-bottom/
-chmod +x $DESTDIR/scripts/casper-bottom/*
+if ls /usr/share/initramfs-tools/scripts/casper-bottom/* >/dev/null 2>&1; then
+    mkdir -p $DESTDIR/scripts/casper-bottom
+    cp /usr/share/initramfs-tools/scripts/casper-bottom/* $DESTDIR/scripts/casper-bottom/
+    chmod +x $DESTDIR/scripts/casper-bottom/*
+    echo "[casper hook] OK: casper-bottom copied"
+fi
 
 auto_add_modules net
 
 if [ -e /etc/casper.conf ]; then
     mkdir -p ${DESTDIR}/etc
     cp /etc/casper.conf ${DESTDIR}/etc
+    echo "[casper hook] OK: casper.conf copied"
 fi
 
 if [ "$CASPER_GENERATE_UUID" ]; then
@@ -504,6 +537,8 @@ if [ -z "\$BOOT" ]; then
 fi
 EOF
 fi
+
+echo "[casper hook] Completed successfully"
 CASPERHOOK
 
     # Создаём conf.d/casper для включения casper hook
@@ -525,15 +560,133 @@ CASPERCONF
       die "Не найдено ядро в /lib/modules/ - проверьте установку ядра выше"
     fi
     log "Генерация initrd для ядра: $KERNEL_VER"
-    
+
+    # === ВАЖНАЯ ПРОВЕРКА: убеждаемся что casper файлы существуют в chroot ===
+    log "Проверка наличия casper файлов в chroot..."
+    if ! chroot "${CHROOT_DIR}" test -f /usr/share/initramfs-tools/scripts/casper; then
+      log "ERROR: /usr/share/initramfs-tools/scripts/casper НЕ НАЙДЕН в chroot!"
+      log "Проверяем установку пакета casper..."
+      chroot "${CHROOT_DIR}" dpkg -l | grep casper || log "  casper package not found!"
+      chroot "${CHROOT_DIR}" ls -la /usr/share/initramfs-tools/scripts/ 2>/dev/null || log "  scripts/ directory not found!"
+      die "casper скрипты не найдены - переустановите пакет casper в chroot"
+    fi
+    log "OK: casper файлы найдены в chroot"
+
+    # Проверяем что hook файл существует и исполняемый
+    if ! chroot "${CHROOT_DIR}" test -f /usr/share/initramfs-tools/hooks/casper; then
+      die "Hook файл /usr/share/initramfs-tools/hooks/casper НЕ НАЙДЕН!"
+    fi
+    chroot "${CHROOT_DIR}" chmod +x /usr/share/initramfs-tools/hooks/casper
+    log "OK: hook файл найден и сделан исполняемым"
+
     # Генерируем initrd с casper hook
     log "Генерация initrd с casper hook..."
     chroot "${CHROOT_DIR}" mkinitramfs -o /boot/initrd.img.new "$KERNEL_VER" || die "Ошибка mkinitramfs"
+
+    # === КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: проверяем нужно ли добавлять scripts/casper ===
+    # Оригинальный hook casper в Ubuntu 24.04 может НЕ копировать scripts/casper
+    # Проверяем есть ли он уже в initrd
+    log "Проверка наличия scripts/casper в initrd..."
     
-    # Проверяем что initrd содержит casper скрипты
-    if ! chroot "${CHROOT_DIR}" lsinitramfs /boot/initrd.img.new 2>/dev/null | grep -q "^scripts/casper$"; then
+    HAS_CASPER=false
+    if chroot "${CHROOT_DIR}" lsinitramfs /boot/initrd.img.new 2>/dev/null | grep -q "^scripts/casper$"; then
+      log "  OK: scripts/casper уже есть в initrd (hook сработал)"
+      HAS_CASPER=true
+    elif chroot "${CHROOT_DIR}" lsinitramfs /boot/initrd.img.new 2>/dev/null | grep -q "scripts/casper$"; then
+      # Проверяем без ^ - может быть с другим префиксом
+      log "  OK: scripts/casper найден (с возможным префиксом)"
+      HAS_CASPER=true
+    else
+      log "  WARNING: scripts/casper НЕ найден в initrd!"
+      log "  Содержимое scripts/ в initrd:"
+      chroot "${CHROOT_DIR}" lsinitramfs /boot/initrd.img.new 2>/dev/null | grep "^scripts/" | head -10 || log "    (scripts/ пуст)"
+    fi
+    
+    if [[ "$HAS_CASPER" == "true" ]]; then
+      log "OK: initrd содержит scripts/casper (hook сработал правильно)"
+    else
+      # scripts/casper отсутствует - нужно добавить вручную
+      log "Добавление scripts/casper в initrd (workaround для Ubuntu 24.04)..."
+      
+      WORK_DIR=$(mktemp -d /tmp/initrd-work-XXXXXX)
+      
+      # Распаковываем initrd
+      cp "${CHROOT_DIR}/boot/initrd.img.new" "${WORK_DIR}/initrd.img.new"
+      INITRD_FILE="${WORK_DIR}/initrd.img.new"
+      mkdir -p "${WORK_DIR}/initrd-extracted"
+      
+      # Определяем формат через file
+      INITRD_TYPE=$(file -b "${INITRD_FILE}" | cut -d' ' -f1 | tr '[:upper:]' '[:lower:]')
+      log "  Тип initrd: ${INITRD_TYPE}"
+      
+      # Пробуем разные методы распаковки
+      EXTRACTED=false
+      for method in "gzip -dc" "xz -dc" "zstd -dc" "lz4 -dc" "cat"; do
+        if (cd "${WORK_DIR}/initrd-extracted" && ${method} "${INITRD_FILE}" | cpio -idm 2>/dev/null); then
+          if [[ -d "${WORK_DIR}/initrd-extracted/scripts" ]] || [[ -d "${WORK_DIR}/initrd-extracted/bin" ]]; then
+            log "  Распаковка успешна: ${method}"
+            EXTRACTED=true
+            break
+          fi
+        fi
+      done
+      
+      if [[ "$EXTRACTED" == "false" ]]; then
+        log "ERROR: Не удалось распаковать initrd!"
+        log "  Пробуем универсальный метод..."
+        # Универсальный метод - cpio сам определит формат
+        (cd "${WORK_DIR}/initrd-extracted" && cpio -idm < "${INITRD_FILE}" 2>/dev/null) || true
+        
+        if [[ ! -d "${WORK_DIR}/initrd-extracted/scripts" ]] && [[ ! -d "${WORK_DIR}/initrd-extracted/bin" ]]; then
+          log "  FATAL: распаковка не удалась, пропускаем workaround"
+          rm -rf "${WORK_DIR}"
+          cd /
+        fi
+      fi
+      
+      # Копируем casper скрипты
+      CASPER_SCRIPTS_SRC="${CHROOT_DIR}/usr/share/initramfs-tools/scripts"
+      if [[ -d "${CASPER_SCRIPTS_SRC}" ]]; then
+        mkdir -p "${WORK_DIR}/initrd-extracted/scripts"
+        
+        if [[ -f "${CASPER_SCRIPTS_SRC}/casper" ]]; then
+          cp "${CASPER_SCRIPTS_SRC}/casper" "${WORK_DIR}/initrd-extracted/scripts/casper"
+          chmod +x "${WORK_DIR}/initrd-extracted/scripts/casper"
+          log "  OK: scripts/casper добавлен"
+        fi
+        
+        [[ -f "${CASPER_SCRIPTS_SRC}/casper-functions" ]] && \
+          cp "${CASPER_SCRIPTS_SRC}/casper-functions" "${WORK_DIR}/initrd-extracted/scripts/"
+        [[ -f "${CASPER_SCRIPTS_SRC}/casper-helpers" ]] && \
+          cp "${CASPER_SCRIPTS_SRC}/casper-helpers" "${WORK_DIR}/initrd-extracted/scripts/"
+      fi
+      
+      # Запаковываем initrd обратно (gzip)
+      rm -f "${CHROOT_DIR}/boot/initrd.img.new"
+      (cd "${WORK_DIR}/initrd-extracted" && find . | cpio --quiet -o -H newc | gzip -9) > "${CHROOT_DIR}/boot/initrd.img.new"
+      
+      rm -rf "${WORK_DIR}"
+      cd /
+      log "OK: initrd обновлён с scripts/casper"
+    fi
+
+    # Проверяем что initrd содержит casper скрипты (ПРЯМАЯ ПРОВЕРКА без chroot)
+    log "Финальная проверка initrd..."
+    CASPER_CHECK=$(lsinitramfs "${CHROOT_DIR}/boot/initrd.img.new" 2>/dev/null | grep "scripts/casper" || true)
+    
+    if [[ -z "$CASPER_CHECK" ]]; then
+      log "ERROR: initrd не содержит scripts/casper"
+      log "=== Все файлы с 'casper' в имени: ==="
+      lsinitramfs "${CHROOT_DIR}/boot/initrd.img.new" 2>/dev/null | grep -i casper || log "  (нет файлов с 'casper')"
+      log "=== Содержимое scripts/: ==="
+      lsinitramfs "${CHROOT_DIR}/boot/initrd.img.new" 2>/dev/null | grep "^scripts/" | head -20 || log "  (scripts/ пуст)"
       die "initrd не содержит scripts/casper - ошибка hook"
     fi
+    
+    log "OK: initrd содержит casper скрипты:"
+    echo "$CASPER_CHECK" | head -5 | while read -r line; do
+      log "  Найдено: $line"
+    done
     
     # Заменяем старый initrd
     chroot "${CHROOT_DIR}" mv /boot/initrd.img.new /boot/initrd.img-"$KERNEL_VER"

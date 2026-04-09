@@ -185,6 +185,15 @@ esac
 
 . /usr/share/initramfs-tools/hook-functions
 
+# DESTDIR устанавливается initramfs-tools автоматически
+# Если не установлена, используем workaround
+DESTDIR="${DESTDIR:-}"
+if [ -z "$DESTDIR" ]; then
+    echo "WARNING: DESTDIR not set, using workaround"
+    DESTDIR="/tmp/initrd-root"
+    mkdir -p "$DESTDIR"
+fi
+
 manual_add_modules overlay
 manual_add_modules squashfs
 manual_add_modules loop
@@ -200,29 +209,55 @@ mkdir -p ${DESTDIR}/lib/casper
 [ -f /usr/share/casper/casper-preseed ] && copy_exec /usr/share/casper/casper-preseed /bin
 
 mkdir -p ${DESTDIR}/lib/udev/rules.d
-[ -f /lib/udev/rules.d/60-cdrom_id.rules ] && cp -p /lib/udev/rules.d/60-cdrom_id.rules ${DESTDIR}/lib/udev/rules.d/
-[ -f /lib/udev/cdrom_id ] && copy_exec /lib/udev/cdrom_id /lib/udev
+[ -f /lib/udev/rules.d/60-cdrom_id.rules ] && cp -p /lib/udev/rules.d/60-cdrom_id.rules ${DESTDIR}/lib/udev/rules.d/ 2>/dev/null || true
+[ -f /lib/udev/cdrom_id ] && copy_exec /lib/udev/cdrom_id /lib/udev 2>/dev/null || true
 
-# Копируем основные скрипты casper
-cp /usr/share/initramfs-tools/scripts/casper-functions $DESTDIR/scripts/
-cp /usr/share/initramfs-tools/scripts/casper-helpers $DESTDIR/scripts/
-cp /usr/share/initramfs-tools/scripts/casper $DESTDIR/scripts/
-chmod +x $DESTDIR/scripts/casper
+# Копируем основные скрипты casper В ОБЯЗАТЕЛЬНОМ ПОРЯДКЕ
+echo "[casper hook] Copying casper scripts to $DESTDIR/scripts/"
+mkdir -p $DESTDIR/scripts
+
+if [ -f /usr/share/initramfs-tools/scripts/casper ]; then
+    cp /usr/share/initramfs-tools/scripts/casper $DESTDIR/scripts/
+    chmod +x $DESTDIR/scripts/casper
+    echo "[casper hook] OK: scripts/casper copied"
+else
+    echo "[casper hook] ERROR: /usr/share/initramfs-tools/scripts/casper not found!"
+    ls -la /usr/share/initramfs-tools/scripts/ || true
+fi
+
+if [ -f /usr/share/initramfs-tools/scripts/casper-functions ]; then
+    cp /usr/share/initramfs-tools/scripts/casper-functions $DESTDIR/scripts/
+    echo "[casper hook] OK: scripts/casper-functions copied"
+fi
+
+if [ -f /usr/share/initramfs-tools/scripts/casper-helpers ]; then
+    cp /usr/share/initramfs-tools/scripts/casper-helpers $DESTDIR/scripts/
+    echo "[casper hook] OK: scripts/casper-helpers copied"
+fi
 
 # Копируем casper-premount скрипты
-mkdir -p $DESTDIR/scripts/casper-premount
-cp /usr/share/initramfs-tools/scripts/casper-premount/* $DESTDIR/scripts/casper-premount/ 2>/dev/null || true
-chmod +x $DESTDIR/scripts/casper-premount/* 2>/dev/null || true
+if ls /usr/share/initramfs-tools/scripts/casper-premount/* >/dev/null 2>&1; then
+    mkdir -p $DESTDIR/scripts/casper-premount
+    cp /usr/share/initramfs-tools/scripts/casper-premount/* $DESTDIR/scripts/casper-premount/ 2>/dev/null || true
+    chmod +x $DESTDIR/scripts/casper-premount/* 2>/dev/null || true
+    echo "[casper hook] OK: casper-premount copied"
+fi
 
 # Копируем casper-bottom скрипты
-mkdir -p $DESTDIR/scripts/casper-bottom
-cp /usr/share/initramfs-tools/scripts/casper-bottom/* $DESTDIR/scripts/casper-bottom/ 2>/dev/null || true
-chmod +x $DESTDIR/scripts/casper-bottom/* 2>/dev/null || true
+if ls /usr/share/initramfs-tools/scripts/casper-bottom/* >/dev/null 2>&1; then
+    mkdir -p $DESTDIR/scripts/casper-bottom
+    cp /usr/share/initramfs-tools/scripts/casper-bottom/* $DESTDIR/scripts/casper-bottom/ 2>/dev/null || true
+    chmod +x $DESTDIR/scripts/casper-bottom/* 2>/dev/null || true
+    echo "[casper hook] OK: casper-bottom copied"
+fi
 
 if [ -e /etc/casper.conf ]; then
     mkdir -p ${DESTDIR}/etc
     cp /etc/casper.conf ${DESTDIR}/etc
+    echo "[casper hook] OK: casper.conf copied"
 fi
+
+echo "[casper hook] Completed successfully"
 CASPERHOOK
       chmod +x "${CHROOT_DIR}/usr/share/initramfs-tools/hooks/casper"
 
