@@ -131,7 +131,7 @@ if command -v apt >/dev/null 2>&1; then
   apt install -y \
     pipewire wireplumber pipewire-audio \
     network-manager \
-    flatpak xdg-desktop-portal xdg-desktop-portal-gtk \
+    xdg-desktop-portal xdg-desktop-portal-gtk \
     fonts-firacode fonts-noto-core fonts-noto-color-emoji \
     udev systemd-timesyncd zsh git curl wget unzip jq fzf ripgrep tmux build-essential pkg-config \
     python3-full python3-pip python3-venv \
@@ -147,42 +147,34 @@ if command -v apt >/dev/null 2>&1; then
   systemctl enable NetworkManager || true
   systemctl enable docker || true
 elif command -v pacman >/dev/null 2>&1; then
-  pacman -Sy --noconfirm pipewire wireplumber networkmanager iwd flatpak xdg-desktop-portal \
+  pacman -Sy --noconfirm pipewire wireplumber networkmanager iwd xdg-desktop-portal \
     ttf-fira-code noto-fonts noto-fonts-emoji base-devel git curl wget unzip jq fzf ripgrep tmux python python-pip docker zstd
   systemctl enable NetworkManager
   systemctl enable docker
 elif command -v dnf >/dev/null 2>&1; then
-  dnf -y install pipewire wireplumber NetworkManager iwd flatpak xdg-desktop-portal \
+  dnf -y install pipewire wireplumber NetworkManager iwd xdg-desktop-portal \
     fira-code-fonts google-noto* git curl wget unzip jq fzf ripgrep tmux python3 python3-pip docker zstd
   systemctl enable NetworkManager
   systemctl enable docker
 fi
 
-if command -v flatpak >/dev/null 2>&1; then
-  flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-  FLATPAKS=(__FLATPAKS__)
-  if [ ${#FLATPAKS[@]} -gt 0 ]; then
-    flatpak install -y flathub "${FLATPAKS[@]}" || true
-  fi
-fi
-
 chsh -s /usr/bin/zsh "$USERNAME" || true
 rm -rf /home/$USERNAME/.oh-my-zsh || true
-runuser -u "$USERNAME" -- bash -lc 'curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh | bash -s -- --unattended || true'
-runuser -u "$USERNAME" -- bash -lc 'curl -sS https://starship.rs/install.sh | sh -s -- -y || true'
+runuser -u "$USERNAME" -- bash -lc 'CI=true curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh | bash -s -- --unattended || true'
+runuser -u "$USERNAME" -- bash -lc 'CI=true curl -fsSL https://starship.rs/install.sh | sh -s -- -y || true'
 runuser -u "$USERNAME" -- bash -lc 'mkdir -p ~/.config && echo "eval $(starship init zsh)" >> ~/.zshrc'
 
 # === Языки программирования ===
 if [[ "__HAS_NODE__" == "1" ]]; then
-  runuser -u "$USERNAME" -- bash -lc 'curl -fsSL https://fnm.vercel.app/install | bash'
+  runuser -u "$USERNAME" -- bash -lc 'CI=true curl -fsSL https://fnm.vercel.app/install | bash'
   runuser -u "$USERNAME" -- bash -lc 'export PATH="$HOME/.local/share/fnm:$PATH"; eval "$(fnm env)"; fnm install --lts; fnm default lts-latest'
 fi
 if [[ "__HAS_BUN__" == "1" ]]; then
-  runuser -u "$USERNAME" -- bash -c 'if [ ! -f "$HOME/.bun/bin/bun" ]; then curl -fsSL https://bun.sh/install | bash; fi'
+  runuser -u "$USERNAME" -- bash -lc 'CI=true curl -fsSL https://bun.sh/install | bash'
   echo 'export PATH="$HOME/.bun/bin:$PATH"' >> /home/$USERNAME/.zshrc
 fi
 if [[ "__HAS_DENO__" == "1" ]]; then
-  runuser -u "$USERNAME" -- bash -c 'if [ ! -d "$HOME/.deno" ]; then curl -fsSL https://deno.land/install.sh | sh; fi'
+  runuser -u "$USERNAME" -- bash -lc 'CI=true curl -fsSL https://deno.land/install.sh | sh'
   echo 'export PATH="$HOME/.deno/bin:$PATH"' >> /home/$USERNAME/.zshrc
 fi
 if [[ "__HAS_PY__" == "1" ]]; then
@@ -192,7 +184,7 @@ if [[ "__HAS_RUST__" == "1" ]]; then
   runuser -u "$USERNAME" -- bash -lc 'curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y'
 fi
 if [[ "__HAS_GO__" == "1" ]]; then
-  curl -fsSL https://go.dev/dl/go1.26.0.linux-amd64.tar.gz -o /tmp/go.tgz
+  curl -fsSL https://go.dev/dl/latest.linux-amd64.tar.gz -o /tmp/go.tgz
   tar -C /usr/local -xzf /tmp/go.tgz
   echo 'export PATH=$PATH:/usr/local/go/bin:$HOME/go/bin' >> /home/$USERNAME/.zshrc
 fi
@@ -213,7 +205,7 @@ fi
 
 # === AI-агенты ===
 if [[ "__HAS_AIDER__" == "1" ]]; then
-  pip3 install --break-system-packages --ignore-installed aider-chat
+  pip3 install --break-system-packages aider-chat || true
 fi
 if [[ "__HAS_OLLAMA__" == "1" ]]; then
   curl -fsSL https://ollama.com/install.sh | sh
@@ -261,12 +253,6 @@ fi
 
 # Install editors
 log "Installing editors..."
-if command -v flatpak >/dev/null 2>&1; then
-  if echo "$editors" | grep -q "zed"; then
-    log "Installing Zed via Flatpak..."
-    flatpak install -y flathub dev.zed.Zed
-  fi
-fi
 if echo "$editors" | grep -q "vscode"; then
   if ! command -v code >/dev/null 2>&1; then
     log "Installing VS Code..."
@@ -282,7 +268,7 @@ log "Installing languages..."
 if echo "$runtimes" | grep -q "node"; then
   if ! command -v node >/dev/null 2>&1; then
     log "Installing Node.js via fnm..."
-    curl -fsSL https://fnm.vercel.app/install | bash
+CI=true curl -fsSL https://fnm.vercel.app/install | bash
     export PATH="$HOME/.local/share/fnm:$PATH"
     eval "$(fnm env)"
     fnm install --lts
@@ -291,13 +277,13 @@ fi
 if echo "$runtimes" | grep -q "bun"; then
   if [ ! -f "$HOME/.bun/bin/bun" ]; then
     log "Installing Bun..."
-    curl -fsSL https://bun.sh/install | bash
+CI=true curl -fsSL https://bun.sh/install | bash
   fi
 fi
 if echo "$runtimes" | grep -q "go"; then
   if ! command -v go >/dev/null 2>&1; then
     log "Installing Go..."
-    curl -fsSL https://go.dev/dl/go1.26.0.linux-amd64.tar.gz -o /tmp/go.tgz
+    curl -fsSL https://go.dev/dl/latest.linux-amd64.tar.gz -o /tmp/go.tgz
     tar -C /usr/local -xzf /tmp/go.tgz
   fi
 fi
@@ -313,7 +299,7 @@ log "Installing AI agents..."
 if echo "$agents" | grep -q "aider"; then
   if ! command -v aider >/dev/null 2>&1; then
     log "Installing aider-chat..."
-    pip3 install --break-system-packages --ignore-installed aider-chat
+    pip3 install --break-system-packages aider-chat || true
   fi
 fi
 if [[ "$ollama" == "true" ]]; then
@@ -391,11 +377,10 @@ cat > "$ROOTFS/etc/vibe/config.json" << JSON
   "build_type": "full",
   "editors": ["zed", "cursor", "vscode", "neovim", "helix"],
   "agents": ["continue", "aider", "cline", "opencode", "gpt-engineer"],
-  "runtimes": ["node-lts", "python-3.12", "rust-stable", "bun", "go-1.22", "deno"],
+  "runtimes": ["node-lts", "python", "rust-stable", "bun", "go", "deno"],
   "tools": ["git", "gh", "tmux", "fzf", "ripgrep", "jq", "docker", "podman"],
-  "flatpak": true,
   "nvidia": false,
-  "ollama": true,
+  "ollama": false,
   "user": "$USERNAME",
   "hostname": "$HOSTNAME"
 }

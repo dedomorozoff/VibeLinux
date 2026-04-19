@@ -132,7 +132,7 @@ if command -v apt >/dev/null 2>&1; then
   apt install -y \
     pipewire wireplumber pipewire-audio \
     network-manager \
-    flatpak xdg-desktop-portal xdg-desktop-portal-gtk \
+    xdg-desktop-portal xdg-desktop-portal-gtk \
     fonts-firacode fonts-noto-core fonts-noto-color-emoji \
     udev systemd-timesyncd zsh git curl wget unzip jq fzf ripgrep tmux build-essential pkg-config \
     python3 python3-venv python3-pip \
@@ -147,21 +147,13 @@ if command -v apt >/dev/null 2>&1; then
   systemctl enable NetworkManager || true
   systemctl enable docker || true
 elif command -v pacman >/dev/null 2>&1; then
-  pacman -Sy --noconfirm pipewire wireplumber networkmanager iwd flatpak xdg-desktop-portal     ttf-fira-code noto-fonts noto-fonts-emoji base-devel git curl wget unzip jq fzf ripgrep tmux python python-pip docker
+  pacman -Sy --noconfirm pipewire wireplumber networkmanager iwd xdg-desktop-portal     ttf-fira-code noto-fonts noto-fonts-emoji base-devel git curl wget unzip jq fzf ripgrep tmux python python-pip docker
   systemctl enable NetworkManager
   systemctl enable docker
 elif command -v dnf >/dev/null 2>&1; then
-  dnf -y install pipewire wireplumber NetworkManager iwd flatpak xdg-desktop-portal     fira-code-fonts google-noto* git curl wget unzip jq fzf ripgrep tmux python3 python3-pip docker
+  dnf -y install pipewire wireplumber NetworkManager iwd xdg-desktop-portal     fira-code-fonts google-noto* git curl wget unzip jq fzf ripgrep tmux python3 python3-pip docker
   systemctl enable NetworkManager
   systemctl enable docker
-fi
-
-if command -v flatpak >/dev/null 2>&1; then
-  flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-  FLATPAKS=(__FLATPAKS__)
-  if [ ${#FLATPAKS[@]} -gt 0 ]; then
-    flatpak install -y flathub "${FLATPAKS[@]}" || true
-  fi
 fi
 
 chsh -s /usr/bin/zsh "$USERNAME" || true
@@ -270,11 +262,10 @@ cat > "$ROOTFS/etc/vibe/config.json" << JSON
   "distro": "ubuntu-24.04",
   "editors": ["zed", "cursor", "vscode", "neovim", "helix"],
   "agents": ["continue", "aider", "cline", "opencode", "gpt-engineer"],
-  "runtimes": ["node-lts", "python-3.12", "rust-stable", "bun", "go-1.22", "deno"],
+  "runtimes": ["node-lts", "python", "rust-stable", "bun", "go", "deno"],
   "tools": ["git", "gh", "tmux", "fzf", "ripgrep", "jq", "docker", "podman"],
-  "flatpak": true,
   "nvidia": true,
-  "ollama": true,
+  "ollama": false,
   "user": "dedo",
   "hostname": "vibecode"
 }

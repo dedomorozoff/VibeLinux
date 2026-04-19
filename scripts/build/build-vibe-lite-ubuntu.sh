@@ -131,7 +131,7 @@ if command -v apt >/dev/null 2>&1; then
   apt install -y \
     pipewire wireplumber pipewire-audio \
     network-manager \
-    flatpak xdg-desktop-portal xdg-desktop-portal-gtk \
+    xdg-desktop-portal xdg-desktop-portal-gtk \
     fonts-firacode fonts-noto-core fonts-noto-color-emoji \
     udev systemd-timesyncd zsh git curl wget unzip jq fzf ripgrep tmux \
     python3-full python3-pip python3-venv \
@@ -145,40 +145,30 @@ if command -v apt >/dev/null 2>&1; then
   systemctl enable docker || true
 fi
 
-if command -v flatpak >/dev/null 2>&1; then
-  flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-  if [[ "__BUILD_TYPE__" == "full" ]]; then
-    FLATPAKS=(__FLATPAKS__)
-    if [ ${#FLATPAKS[@]} -gt 0 ]; then
-      flatpak install -y flathub "${FLATPAKS[@]}" || true
-    fi
-  fi
-fi
-
 chsh -s /usr/bin/zsh "$USERNAME" || true
 rm -rf /home/$USERNAME/.oh-my-zsh || true
-runuser -u "$USERNAME" -- bash -lc 'curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh | bash -s -- --unattended || true'
-runuser -u "$USERNAME" -- bash -lc 'curl -sS https://starship.rs/install.sh | sh -s -- -y || true'
+runuser -u "$USERNAME" -- bash -lc 'CI=true curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh | bash -s -- --unattended || true'
+runuser -u "$USERNAME" -- bash -lc 'CI=true curl -fsSL https://starship.rs/install.sh | sh -s -- -y || true'
 runuser -u "$USERNAME" -- bash -lc 'mkdir -p ~/.config && echo "eval $(starship init zsh)" >> ~/.zshrc'
 
 if [[ "__BUILD_TYPE__" == "full" ]]; then
   if [[ "__HAS_NODE__" == "1" ]]; then
-    runuser -u "$USERNAME" -- bash -lc 'curl -fsSL https://fnm.vercel.app/install | bash'
+    runuser -u "$USERNAME" -- bash -lc 'CI=true curl -fsSL https://fnm.vercel.app/install | bash'
     runuser -u "$USERNAME" -- bash -lc 'export PATH="$HOME/.local/share/fnm:$PATH"; eval "$(fnm env)"; fnm install --lts; fnm default lts-latest'
   fi
   if [[ "__HAS_BUN__" == "1" ]]; then
-    runuser -u "$USERNAME" -- bash -c 'if [ ! -f "$HOME/.bun/bin/bun" ]; then curl -fsSL https://bun.sh/install | bash; fi'
+    runuser -u "$USERNAME" -- bash -lc 'CI=true curl -fsSL https://bun.sh/install | bash'
     echo 'export PATH="$HOME/.bun/bin:$PATH"' >> /home/$USERNAME/.zshrc
   fi
   if [[ "__HAS_DENO__" == "1" ]]; then
-    runuser -u "$USERNAME" -- bash -c 'if [ ! -d "$HOME/.deno" ]; then curl -fsSL https://deno.land/install.sh | sh; fi'
+    runuser -u "$USERNAME" -- bash -lc 'CI=true curl -fsSL https://deno.land/install.sh | sh'
     echo 'export PATH="$HOME/.deno/bin:$PATH"' >> /home/$USERNAME/.zshrc
   fi
   if [[ "__HAS_RUST__" == "1" ]]; then
-    runuser -u "$USERNAME" -- bash -lc 'curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y'
+    runuser -u "$USERNAME" -- bash -lc 'CI=true curl --proto "=https" --tlsv1.2 -fsSf https://sh.rustup.rs | sh -s -- -y'
   fi
   if [[ "__HAS_GO__" == "1" ]]; then
-    curl -fsSL https://go.dev/dl/go1.26.0.linux-amd64.tar.gz -o /tmp/go.tgz
+    curl -fsSL https://go.dev/dl/latest.linux-amd64.tar.gz -o /tmp/go.tgz
     tar -C /usr/local -xzf /tmp/go.tgz
     echo 'export PATH=$PATH:/usr/local/go/bin:$HOME/go/bin' >> /home/$USERNAME/.zshrc
   fi
@@ -197,7 +187,7 @@ fi
 
 if [[ "__BUILD_TYPE__" == "full" ]]; then
   if [[ "__HAS_AIDER__" == "1" ]]; then
-    pip3 install --break-system-packages --ignore-installed aider-chat
+    pip3 install --break-system-packages aider-chat || true
   fi
   if [[ "__HAS_OLLAMA__" == "1" ]]; then
     curl -fsSL https://ollama.com/install.sh | sh
@@ -298,9 +288,8 @@ cat > "$ROOTFS/etc/vibe/config.json" << JSON
   "build_type": "lite",
   "editors": ["neovim"],
   "agents": [],
-  "runtimes": ["python-system"],
+  "runtimes": ["python"],
   "tools": ["git", "tmux", "fzf", "ripgrep", "jq"],
-  "flatpak": true,
   "nvidia": false,
   "ollama": false,
   "user": "$USERNAME",

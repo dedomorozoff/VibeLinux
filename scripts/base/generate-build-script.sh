@@ -23,7 +23,6 @@ USERNAME=$(jq -r '.user // "vibe"' "$CONFIG_FILE")
 HOSTNAME=$(jq -r '.hostname // "vibelinux"' "$CONFIG_FILE")
 NVIDIA=$(jq -r '.nvidia // false' "$CONFIG_FILE")
 OLLAMA=$(jq -r '.ollama // false' "$CONFIG_FILE")
-FLATPAK=$(jq -r '.flatpak // true' "$CONFIG_FILE")
 
 # Преобразуем массивы в строки
 EDITORS=$(jq -r '.editors // [] | join(",")' "$CONFIG_FILE")
@@ -45,12 +44,6 @@ HAS_ZED=0; echo "$EDITORS" | grep -q "zed" && HAS_ZED=1
 HAS_VSCODE=0; echo "$EDITORS" | grep -q "vscode\|code" && HAS_VSCODE=1
 
 HAS_AIDER=0; echo "$AGENTS" | grep -q "aider" && HAS_AIDER=1
-
-# Flatpak приложения
-FLATPAK_APPS=""
-if [[ "$HAS_ZED" == "1" ]]; then
-  FLATPAK_APPS+="dev.zed.Zed "
-fi
 
 echo "Generating build script from: $CONFIG_FILE"
 echo "  Distro: $DISTRO"
@@ -195,7 +188,7 @@ if command -v apt >/dev/null 2>&1; then
   apt install -y \\
     pipewire wireplumber pipewire-audio \\
     network-manager \\
-    flatpak xdg-desktop-portal xdg-desktop-portal-gtk \\
+    xdg-desktop-portal xdg-desktop-portal-gtk \\
     fonts-firacode fonts-noto-core fonts-noto-color-emoji \\
     udev systemd-timesyncd zsh git curl wget unzip jq fzf ripgrep tmux \\
     python3-full python3-pip python3-venv \\
@@ -208,23 +201,15 @@ if command -v apt >/dev/null 2>&1; then
   systemctl enable NetworkManager || true
   systemctl enable docker || true
 elif command -v pacman >/dev/null 2>&1; then
-  pacman -Sy --noconfirm pipewire wireplumber networkmanager iwd flatpak xdg-desktop-portal \\
+  pacman -Sy --noconfirm pipewire wireplumber networkmanager iwd xdg-desktop-portal \\
     ttf-fira-code noto-fonts noto-fonts-emoji base-devel git curl wget unzip jq fzf ripgrep tmux python python-pip docker zstd
   systemctl enable NetworkManager
   systemctl enable docker
 elif command -v dnf >/dev/null 2>&1; then
-  dnf -y install pipewire wireplumber NetworkManager iwd flatpak xdg-desktop-portal \\
+  dnf -y install pipewire wireplumber NetworkManager iwd xdg-desktop-portal \\
     fira-code-fonts google-noto* git curl wget unzip jq fzf ripgrep tmux python3 python3-pip docker zstd
   systemctl enable NetworkManager
   systemctl enable docker
-fi
-
-if command -v flatpak >/dev/null 2>&1; then
-  flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-  FLATPAKS=(__FLATPAKS__)
-  if [ \${#FLATPAKS[@]} -gt 0 ]; then
-    flatpak install -y flathub "\${FLATPAKS[@]}" || true
-  fi
 fi
 
 chsh -s /usr/bin/zsh "\$USERNAME" || true
@@ -343,7 +328,6 @@ EOS
 sed -i "s|__USER__|$USERNAME|g; s|__HOST__|$HOSTNAME|g" "\$ROOTFS/tmp/customize.sh"
 sed -i "s/__NVIDIA__/$([ "$NVIDIA" = "true" ] && echo "1" || echo "0")/g" "\$ROOTFS/tmp/customize.sh"
 sed -i "s/__BUILD_TYPE__/$BUILD_TYPE/g" "\$ROOTFS/tmp/customize.sh"
-sed -i "s/__FLATPAKS__/$FLATPAK_APPS/g" "\$ROOTFS/tmp/customize.sh"
 sed -i "s/__HAS_NODE__/$HAS_NODE/g" "\$ROOTFS/tmp/customize.sh"
 sed -i "s/__HAS_BUN__/$HAS_BUN/g" "\$ROOTFS/tmp/customize.sh"
 sed -i "s/__HAS_DENO__/$HAS_DENO/g" "\$ROOTFS/tmp/customize.sh"

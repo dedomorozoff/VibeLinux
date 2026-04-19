@@ -131,7 +131,6 @@ read_config() {
       TOOLS=$(jq -r '.tools // [] | join(",")' "$CONFIG" 2>/dev/null || echo "")
       NVIDIA=$(jq -r '.nvidia // false' "$CONFIG" 2>/dev/null || echo "false")
       OLLAMA=$(jq -r '.ollama // false' "$CONFIG" 2>/dev/null || echo "false")
-      FLATPAK=$(jq -r '.flatpak // true' "$CONFIG" 2>/dev/null || echo "true")
     else
       log "jq не найден, используем значения по умолчанию"
       EDITORS="neovim"
@@ -140,7 +139,6 @@ read_config() {
       TOOLS="git,tmux,fzf,ripgrep"
       NVIDIA="false"
       OLLAMA="false"
-      FLATPAK="true"
     fi
   else
     log "Конфигурация не найдена, используем значения по умолчанию"
@@ -150,7 +148,6 @@ read_config() {
     TOOLS="git,tmux,fzf,ripgrep"
     NVIDIA="false"
     OLLAMA="false"
-    FLATPAK="true"
   fi
 }
 
@@ -165,11 +162,7 @@ install_editors() {
   # Zed
   if echo "$selected" | grep -qi "zed"; then
     log "Установка Zed..."
-    if command -v flatpak >/dev/null 2>&1; then
-      flatpak install -y flathub dev.zed.Zed 2>/dev/null || log "Zed: ошибка установки"
-    else
-      curl -f https://zed.dev/install.sh | sh 2>/dev/null || log "Zed: ошибка установки"
-    fi
+    curl -f https://zed.dev/install.sh | sh 2>/dev/null || log "Zed: ошибка установки"
   fi
 
   # VS Code
