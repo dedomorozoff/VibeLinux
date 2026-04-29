@@ -53,8 +53,28 @@ install_deps() {
 
   if [ ${#deps[@]} -ne 0 ]; then
     log "Установка: ${deps[*]}"
-    apt-get update
-    DEBIAN_FRONTEND=noninteractive apt-get install -y "${deps[@]}"
+    
+    if command -v apt-get >/dev/null 2>&1; then
+      apt-get update
+      DEBIAN_FRONTEND=noninteractive apt-get install -y "${deps[@]}"
+    elif command -v pacman >/dev/null 2>&1; then
+      local pacman_deps=()
+      for d in "${deps[@]}"; do
+        case "$d" in
+          debootstrap) pacman_deps+=(archiso) ;;
+          squashfs-tools) pacman_deps+=(squashfs-tools) ;;
+          xorriso) pacman_deps+=(xorriso) ;;
+          grub-common) pacman_deps+=(grub) ;;
+          dosfstools) pacman_deps+=(dosfstools) ;;
+          mtools) pacman_deps+=(mtools) ;;
+        esac
+      done
+      pacman -Sy --noconfirm "${pacman_deps[@]}"
+    elif command -v dnf >/dev/null 2>&1; then
+      dnf -y install "${deps[@]}"
+    else
+      die "Не найден пакетный менеджер (apt-get/pacman/dnf). Установите зависимости вручную."
+    fi
   else
     log "Все зависимости на хосте уже установлены."
   fi

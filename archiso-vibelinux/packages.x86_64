@@ -1,0 +1,48 @@
+# VibeLinux base packages
+base
+linux
+linux-firmware
+archiso
+mkinitcpio
+mkinitcpio-archiso
+
+# Boot
+syslinux
+memtest86+
+memtest86+-efi
+efibootmgr
+edk2-shell
+
+# Network
+networkmanager
+iwd
+
+# Shell
+zsh
+curl
+wget
+git
+
+# Audio
+pipewire
+wireplumber
+
+# Fonts
+ttf-fira-code
+noto-fonts
+noto-fonts-emoji
+
+# Shell & prompt
+starship
+
+# Dev tools
+base-devel
+python
+python-pip
+docker
+jq
+fzf
+ripgrep
+tmux
+unzip
+zstd
