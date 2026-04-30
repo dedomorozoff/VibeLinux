@@ -292,12 +292,15 @@ EOF
 fi
 
 # AI Stack scripts
+# Fix npm permissions for vibe user
+mkdir -p /home/vibe/.npm
+chown -R vibe:vibe /home/vibe/.npm
+
 # qwen-code (AI coding agent via npm)
 runuser -u vibe -- bash -c 'npm install -g @qwen-code/qwen-code' 2>&1 | tail -3 || true
 
-# aider-chat + Python AI libs
+# Python AI libs (aider-chat requires Python <3.13, skip for now)
 pip install --break-system-packages --no-cache-dir \
-  aider-chat \
   torch --index-url https://download.pytorch.org/whl/cpu \
   transformers \
   accelerate \
@@ -643,6 +646,7 @@ X-GNOME-Autostart-enabled=true
 EOF
 
 # Welcome App shortcut on desktop
+mkdir -p /home/vibe/Desktop
 cat > /home/vibe/Desktop/VibeLinux-Welcome.desktop << EOF
 [Desktop Entry]
 Type=Application
