@@ -11,6 +11,95 @@ cat > /etc/hosts << EOF
 ::1       localhost
 EOF
 
+# MOTD
+cat > /etc/motd << 'EOF'
+ __     ___  ____     ___  _     ____
+ \ \   / / ||  _ \   / _ \| |   / ___|
+  \ \ / /| || |_) | | | | | |   \___ \
+   \ V / | ||  _ <  | |_| | |___ ___) |
+    \_/  |_||_| \_\  \__\_\_____|____/
+
+ VibeLinux — Linux for vibe coding & AI development
+EOF
+
+# OS Release (for fastfetch / lsb_release)
+cat > /etc/os-release << 'EOF'
+NAME="VibeLinux"
+PRETTY_NAME="VibeLinux (Arch Linux based)"
+ID=vibelinux
+ID_LIKE=arch
+VERSION=2026.04
+VERSION_CODENAME=genesis
+ANSI_COLOR="0;36"
+HOME_URL="https://vibelinux.org"
+DOCUMENTATION_URL="https://github.com/vibelinux/docs"
+SUPPORT_URL="https://github.com/vibelinux"
+BUG_REPORT_URL="https://github.com/vibelinux/issues"
+LOGO=vibelinux
+EOF
+
+# Fastfetch config
+mkdir -p /home/vibe/.config/fastfetch
+cat > /home/vibe/.config/fastfetch/config.jsonc << 'EOF'
+{
+  "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/config.schema.jsonc",
+  "logo": {
+    "type": "small",
+    "padding": {
+      "top": 0,
+      "bottom": 0,
+      "left": 2,
+      "right": 2
+    }
+  },
+  "modules": [
+    { "type": "title" },
+    { "type": "separator" },
+    {
+      "type": "os",
+      "key": "OS"
+    },
+    { "type": "host" },
+    { "type": "kernel" },
+    { "type": "uptime" },
+    {
+      "type": "packages",
+      "display": {
+        "mode": "custom",
+        "custom": "packages: pacman-p, npm, pip, cargo"
+      }
+    },
+    { "type": "shell" },
+    { "type": "de" },
+    { "type": "wm" },
+    { "type": "wmtheme" },
+    { "type": "theme" },
+    { "type": "icons" },
+    { "type": "font" },
+    {
+      "type": "terminal",
+      "key": "Terminal"
+    },
+    { "type": "terminalfont" },
+    { "type": "cpu" },
+    { "type": "gpu" },
+    { "type": "memory" },
+    { "type": "disk" },
+    { "type": "localip" },
+    {
+      "type": "colors",
+      "key": "Colors",
+      "symbol": "circle"
+    }
+  ],
+  "colors": {
+    "initials": [
+      "4cc9f0", "7209b7", "2ec4b6", "ffe066"
+    ]
+  }
+}
+EOF
+
 # Locale
 sed -i 's/#en_US.UTF-8/en_US.UTF-8/' /etc/locale.gen
 sed -i 's/#ru_RU.UTF-8/ru_RU.UTF-8/' /etc/locale.gen
@@ -60,7 +149,37 @@ if [[ ! -d /home/vibe/.oh-my-zsh ]]; then
   runuser -u vibe -- bash -c 'CI=true sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended' 2>/dev/null || true
 fi
 
-# Starship prompt
+# Starship prompt with VibeLinux config
+cat > /home/vibe/.config/starship.toml << 'EOF'
+format = """
+$custom$directory$git_branch$git_status$character
+"""
+
+[character]
+success_symbol = "[❯](bold #4CC9F0)"
+error_symbol = "[❯](bold #f7768e)"
+
+[directory]
+style = "bold #7209B7"
+read_only = " 󰌾"
+
+[git_branch]
+format = "[$symbol$branch]($style) "
+style = "bold #FFE066"
+symbol = ""
+
+[git_status]
+format = '([\[$all_status$ahead_behind\]]($style) )'
+style = "bold #f7768e"
+
+[custom.distro]
+command = "echo VibeLinux"
+format = "[$output]($style) "
+style = "bold #4CC9F0"
+when = "true"
+shell = ["bash", "--norc"]
+EOF
+
 if command -v starship >/dev/null 2>&1; then
   echo 'eval "$(starship init zsh)"' >> /home/vibe/.zshrc
 fi
@@ -144,29 +263,140 @@ echo "Open WebUI: http://localhost:$PORT"
 WEBUIEOF
 chmod +x /usr/local/bin/ai-webui
 
-# Branding — wallpapers
+# === BRANDING ===
+
+# Wallpapers — copy to system location
 mkdir -p /usr/share/wallpapers/VibeLinux/contents/images
 if [[ -f /root/branding/wallpapers/vibecode-dark.svg ]]; then
   cp /root/branding/wallpapers/vibecode-dark.svg /usr/share/wallpapers/VibeLinux/contents/images/2560x1440.svg
 fi
 
-# SDDM theme config
-mkdir -p /usr/share/sddm/themes/breeze
-cat > /usr/share/sddm/themes/breeze/theme.conf.user << EOF
-[General]
-background=/usr/share/wallpapers/VibeLinux/contents/images/2560x1440.svg
+# Set default wallpaper via KDE system config
+mkdir -p /home/vibe/.config
+cat > /home/vibe/.config/plasma-org.kde.plasma.desktop-appletsrc << EOF
+[Containments][1]
+ItemGeometries-1920x1080=
+wallpaperplugin=org.kde.image
+wallpaperpluginmode=SingleImage
+
+[Containments][1][Wallpaper][org.kde.image][General]
+Image=/usr/share/wallpapers/VibeLinux/contents/images/2560x1440.svg
 EOF
 
-# KDE user defaults
-mkdir -p /home/vibe/.config
-
+# KDE globals — dark theme
 cat > /home/vibe/.config/kdeglobals << EOF
 [General]
 ColorScheme=BreezeDark
+Name=VibeLinux
+
+[KDE]
+widgetStyle=Breeze
 
 [Colors:Window]
 BackgroundNormal=11,16,32
 ForegroundNormal=255,255,255
+EOF
+
+# Konsole theme — VibeLinux dark
+mkdir -p /home/vibe/.local/share/konsole
+cat > /home/vibe/.local/share/konsole/VibeLinux.colorscheme << EOF
+[Background]
+Color=11,16,32
+
+[BackgroundIntense]
+Color=11,16,32
+
+[BackgroundFaint]
+Color=11,16,32
+
+[Foreground]
+Color=255,255,255
+
+[ForegroundIntense]
+Color=76,201,240
+
+[ForegroundFaint]
+Color=200,200,200
+
+[Color0]
+Color=11,16,32
+
+[Color1]
+Color=247,118,142
+
+[Color2]
+Color=46,196,182
+
+[Color3]
+Color=255,224,102
+
+[Color4]
+Color=76,201,240
+
+[Color5]
+Color=114,9,183
+
+[Color6]
+Color=46,196,182
+
+[Color7]
+Color=255,255,255
+
+[Color8]
+Color=100,100,100
+
+[Color9]
+Color=255,150,150
+
+[Color10]
+Color=100,255,200
+
+[Color11]
+Color=255,240,150
+
+[Color12]
+Color=120,220,255
+
+[Color13]
+Color=160,60,220
+
+[Color14]
+Color=100,255,200
+
+[Color15]
+Color=255,255,255
+
+[General]
+Name=VibeLinux
+Opacity=0.95
+EOF
+
+# Konsole profile
+cat > /home/vibe/.local/share/konsole/VibeLinux.profile << EOF
+[Appearance]
+ColorScheme=VibeLinux
+Font=JetBrainsMono Nerd Font,12,-1,5,500,0,0,0,0,0,Regular
+
+[General]
+Name=VibeLinux
+Parent=FALLBACK/
+
+[TerminalFeatures]
+HorizontalScrollbar=false
+EOF
+
+# Set Konsole as default terminal
+mkdir -p /home/vibe/.config
+cat > /home/vibe/.config/konsolerc << EOF
+[Desktop Entry]
+DefaultProfile=VibeLinux.profile
+EOF
+
+# SDDM wallpaper
+mkdir -p /usr/share/sddm/themes/breeze
+cat > /usr/share/sddm/themes/breeze/theme.conf.user << EOF
+[General]
+background=/usr/share/wallpapers/VibeLinux/contents/images/2560x1440.svg
 EOF
 
 # Welcome App
