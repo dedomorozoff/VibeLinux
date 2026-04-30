@@ -44,6 +44,7 @@ systemctl enable NetworkManager || true
 systemctl enable systemd-timesyncd || true
 systemctl enable docker || true
 systemctl enable sddm || true
+systemctl enable ollama || true
 
 # SDDM autologin
 mkdir -p /etc/sddm.conf.d
@@ -70,6 +71,112 @@ EOF
 
 # Fix permissions
 chown -R vibe:vibe /home/vibe
+
+# AI Stack — Ollama models + ai-chat script
+cat > /usr/local/bin/ai-chat << 'AICHATEOF'
+#!/usr/bin/env bash
+# VibeLinux — простой AI-чат через Ollama
+MODEL="${AI_MODEL:-qwen2.5-coder}"
+
+if ! command -v ollama &>/dev/null; then
+  echo "Ollama не установлен. Запуск: sudo pacman -S ollama"
+  exit 1
+fi
+
+if ! systemctl is-active --quiet ollama; then
+  echo "Запуск Ollama..."
+  systemctl --user start ollama || ollama serve &
+  sleep 2
+fi
+
+echo "🤖 VibeLinux AI Chat (модель: $MODEL)"
+echo "Команды: /help, /model <name>, /quit"
+echo
+
+while true; do
+  read -rp "➜ " line
+  case "$line" in
+    /quit|/exit|/q) break ;;
+    /help)
+      echo "Доступные команды:"
+      echo "  /model <name> — сменить модель"
+      echo "  /quit         — выйти"
+      echo "  Просто введите сообщение — AI ответит"
+      ;;
+    /model\ *)
+      MODEL="${line#/model }"
+      export AI_MODEL="$MODEL"
+      echo "Модель: $MODEL"
+      ;;
+    "")
+      continue
+      ;;
+    *)
+      ollama run "$MODEL" "$line"
+      ;;
+  esac
+done
+echo "Пока! 👋"
+AICHATEOF
+chmod +x /usr/local/bin/ai-chat
+
+# Скрипт загрузки базовых моделей
+cat > /usr/local/bin/ai-setup << 'AISETUPEOF'
+#!/usr/bin/env bash
+# VibeLinux — загрузка AI-моделей
+echo "📦 Загрузка базовых моделей Ollama..."
+echo
+
+MODELS=(
+  "qwen2.5-coder:7b"
+  "llama3.2:3b"
+  "codellama:7b"
+)
+
+for model in "${MODELS[@]}"; do
+  echo "→ $model"
+  ollama pull "$model" 2>&1 | tail -1
+  echo
+done
+
+echo "✅ Готово! Запустите ai-chat для общения."
+echo "   Или: ollama run qwen2.5-coder"
+AISETUPEOF
+chmod +x /usr/local/bin/ai-setup
+
+# Скрипт для Open WebUI через Docker
+cat > /usr/local/bin/ai-webui << 'WEBUIEOF'
+#!/usr/bin/env bash
+# VibeLinux — запуск Open WebUI (Docker)
+CONTAINER="open-webui"
+PORT="${AI_WEBUI_PORT:-3000}"
+
+if ! command -v docker &>/dev/null; then
+  echo "Docker не установлен."
+  exit 1
+fi
+
+if docker ps --format '{{.Names}}' | grep -q "$CONTAINER"; then
+  echo "Open WebUI уже запущен: http://localhost:$PORT"
+  exit 0
+fi
+
+if docker ps -a --format '{{.Names}}' | grep -q "$CONTAINER"; then
+  echo "Запуск остановленного контейнера..."
+  docker start "$CONTAINER"
+else
+  echo "Создание контейнера Open WebUI..."
+  docker run -d -p "$PORT":8080 \
+    --add-host=host.docker.internal:host-gateway \
+    -v open-webui:/app/backend/data \
+    --name "$CONTAINER" \
+    --restart always \
+    ghcr.io/open-webui/open-webui:main
+fi
+
+echo "✅ Open WebUI: http://localhost:$PORT"
+WEBUIEOF
+chmod +x /usr/local/bin/ai-webui
 
 # Rust setup (run as user after boot)
 cat >> /home/vibe/.zshrc << 'EOF'
