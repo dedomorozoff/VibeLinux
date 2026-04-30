@@ -65,6 +65,14 @@ if command -v starship >/dev/null 2>&1; then
 fi
 
 # AI Stack scripts
+pip install --break-system-packages --no-cache-dir \
+  aider-chat \
+  torch --index-url https://download.pytorch.org/whl/cpu \
+  transformers \
+  accelerate \
+  langchain \
+  llama-index 2>&1 | tail -5 || true
+
 cat > /usr/local/bin/ai-chat << 'AICHATEOF'
 #!/usr/bin/env bash
 MODEL="${AI_MODEL:-qwen2.5-coder}"

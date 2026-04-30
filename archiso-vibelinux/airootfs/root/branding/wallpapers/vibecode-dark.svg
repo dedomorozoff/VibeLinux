@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1920" height="1080" viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background gradient -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0B1020;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#0D1428;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0B1020;stop-opacity:1" />
+    </linearGradient>
+    
+    <radialGradient id="glowGradient" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#4CC9F0;stop-opacity:0.3" />
+      <stop offset="100%" style="stop-color:#4CC9F0;stop-opacity:0" />
+    </radialGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1920" height="1080" fill="url(#bgGradient)"/>
+  
+  <!-- Glow effect -->
+  <ellipse cx="960" cy="540" rx="600" ry="400" fill="url(#glowGradient)"/>
+  
+  <!-- Abstract wave lines -->
+  <path d="M 0 400 Q 480 300, 960 400 T 1920 400" 
+        stroke="#4CC9F0" 
+        stroke-width="2" 
+        fill="none" 
+        opacity="0.3"/>
+  
+  <path d="M 0 500 Q 480 600, 960 500 T 1920 500" 
+        stroke="#7209B7" 
+        stroke-width="2" 
+        fill="none" 
+        opacity="0.3"/>
+  
+  <path d="M 0 600 Q 480 500, 960 600 T 1920 600" 
+        stroke="#2EC4B6" 
+        stroke-width="2" 
+        fill="none" 
+        opacity="0.2"/>
+  
+  <!-- Code brackets decoration -->
+  <g opacity="0.15">
+    <path d="M 100 100 L 50 150 L 100 200" 
+          stroke="#4CC9F0" 
+          stroke-width="4" 
+          fill="none" 
+          stroke-linecap="round"/>
+    
+    <path d="M 1820 100 L 1870 150 L 1820 200" 
+          stroke="#4CC9F0" 
+          stroke-width="4" 
+          fill="none" 
+          stroke-linecap="round"/>
+  </g>
+  
+  <!-- Logo in corner (optional, can be removed) -->
+  <text x="1800" y="1050" 
+        font-family="monospace" 
+        font-size="24" 
+        fill="#4CC9F0" 
+        opacity="0.5" 
+        text-anchor="end">VibeCode OS</text>
+</svg>

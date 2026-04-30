@@ -79,11 +79,6 @@ neovim
 
 # AI tools
 ollama
-aider
-
-# Python AI libs
-python-torch
-python-transformers
 
 # Utilities
 fastfetch
