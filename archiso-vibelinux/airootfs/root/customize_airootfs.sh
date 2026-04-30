@@ -684,7 +684,7 @@ A Linux distro for **vibe coding** and **AI development** — everything works o
 - **Go** — pre-installed (`go version`)
 
 ### Editors
-- **VSCodium** — open-source VS Code (Applications → Programming)
+- **VS Code** — Microsoft's editor (Applications → Programming)
 - **Neovim** — with AstroNvim config (`nvim`)
 - **Kate** — KDE text editor (`kate`)
 
@@ -789,17 +789,33 @@ Categories=System;
 EOF
 chmod 755 /home/vibe/Desktop/Install-AI-Tools.desktop
 
-# VSCodium shortcut
-cat > /home/vibe/Desktop/VSCodium.desktop << EOF
+# VS Code shortcut (will be installed via AUR below)
+cat > /home/vibe/Desktop/VS-Code.desktop << EOF
 [Desktop Entry]
 Type=Application
-Name=VSCodium
-Icon=vscodium
-Exec=/usr/bin/codium
+Name=Visual Studio Code
+Icon=visual-studio-code
+Exec=/usr/bin/code
 Terminal=false
 Categories=Development;IDE;
 EOF
-chmod 755 /home/vibe/Desktop/VSCodium.desktop
+chmod 755 /home/vibe/Desktop/VS-Code.desktop
+
+# === AUR SETUP (bootstrap yay-bin) ===
+echo "Bootstrapping yay-bin from AUR..."
+git clone https://aur.archlinux.org/yay-bin.git /tmp/yay 2>/dev/null
+if [[ -d /tmp/yay ]]; then
+  cd /tmp/yay
+  makepkg -si --noconfirm 2>&1 | tail -5
+  cd /
+  rm -rf /tmp/yay
+  echo "yay installed successfully"
+
+  # VS Code из AUR (бинарный пакет)
+  echo "Installing Visual Studio Code..."
+  yay -S --noconfirm visual-studio-code-bin 2>&1 | tail -10
+  echo "VS Code installed"
+fi
 
 chown -R vibe:vibe /home/vibe
 

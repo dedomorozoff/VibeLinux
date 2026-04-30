@@ -80,7 +80,7 @@ lazygit
 neovim
 
 # Editors (GUI)
-vscodium
+# VS Code installed via AUR (see customize_airootfs.sh)
 
 # AI tools
 ollama
@@ -88,7 +88,7 @@ opencode
 
 # VirtualBox Guest Additions
 virtualbox-guest-utils
-virtualbox-guest-modules-arch
+virtualbox-guest-dkms
 
 # Browser & Internet
 firefox
