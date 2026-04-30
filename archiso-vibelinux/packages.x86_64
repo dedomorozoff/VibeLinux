@@ -5,6 +5,7 @@ linux-firmware
 archiso
 mkinitcpio
 mkinitcpio-archiso
+pacman-mirrorlist
 
 # Boot
 syslinux

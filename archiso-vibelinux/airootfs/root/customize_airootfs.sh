@@ -296,15 +296,16 @@ fi
 mkdir -p /home/vibe/.npm
 chown -R vibe:vibe /home/vibe/.npm
 
-# qwen-code (AI coding agent via npm)
-runuser -u vibe -- bash -c 'npm install -g @qwen-code/qwen-code' 2>&1 | tail -3 || true
+# qwen-code (AI coding agent via npm) — ставим как root, потом фиксим права
+npm install -g @qwen-code/qwen-code 2>&1 | tail -5 || echo "WARNING: qwen-code install failed"
+chown -R vibe:vibe /home/vibe/.npm
 
-# Python AI libs (aider-chat requires Python <3.13, skip for now)
+# Python AI libs (transformers + accelerate из git для Python 3.14)
+# langchain — meta-package, ставится отдельно: pip install langchain-core
 pip install --break-system-packages --no-cache-dir \
   torch --index-url https://download.pytorch.org/whl/cpu \
-  transformers \
-  accelerate \
-  langchain \
+  git+https://github.com/huggingface/transformers.git \
+  git+https://github.com/huggingface/accelerate.git \
   llama-index 2>&1 | tail -5 || true
 
 cat > /usr/local/bin/ai-chat << 'AICHATEOF'
@@ -688,7 +689,7 @@ A Linux distro for **vibe coding** and **AI development** — everything works o
 - **Go** — pre-installed (`go version`)
 
 ### Editors
-- **VS Code** — Microsoft's editor (Applications → Programming)
+- **VS Code** — install after boot: `yay -S visual-studio-code-bin`
 - **Neovim** — with AstroNvim config (`nvim`)
 - **Kate** — KDE text editor (`kate`)
 
@@ -704,6 +705,8 @@ A Linux distro for **vibe coding** and **AI development** — everything works o
 - **Ollama** — local LLMs (auto-started)
 - **ai-chat** — terminal chat with local models (`ai-chat`)
 - **ai-webui** — Open WebUI via Docker (`ai-webui` → http://localhost:3000)
+- **torch, transformers, accelerate** — pre-installed via pip
+- **langchain** — install: `pip install langchain-core`
 
 ### AI Tools (proprietary, install on demand)
 - **Cursor** — `install-cursor` (AI IDE)
@@ -793,13 +796,13 @@ Categories=System;
 EOF
 chmod 755 /home/vibe/Desktop/Install-AI-Tools.desktop
 
-# VS Code shortcut (will be installed via AUR below)
+# VS Code — не установлен в ISO, ярлык объясняет как поставить
 cat > /home/vibe/Desktop/VS-Code.desktop << EOF
 [Desktop Entry]
 Type=Application
-Name=Visual Studio Code
-Icon=visual-studio-code
-Exec=/usr/bin/code
+Name=Install VS Code
+Icon=utilities-terminal
+Exec=konsole --hold -e bash -c 'echo "Installing Visual Studio Code..."; yay -S --noconfirm visual-studio-code-bin; read -p "Press Enter to exit"'
 Terminal=false
 Categories=Development;IDE;
 EOF
@@ -807,19 +810,37 @@ chmod 755 /home/vibe/Desktop/VS-Code.desktop
 
 # === AUR SETUP (bootstrap yay-bin) ===
 echo "Bootstrapping yay-bin from AUR..."
-git clone https://aur.archlinux.org/yay-bin.git /tmp/yay 2>/dev/null
-if [[ -d /tmp/yay ]]; then
-  cd /tmp/yay
-  makepkg -si --noconfirm 2>&1 | tail -5
-  cd /
-  rm -rf /tmp/yay
-  echo "yay installed successfully"
-
-  # VS Code из AUR (бинарный пакет)
-  echo "Installing Visual Studio Code..."
-  yay -S --noconfirm visual-studio-code-bin 2>&1 | tail -10
-  echo "VS Code installed"
+# makepkg нельзя запускать из-под root — создаём временного билд-юзера
+if ! id builder &>/dev/null; then
+  useradd -m builder
 fi
+mkdir -p /tmp/aur-build
+chown builder:builder /tmp/aur-build
+
+# Собираем пакет от имени builder
+runuser -u builder -- bash -c '
+  cd /tmp/aur-build
+  git clone --depth 1 https://aur.archlinux.org/yay-bin.git yay
+  cd yay
+  makepkg --noconfirm --skippgpcheck
+' 2>&1 | tail -15
+
+# Устанавливаем вручную (pacman -U не работает в chroot)
+YAY_PKG=$(ls /tmp/aur-build/yay/yay-*.tar.zst 2>/dev/null | head -1)
+if [[ -n "$YAY_PKG" && -f "$YAY_PKG" ]]; then
+  bsdtar -xpf "$YAY_PKG" -C /
+  pacman -D --asexplicit yay-bin 2>/dev/null || true
+  echo "yay installed successfully"
+else
+  echo "WARNING: yay build failed."
+fi
+
+# VS Code — ставится пользователем post-install: yay -S visual-studio-code-bin
+echo "VS Code: install after boot with: yay -S visual-studio-code-bin"
+
+# Cleanup
+userdel builder 2>/dev/null || true
+rm -rf /tmp/aur-build
 
 chown -R vibe:vibe /home/vibe
 
