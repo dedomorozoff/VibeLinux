@@ -184,6 +184,113 @@ if command -v starship >/dev/null 2>&1; then
   echo 'eval "$(starship init zsh)"' >> /home/vibe/.zshrc
 fi
 
+# === DEV STACK SETUP ===
+
+# Kitty terminal config
+mkdir -p /home/vibe/.config/kitty
+cat > /home/vibe/.config/kitty/kitty.conf << 'EOF'
+font_family      JetBrainsMono Nerd Font
+font_size        13.0
+background       #0B1020
+foreground       #FFFFFF
+cursor           #4CC9F0
+selection_foreground #FFFFFF
+selection_background #7209B7
+color0  #0B1020
+color1  #F7768E
+color2  #2EC4B6
+color3  #FFE066
+color4  #4CC9F0
+color5  #7209B7
+color6  #2EC4B6
+color7  #FFFFFF
+color8  #646464
+color9  #FF9696
+color10 #64FFC8
+color11 #FFF096
+color12 #78DCFF
+color13 #A03CDC
+color14 #64FFC8
+color15 #FFFFFF
+enable_audio_bell no
+confirm_os_window_close 0
+window_padding_width 10
+EOF
+
+# nvm setup
+export NVM_DIR="/home/vibe/.nvm"
+mkdir -p "$NVM_DIR"
+cat >> /home/vibe/.zshrc << 'EOF'
+
+# nvm
+export NVM_DIR="$HOME/.nvm"
+[ -s "/usr/share/nvm/init-nvm.sh" ] && . "/usr/share/nvm/init-nvm.sh"
+EOF
+
+# pyenv setup
+cat >> /home/vibe/.zshrc << 'EOF'
+
+# pyenv
+export PYENV_ROOT="$HOME/.pyenv"
+[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init - zsh)" 2>/dev/null || true
+EOF
+
+# SDKMAN setup
+mkdir -p /home/vibe/.sdkman
+cat >> /home/vibe/.zshrc << 'EOF'
+
+# SDKMAN
+export SDKMAN_DIR="$HOME/.sdkman"
+[[ -s "$SDKMAN_DIR/bin/sdkman-init.sh" ]] && source "$SDKMAN_DIR/bin/sdkman-init.sh"
+EOF
+
+# Neovim — install AstroNvim
+if [[ ! -d /home/vibe/.config/nvim ]]; then
+  runuser -u vibe -- bash -c 'git clone --depth 1 https://github.com/AstroNvim/AstroNvim ~/.config/nvim' 2>/dev/null || true
+fi
+
+# Git config
+cat > /home/vibe/.gitconfig << 'EOF'
+[user]
+    name = VibeLinux User
+    email = user@vibelinux.local
+[core]
+    editor = nvim
+[init]
+    defaultBranch = main
+[push]
+    autoSetupRemote = true
+[alias]
+    st = status
+    co = checkout
+    br = branch
+    lg = log --oneline --graph --decorate
+EOF
+
+# Lazygit config
+mkdir -p /home/vibe/.config/lazygit
+cat > /home/vibe/.config/lazygit/config.yml << 'EOF'
+gui:
+  theme:
+    activeBorderColor:
+      - '#4CC9F0'
+      - 'bold'
+    inactiveBorderColor:
+      - '#7209B7'
+    selectedLineBgColor:
+      - '#1A2540'
+EOF
+
+# Set default terminal to Kitty
+if command -v kitty >/dev/null; then
+  mkdir -p /home/vibe/.config
+  cat > /home/vibe/.config/mimeapps.list << EOF
+[Default Applications]
+x-scheme-handler/terminal=kitty.desktop
+EOF
+fi
+
 # AI Stack scripts
 pip install --break-system-packages --no-cache-dir \
   aider-chat \
@@ -469,40 +576,57 @@ chown -R vibe:vibe /home/vibe
 cat > /home/vibe/Desktop/GET-STARTED.md << 'EOF'
 # Welcome to VibeLinux
 
-## What is this?
-
 A Linux distro for **vibe coding** and **AI development** — everything works out of the box.
 
-## Quick Start
+## What is here
 
-### 1. AI Tools
-- **Terminal chat:** open Konsole and run `ai-chat`
-- **Download models:** run `ai-setup`
-- **Web UI:** run `ai-webui` (Docker) → http://localhost:3000
+### Terminal & Shell
+- **Konsole** — default terminal (Zsh + Starship prompt)
+- **Kitty** — GPU-accelerated terminal (run `kitty`)
+- **CLI tools:** `eza`, `bat`, `fd`, `rg`, `fzf`, `zoxide`, `btop`
 
-### 2. Dev Stack
-- **Languages:** Python, Go, Rust (via rustup), Node.js
-- **Editors:** Neovim (pre-installed), Kate (GUI)
-- **Terminal:** Konsole (Zsh + Starship prompt)
-- **Git:** pre-configured with lazygit (TUI)
+### Languages & Version Managers
+- **Python** — `pyenv` for version management (`pyenv install 3.12`)
+- **Node.js** — `nvm` (`nvm install --lts`)
+- **Rust** — `rustup default stable`
+- **Go** — pre-installed (`go version`)
 
-### 3. Docker
-Already running. Check: `docker ps`
+### Editors
+- **VSCodium** — open-source VS Code (Applications → Programming)
+- **Neovim** — with AstroNvim config (`nvim`)
+- **Kate** — KDE text editor (`kate`)
+- **Zed** — fast modern editor (`zed`)
 
-### 4. Useful Commands
+### Git
+- `git` + `lazygit` (TUI, run `lazygit`)
+
+### Containers
+- **Docker** — already running (`docker ps`)
+
+### AI Tools
+- **Ollama** — local LLMs (auto-started)
+- **ai-chat** — terminal chat (`ai-chat`)
+- **ai-setup** — download models (`ai-setup`)
+- **ai-webui** — Open WebUI via Docker (`ai-webui` → http://localhost:3000)
+
+## Quick Commands
 ```
 fastfetch     — system info
 btop          — resource monitor
-eza -la       — file list (replaces ls)
-bat file      — cat with syntax highlight
+eza -la       — list files (replaces ls)
+bat file      — cat with syntax highlighting
 fd pattern    — fast file search
 rg pattern    — fast text search
 lazygit       — git TUI
+ai-chat       — AI chat in terminal
+ai-setup      — download AI models
 ```
 
-### 5. Welcome App
-First-run menu is at: **Applications → VibeLinux Welcome**
-Or run: `vibe-welcome`
+## First Steps
+1. Run `ai-setup` to download AI models
+2. Run `rustup default stable` for Rust
+3. Run `pyenv install 3.12` for Python
+4. Run `nvm install --lts` for Node.js
 EOF
 chmod 644 /home/vibe/Desktop/GET-STARTED.md
 
@@ -528,6 +652,18 @@ Terminal=false
 Categories=Development;
 EOF
 chmod 755 /home/vibe/Desktop/Open-WebUI.desktop
+
+# VSCodium shortcut
+cat > /home/vibe/Desktop/VSCodium.desktop << EOF
+[Desktop Entry]
+Type=Application
+Name=VSCodium
+Icon=vscodium
+Exec=/usr/bin/codium
+Terminal=false
+Categories=Development;IDE;
+EOF
+chmod 755 /home/vibe/Desktop/VSCodium.desktop
 
 chown -R vibe:vibe /home/vibe
 

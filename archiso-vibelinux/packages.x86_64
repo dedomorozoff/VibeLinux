@@ -65,6 +65,8 @@ go
 rustup
 nodejs
 npm
+nvm
+pyenv
 docker
 docker-compose
 jq
@@ -76,6 +78,9 @@ zstd
 git
 lazygit
 neovim
+
+# Editors (GUI)
+vscodium
 
 # AI tools
 ollama
@@ -103,3 +108,9 @@ p7zip
 mc
 xdg-user-dirs
 xdg-utils
+
+# Terminal
+kitty
+
+# Nerd Fonts (for icons in terminal)
+ttf-jetbrains-mono-nerd
