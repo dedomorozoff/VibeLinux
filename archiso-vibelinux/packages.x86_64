@@ -84,6 +84,7 @@ vscodium
 
 # AI tools
 ollama
+opencode
 
 # VirtualBox Guest Additions
 virtualbox-guest-utils

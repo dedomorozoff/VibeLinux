@@ -292,6 +292,10 @@ EOF
 fi
 
 # AI Stack scripts
+# qwen-code (AI coding agent via npm)
+runuser -u vibe -- bash -c 'npm install -g @qwen-code/qwen-code' 2>&1 | tail -3 || true
+
+# aider-chat + Python AI libs
 pip install --break-system-packages --no-cache-dir \
   aider-chat \
   torch --index-url https://download.pytorch.org/whl/cpu \
@@ -369,6 +373,94 @@ fi
 echo "Open WebUI: http://localhost:$PORT"
 WEBUIEOF
 chmod +x /usr/local/bin/ai-webui
+
+# Proprietary AI tool installers
+
+# Cursor IDE installer
+cat > /usr/local/bin/install-cursor << 'CURSOREOF'
+#!/usr/bin/env bash
+echo "Installing Cursor IDE..."
+curl -L "https://downloads.cursor.com/production/$(uname -m)/appimage/Cursor.AppImage" -o /tmp/Cursor.AppImage 2>/dev/null || {
+  echo "Trying alternative download..."
+  wget -q "https://cursor.sh/download/linux" -O /tmp/Cursor.AppImage 2>/dev/null || true
+}
+if [[ -f /tmp/Cursor.AppImage ]]; then
+  mkdir -p /opt/cursor
+  mv /tmp/Cursor.AppImage /opt/cursor/Cursor.AppImage
+  chmod +x /opt/cursor/Cursor.AppImage
+  cat > /usr/share/applications/cursor.desktop << EOF
+[Desktop Entry]
+Name=Cursor
+Exec=/opt/cursor/Cursor.AppImage --no-sandbox
+Icon=utilities-terminal
+Type=Application
+Categories=Development;IDE;
+EOF
+  echo "Cursor installed: /opt/cursor/Cursor.AppImage"
+else
+  echo "Failed to download Cursor. Get it at: https://cursor.sh"
+fi
+CURSOREOF
+chmod +x /usr/local/bin/install-cursor
+
+# Amazon Kiro installer (if available)
+cat > /usr/local/bin/install-kiro << 'KIROEOF'
+#!/usr/bin/env bash
+echo "Installing Amazon Kiro..."
+if command -v npm >/dev/null; then
+  npm install -g @amazon/kiro 2>/dev/null && echo "Kiro installed via npm" || {
+    echo "Kiro package not found on npm. Check: https://kiro.dev"
+    echo "Alternative: install from official site"
+  }
+else
+  echo "npm not found. Install Node.js first."
+fi
+KIROEOF
+chmod +x /usr/local/bin/install-kiro
+
+# Claude Code installer
+cat > /usr/local/bin/install-claude-code << 'CLAUDEEOF'
+#!/usr/bin/env bash
+echo "Installing Claude Code..."
+if command -v npm >/dev/null; then
+  npm install -g @anthropic-ai/claude-code 2>/dev/null && echo "Claude Code installed" || {
+    echo "Failed to install Claude Code. Check: https://claude.ai/code"
+  }
+else
+  echo "npm not found. Install Node.js first."
+fi
+CLAUDEEOF
+chmod +x /usr/local/bin/install-claude-code
+
+# Unified AI installer script
+cat > /usr/local/bin/ai-install << 'INSTALLEOF'
+#!/usr/bin/env bash
+echo "VibeLinux — AI Tool Installer"
+echo "=============================="
+echo ""
+echo "Available tools:"
+echo ""
+echo "  [1] opencode   — Open source AI coding agent (pre-installed)"
+echo "  [2] qwen-code  — Qwen AI coding agent (pre-installed, run 'qwen')"
+echo "  [3] Cursor     — Proprietary AI IDE"
+echo "  [4] Kiro       — Amazon's AI coding assistant"
+echo "  [5] Claude Code — Anthropic's terminal AI"
+echo "  [6] ai-chat    — Local Ollama chat (pre-installed)"
+echo "  [7] ai-webui   — Open WebUI via Docker (pre-installed script)"
+echo ""
+read -rp "Install [1-7]: " choice
+case "$choice" in
+  1) echo "opencode is already installed. Run: opencode" ;;
+  2) echo "qwen-code is already installed. Run: qwen" ;;
+  3) install-cursor ;;
+  4) install-kiro ;;
+  5) install-claude-code ;;
+  6) echo "ai-chat is pre-installed. Run: ai-chat" ;;
+  7) ai-webui ;;
+  *) echo "Nothing to install." ;;
+esac
+INSTALLEOF
+chmod +x /usr/local/bin/ai-install
 
 # === BRANDING ===
 
@@ -595,7 +687,6 @@ A Linux distro for **vibe coding** and **AI development** — everything works o
 - **VSCodium** — open-source VS Code (Applications → Programming)
 - **Neovim** — with AstroNvim config (`nvim`)
 - **Kate** — KDE text editor (`kate`)
-- **Zed** — fast modern editor (`zed`)
 
 ### Git
 - `git` + `lazygit` (TUI, run `lazygit`)
@@ -603,11 +694,19 @@ A Linux distro for **vibe coding** and **AI development** — everything works o
 ### Containers
 - **Docker** — already running (`docker ps`)
 
-### AI Tools
+### AI Tools (open source)
+- **opencode** — open source AI coding agent (`opencode`)
+- **qwen-code** — Qwen's AI coding agent (`qwen`)
 - **Ollama** — local LLMs (auto-started)
-- **ai-chat** — terminal chat (`ai-chat`)
-- **ai-setup** — download models (`ai-setup`)
+- **ai-chat** — terminal chat with local models (`ai-chat`)
 - **ai-webui** — Open WebUI via Docker (`ai-webui` → http://localhost:3000)
+
+### AI Tools (proprietary, install on demand)
+- **Cursor** — `install-cursor` (AI IDE)
+- **Kiro** — `install-kiro` (Amazon's AI assistant)
+- **Claude Code** — `install-claude-code` (Anthropic terminal AI)
+
+Run `ai-install` for a menu to install proprietary tools.
 
 ## Quick Commands
 ```
@@ -618,15 +717,19 @@ bat file      — cat with syntax highlighting
 fd pattern    — fast file search
 rg pattern    — fast text search
 lazygit       — git TUI
-ai-chat       — AI chat in terminal
+opencode      — AI coding agent (TUI)
+qwen          — Qwen AI coding agent
+ai-chat       — local AI chat (Ollama)
+ai-install    — install AI tools menu
 ai-setup      — download AI models
 ```
 
 ## First Steps
 1. Run `ai-setup` to download AI models
-2. Run `rustup default stable` for Rust
-3. Run `pyenv install 3.12` for Python
-4. Run `nvm install --lts` for Node.js
+2. Run `opencode` for AI coding in terminal
+3. Run `rustup default stable` for Rust
+4. Run `pyenv install 3.12` for Python
+5. Run `nvm install --lts` for Node.js
 EOF
 chmod 644 /home/vibe/Desktop/GET-STARTED.md
 
@@ -642,6 +745,28 @@ Categories=Development;
 EOF
 chmod 755 /home/vibe/Desktop/AI-Chat.desktop
 
+cat > /home/vibe/Desktop/OpenCode.desktop << EOF
+[Desktop Entry]
+Type=Application
+Name=OpenCode
+Icon=utilities-terminal
+Exec=konsole --hold -e opencode
+Terminal=false
+Categories=Development;
+EOF
+chmod 755 /home/vibe/Desktop/OpenCode.desktop
+
+cat > /home/vibe/Desktop/Qwen-Code.desktop << EOF
+[Desktop Entry]
+Type=Application
+Name=Qwen Code
+Icon=utilities-terminal
+Exec=konsole --hold -e qwen
+Terminal=false
+Categories=Development;
+EOF
+chmod 755 /home/vibe/Desktop/Qwen-Code.desktop
+
 cat > /home/vibe/Desktop/Open-WebUI.desktop << EOF
 [Desktop Entry]
 Type=Application
@@ -652,6 +777,17 @@ Terminal=false
 Categories=Development;
 EOF
 chmod 755 /home/vibe/Desktop/Open-WebUI.desktop
+
+cat > /home/vibe/Desktop/Install-AI-Tools.desktop << EOF
+[Desktop Entry]
+Type=Application
+Name=Install AI Tools
+Icon=utilities-terminal
+Exec=konsole --hold -e ai-install
+Terminal=false
+Categories=System;
+EOF
+chmod 755 /home/vibe/Desktop/Install-AI-Tools.desktop
 
 # VSCodium shortcut
 cat > /home/vibe/Desktop/VSCodium.desktop << EOF
