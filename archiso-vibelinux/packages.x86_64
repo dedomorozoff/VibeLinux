@@ -80,6 +80,10 @@ neovim
 # AI tools
 ollama
 
+# VirtualBox Guest Additions
+virtualbox-guest-utils
+virtualbox-guest-modules-arch
+
 # Utilities
 fastfetch
 wget

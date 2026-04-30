@@ -33,7 +33,7 @@ chsh -s /usr/bin/zsh root 2>/dev/null || true
 
 # User
 if ! id vibe &>/dev/null; then
-  useradd -m -G wheel -s /usr/bin/zsh vibe
+  useradd -m -G wheel,vboxsf -s /usr/bin/zsh vibe
   echo "vibe:vibe" | chpasswd
 fi
 echo "vibe ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/90_vibe
@@ -45,6 +45,7 @@ systemctl enable systemd-timesyncd || true
 systemctl enable docker || true
 systemctl enable sddm || true
 systemctl enable ollama || true
+systemctl enable vboxservice || true
 
 # SDDM autologin
 mkdir -p /etc/sddm.conf.d
