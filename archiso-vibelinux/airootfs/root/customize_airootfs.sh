@@ -64,108 +64,66 @@ if command -v starship >/dev/null 2>&1; then
   echo 'eval "$(starship init zsh)"' >> /home/vibe/.zshrc
 fi
 
-# KDE user defaults
-mkdir -p /home/vibe/.config
-cat > /home/vibe/.config/kglobalshortcutsrc << EOF
-EOF
-
-# Fix permissions
-chown -R vibe:vibe /home/vibe
-
-# AI Stack — Ollama models + ai-chat script
+# AI Stack scripts
 cat > /usr/local/bin/ai-chat << 'AICHATEOF'
 #!/usr/bin/env bash
-# VibeLinux — простой AI-чат через Ollama
 MODEL="${AI_MODEL:-qwen2.5-coder}"
-
 if ! command -v ollama &>/dev/null; then
-  echo "Ollama не установлен. Запуск: sudo pacman -S ollama"
+  echo "Ollama not installed. Run: sudo pacman -S ollama"
   exit 1
 fi
-
-if ! systemctl is-active --quiet ollama; then
-  echo "Запуск Ollama..."
-  systemctl --user start ollama || ollama serve &
-  sleep 2
-fi
-
-echo "🤖 VibeLinux AI Chat (модель: $MODEL)"
-echo "Команды: /help, /model <name>, /quit"
+echo "VibeLinux AI Chat (model: $MODEL)"
+echo "Commands: /help, /model <name>, /quit"
 echo
-
 while true; do
-  read -rp "➜ " line
+  read -rp "> " line
   case "$line" in
     /quit|/exit|/q) break ;;
     /help)
-      echo "Доступные команды:"
-      echo "  /model <name> — сменить модель"
-      echo "  /quit         — выйти"
-      echo "  Просто введите сообщение — AI ответит"
+      echo "Commands:"
+      echo "  /model <name> - change model"
+      echo "  /quit         - exit"
       ;;
     /model\ *)
       MODEL="${line#/model }"
       export AI_MODEL="$MODEL"
-      echo "Модель: $MODEL"
+      echo "Model: $MODEL"
       ;;
-    "")
-      continue
-      ;;
-    *)
-      ollama run "$MODEL" "$line"
-      ;;
+    "") continue ;;
+    *) ollama run "$MODEL" "$line" ;;
   esac
 done
-echo "Пока! 👋"
 AICHATEOF
 chmod +x /usr/local/bin/ai-chat
 
-# Скрипт загрузки базовых моделей
 cat > /usr/local/bin/ai-setup << 'AISETUPEOF'
 #!/usr/bin/env bash
-# VibeLinux — загрузка AI-моделей
-echo "📦 Загрузка базовых моделей Ollama..."
+echo "Downloading base Ollama models..."
 echo
-
-MODELS=(
-  "qwen2.5-coder:7b"
-  "llama3.2:3b"
-  "codellama:7b"
-)
-
-for model in "${MODELS[@]}"; do
-  echo "→ $model"
+for model in qwen2.5-coder:7b llama3.2:3b codellama:7b; do
+  echo "-> $model"
   ollama pull "$model" 2>&1 | tail -1
   echo
 done
-
-echo "✅ Готово! Запустите ai-chat для общения."
-echo "   Или: ollama run qwen2.5-coder"
+echo "Done! Run: ai-chat"
 AISETUPEOF
 chmod +x /usr/local/bin/ai-setup
 
-# Скрипт для Open WebUI через Docker
 cat > /usr/local/bin/ai-webui << 'WEBUIEOF'
 #!/usr/bin/env bash
-# VibeLinux — запуск Open WebUI (Docker)
 CONTAINER="open-webui"
 PORT="${AI_WEBUI_PORT:-3000}"
-
 if ! command -v docker &>/dev/null; then
-  echo "Docker не установлен."
+  echo "Docker not installed."
   exit 1
 fi
-
 if docker ps --format '{{.Names}}' | grep -q "$CONTAINER"; then
-  echo "Open WebUI уже запущен: http://localhost:$PORT"
+  echo "Open WebUI running: http://localhost:$PORT"
   exit 0
 fi
-
 if docker ps -a --format '{{.Names}}' | grep -q "$CONTAINER"; then
-  echo "Запуск остановленного контейнера..."
   docker start "$CONTAINER"
 else
-  echo "Создание контейнера Open WebUI..."
   docker run -d -p "$PORT":8080 \
     --add-host=host.docker.internal:host-gateway \
     -v open-webui:/app/backend/data \
@@ -173,16 +131,87 @@ else
     --restart always \
     ghcr.io/open-webui/open-webui:main
 fi
-
-echo "✅ Open WebUI: http://localhost:$PORT"
+echo "Open WebUI: http://localhost:$PORT"
 WEBUIEOF
 chmod +x /usr/local/bin/ai-webui
 
-# Rust setup (run as user after boot)
+# Branding — wallpapers
+mkdir -p /usr/share/wallpapers/VibeLinux/contents/images
+if [[ -f /root/branding/wallpapers/vibecode-dark.svg ]]; then
+  cp /root/branding/wallpapers/vibecode-dark.svg /usr/share/wallpapers/VibeLinux/contents/images/2560x1440.svg
+fi
+
+# SDDM theme config
+mkdir -p /usr/share/sddm/themes/breeze
+cat > /usr/share/sddm/themes/breeze/theme.conf.user << EOF
+[General]
+background=/usr/share/wallpapers/VibeLinux/contents/images/2560x1440.svg
+EOF
+
+# KDE user defaults
+mkdir -p /home/vibe/.config
+
+cat > /home/vibe/.config/kdeglobals << EOF
+[General]
+ColorScheme=BreezeDark
+
+[Colors:Window]
+BackgroundNormal=11,16,32
+ForegroundNormal=255,255,255
+EOF
+
+# Welcome App
+cat > /usr/local/bin/vibe-welcome << 'WELCOMEEOF'
+#!/usr/bin/env bash
+clear
+cat << 'ASCII'
+ __     ___  ____     ___  _     ____
+ \ \   / / ||  _ \   / _ \| |   / ___|
+  \ \ / /| || |_) | | | | | |   \___ \
+   \ V / | ||  _ <  | |_| | |___ ___) |
+    \_/  |_||_| \_\  \__\_\_____|____/
+
+ASCII
+echo "  Welcome to VibeLinux!"
+echo "  Linux for vibe coding and AI development"
+echo "  ========================================="
+echo ""
+echo "  [1] Download AI models (ollama pull)"
+echo "  [2] Start Open WebUI (Docker)"
+echo "  [3] Setup Rust (rustup default)"
+echo "  [4] System info (fastfetch)"
+echo "  [5] Skip"
+echo ""
+read -rp "  Choose [1-5]: " choice
+case "$choice" in
+  1) ai-setup ;;
+  2) ai-webui ;;
+  3) runuser -u vibe -- bash -c 'rustup default stable' || true ;;
+  4) fastfetch ;;
+  *) echo "  Happy coding!"; exit 0 ;;
+esac
+WELCOMEEOF
+chmod +x /usr/local/bin/vibe-welcome
+
+# Autostart Welcome App (first run only)
+mkdir -p /home/vibe/.config/autostart
+cat > /home/vibe/.config/autostart/vibe-welcome.desktop << EOF
+[Desktop Entry]
+Type=Application
+Name=VibeLinux Welcome
+Exec=/usr/local/bin/vibe-welcome
+Terminal=true
+X-GNOME-Autostart-enabled=true
+EOF
+
+# Rust setup hint
 cat >> /home/vibe/.zshrc << 'EOF'
 if command -v rustup &>/dev/null && [[ ! -f "$HOME/.cargo/env" ]]; then
   rustup default stable 2>/dev/null || true
 fi
 EOF
+
+# Fix permissions
+chown -R vibe:vibe /home/vibe
 
 echo "=== Done ==="
