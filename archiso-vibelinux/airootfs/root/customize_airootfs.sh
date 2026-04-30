@@ -443,6 +443,18 @@ Terminal=true
 X-GNOME-Autostart-enabled=true
 EOF
 
+# Welcome App shortcut on desktop
+cat > /home/vibe/Desktop/VibeLinux-Welcome.desktop << EOF
+[Desktop Entry]
+Type=Application
+Name=VibeLinux Welcome
+Icon=utilities-terminal
+Exec=konsole --hold -e vibe-welcome
+Terminal=false
+Categories=System;
+EOF
+chmod 755 /home/vibe/Desktop/VibeLinux-Welcome.desktop
+
 # Rust setup hint
 cat >> /home/vibe/.zshrc << 'EOF'
 if command -v rustup &>/dev/null && [[ ! -f "$HOME/.cargo/env" ]]; then
@@ -451,6 +463,72 @@ fi
 EOF
 
 # Fix permissions
+chown -R vibe:vibe /home/vibe
+
+# Quick Start Guide
+cat > /home/vibe/Desktop/GET-STARTED.md << 'EOF'
+# Welcome to VibeLinux
+
+## What is this?
+
+A Linux distro for **vibe coding** and **AI development** — everything works out of the box.
+
+## Quick Start
+
+### 1. AI Tools
+- **Terminal chat:** open Konsole and run `ai-chat`
+- **Download models:** run `ai-setup`
+- **Web UI:** run `ai-webui` (Docker) → http://localhost:3000
+
+### 2. Dev Stack
+- **Languages:** Python, Go, Rust (via rustup), Node.js
+- **Editors:** Neovim (pre-installed), Kate (GUI)
+- **Terminal:** Konsole (Zsh + Starship prompt)
+- **Git:** pre-configured with lazygit (TUI)
+
+### 3. Docker
+Already running. Check: `docker ps`
+
+### 4. Useful Commands
+```
+fastfetch     — system info
+btop          — resource monitor
+eza -la       — file list (replaces ls)
+bat file      — cat with syntax highlight
+fd pattern    — fast file search
+rg pattern    — fast text search
+lazygit       — git TUI
+```
+
+### 5. Welcome App
+First-run menu is at: **Applications → VibeLinux Welcome**
+Or run: `vibe-welcome`
+EOF
+chmod 644 /home/vibe/Desktop/GET-STARTED.md
+
+# Desktop shortcuts for key apps
+cat > /home/vibe/Desktop/AI-Chat.desktop << EOF
+[Desktop Entry]
+Type=Application
+Name=AI Chat
+Icon=utilities-terminal
+Exec=konsole --hold -e ai-chat
+Terminal=false
+Categories=Development;
+EOF
+chmod 755 /home/vibe/Desktop/AI-Chat.desktop
+
+cat > /home/vibe/Desktop/Open-WebUI.desktop << EOF
+[Desktop Entry]
+Type=Application
+Name=Open WebUI
+Icon=firefox
+Exec=ai-webui
+Terminal=false
+Categories=Development;
+EOF
+chmod 755 /home/vibe/Desktop/Open-WebUI.desktop
+
 chown -R vibe:vibe /home/vibe
 
 echo "=== Done ==="

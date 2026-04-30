@@ -84,6 +84,17 @@ ollama
 virtualbox-guest-utils
 virtualbox-guest-modules-arch
 
+# Browser & Internet
+firefox
+flatpak
+plasma-browser-integration
+
+# GUI apps
+kate
+spectacle
+ark
+flameshot
+
 # Utilities
 fastfetch
 wget
@@ -91,3 +102,4 @@ curl
 p7zip
 mc
 xdg-user-dirs
+xdg-utils
