@@ -182,6 +182,15 @@ if [[ "__HAS_GO__" == "1" ]]; then
   echo 'export PATH=$PATH:/usr/local/go/bin:$HOME/go/bin' >> /home/$USERNAME/.zshrc
 fi
 
+# === PHP ===
+if command -v apt >/dev/null 2>&1; then
+  apt install -y php php-cli php-common php-curl php-mbstring php-xml php-zip php-sqlite3 php-mysql php-pgsql php-json php-intl php-bcmath || echo "WARNING: PHP install failed"
+elif command -v pacman >/dev/null 2>&1; then
+  pacman -Sy --noconfirm php || echo "WARNING: PHP install failed"
+elif command -v dnf >/dev/null 2>&1; then
+  dnf -y install php php-cli php-common php-curl php-mbstring php-xml php-zip php-intl || echo "WARNING: PHP install failed"
+fi
+
 # === Редакторы ===
 if [[ "__HAS_NEOVIM__" == "1" ]]; then
   if command -v apt >/dev/null 2>&1; then
@@ -220,6 +229,30 @@ if [[ "__HAS_HELIX__" == "1" ]]; then
 fi
 
 # === AI-агенты ===
+
+# === Графические приложения ===
+if command -v apt >/dev/null 2>&1; then
+  apt install -y pinta sqlite3 sqlitebrowser || echo "WARNING: Pinta/SQLite install failed"
+elif command -v pacman >/dev/null 2>&1; then
+  pacman -Sy --noconfirm pinta sqlite3 sqliteman || echo "WARNING: Pinta/SQLite install failed"
+elif command -v dnf >/dev/null 2>&1; then
+  dnf -y install pinta sqlite sqlitebrowser || echo "WARNING: Pinta/SQLite install failed"
+fi
+
+# Bruno — API-клиент (альтернатива Postman)
+if command -v apt >/dev/null 2>&1; then
+  BRUNO_DEB=$(curl -sL "https://api.github.com/repos/usebruno/bruno/releases/latest" | grep -oP '"browser_download_url": "\K[^"]*amd64\.deb' | head -1)
+  if [[ -n "$BRUNO_DEB" ]]; then
+    curl -sL "$BRUNO_DEB" -o /tmp/bruno.deb
+    apt install -y /tmp/bruno.deb || echo "WARNING: Bruno install failed"
+    rm -f /tmp/bruno.deb
+  fi
+elif command -v pacman >/dev/null 2>&1; then
+  # Bruno на Arch устанавливается через AUR (см. customize_airootfs.sh)
+  echo "Bruno on Arch: install via yay -S bruno-bin after boot"
+fi
+
+# === AI-агенты (оригинальная секция) ===
 if [[ "__HAS_AIDER__" == "1" ]]; then
   pip3 install --break-system-packages aider-chat || true
 fi
@@ -393,8 +426,8 @@ cat > "$ROOTFS/etc/vibe/config.json" << JSON
   "build_type": "full",
   "editors": ["zed", "cursor", "vscode", "neovim", "helix"],
   "agents": ["continue", "aider", "cline", "opencode", "gpt-engineer"],
-  "runtimes": ["node-lts", "python", "rust-stable", "bun", "go", "deno"],
-  "tools": ["git", "gh", "tmux", "fzf", "ripgrep", "jq", "docker", "podman"],
+  "runtimes": ["node-lts", "python", "rust-stable", "bun", "go", "deno", "php"],
+  "tools": ["git", "gh", "tmux", "fzf", "ripgrep", "jq", "docker", "podman", "pinta", "bruno"],
   "nvidia": false,
   "ollama": false,
   "user": "$USERNAME",

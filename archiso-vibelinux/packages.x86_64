@@ -62,6 +62,7 @@ htop
 base-devel
 python
 python-pip
+php
 go
 rustup
 nodejs
@@ -101,6 +102,9 @@ kate
 spectacle
 ark
 flameshot
+pinta
+sqlite3
+sqliteman
 
 # Utilities
 fastfetch

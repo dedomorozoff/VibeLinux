@@ -697,6 +697,17 @@ A Linux distro for **vibe coding** and **AI development** — everything works o
 ### Git
 - `git` + `lazygit` (TUI, run `lazygit`)
 
+### Languages
+- **Python** — `pyenv` for version management (`pyenv install 3.12`)
+- **Node.js** — `nvm` (`nvm install --lts`)
+- **Rust** — `rustup default stable`
+- **Go** — pre-installed (`go version`)
+- **PHP** — pre-installed (`php --version`)
+
+### GUI Apps
+- **Pinta** — lightweight image editor (`pinta`)
+- **Bruno** — API client for REST/GraphQL (`bruno`)
+
 ### Containers
 - **Docker** — already running (`docker ps`)
 
@@ -880,6 +891,142 @@ if [[ -n "$VSCODE_PKG" && -f "$VSCODE_PKG" ]]; then
   echo "VS Code installed successfully"
 else
   echo "WARNING: VS Code build failed. Install after boot: yay -S visual-studio-code-bin"
+fi
+
+# === Bruno — API клиент (аналог Postman, open-source) ===
+echo "Building Bruno from AUR..."
+runuser -u builder -- bash -c '
+  cd /tmp/aur-build
+  git clone --depth 1 https://aur.archlinux.org/bruno-bin.git bruno 2>/dev/null || true
+  cd bruno
+  makepkg --noconfirm --skippgpcheck
+' 2>&1 | tail -15
+
+BRUNO_PKG=$(ls /tmp/aur-build/bruno/bruno-bin-*.tar.zst 2>/dev/null | head -1)
+if [[ -n "$BRUNO_PKG" && -f "$BRUNO_PKG" ]]; then
+  bsdtar -xpf "$BRUNO_PKG" -C /
+  echo "Bruno installed successfully"
+else
+  echo "WARNING: Bruno build failed. Install after boot: yay -S bruno-bin"
+fi
+
+# === Calamares — графический установщик ===
+echo "Building Calamares from AUR..."
+runuser -u builder -- bash -c '
+  cd /tmp/aur-build
+  git clone --depth 1 https://aur.archlinux.org/calamares.git calamares 2>/dev/null || true
+  cd calamares
+  makepkg --noconfirm --skippgpcheck
+' 2>&1 | tail -20
+
+CALAMARES_PKG=$(ls /tmp/aur-build/calamares/calamares-*.tar.zst 2>/dev/null | head -1)
+if [[ -n "$CALAMARES_PKG" && -f "$CALAMARES_PKG" ]]; then
+  bsdtar -xpf "$CALAMARES_PKG" -C /
+  echo "Calamares installed successfully"
+else
+  echo "WARNING: Calamares build failed. Install after boot: yay -S calamares"
+fi
+
+# Calamares — конфигурация для VibeLinux
+mkdir -p /etc/calamares
+cat > /etc/calamares/settings.conf << 'CALCONF'
+---
+branding: vibelinux
+sequence:
+  - show:
+    - welcome
+    - locale
+    - keyboard
+    - partition
+    - users
+    - summary
+  - exec:
+    - partition
+    - mount
+    - unpackfs
+    - machineid
+    - fstab
+    - locale
+    - keyboard
+    - localecfg
+    - users
+    - displaymanager
+    - networkcfg
+    - hwclock
+    - services-systemd
+    - bootloader
+    - umount
+  - show:
+    - finished
+prompt-install: false
+dont-chroot: false
+oem-setup: false
+disable-cancel: false
+disable-cancel-during-exec: true
+CALCONF
+
+# VibeLinux брендинг для Calamares
+mkdir -p /usr/share/calamares/branding/vibelinux
+cat > /usr/share/calamares/branding/vibelinux/branding.desc << 'BRANDCONF'
+---
+componentName: vibelinux
+strings:
+  productName: VibeLinux
+  shortProductName: VibeLinux
+  version: 2026.04
+  shortVersion: "2026.04"
+  versionedName: VibeLinux 2026.04
+  shortVersionedName: VibeLinux 2026.04
+  bootloaderEntryName: VibeLinux
+  productUrl: https://vibelinux.org
+  supportUrl: https://github.com/vibelinux
+  knownIssuesUrl: https://github.com/vibelinux/issues
+  releaseNotesUrl: https://github.com/vibelinux/releases
+images:
+  productLogo: "logo.png"
+  productIcon: "logo.png"
+  productWelcome: "welcome.png"
+slideshow: "show.qml"
+style:
+  sidebarBackground: "#0B1020"
+  sidebarText: "#FFFFFF"
+  sidebarTextSelect: "#4CC9F0"
+BRANDCONF
+
+# Простой слайдшоу для Calamares
+cat > /usr/share/calamares/branding/vibelinux/show.qml << 'SHOWQML'
+import QtQuick 2.0
+Rectangle {
+    width: 800; height: 480; color: "#0B1020"
+    Text {
+        anchors.centerIn: parent
+        text: "VibeLinux — Linux for vibe coding & AI development"
+        color: "#4CC9F0"
+        font.pixelSize: 24
+    }
+}
+SHOWQML
+
+# Ярлык Calamares на рабочем столе
+cat > /home/vibe/Desktop/Install-VibeLinux.desktop << 'DESKTOP'
+[Desktop Entry]
+Type=Application
+Name=Install VibeLinux
+Name[ru]=Установить VibeLinux
+GenericName=System Installer
+Comment=Install VibeLinux to your hard drive
+Comment[ru]=Установить VibeLinux на жёсткий диск
+Icon=calamares
+Exec=sudo calamares
+Terminal=false
+Categories=System;
+StartupNotify=true
+DESKTOP
+chmod 755 /home/vibe/Desktop/Install-VibeLinux.desktop
+
+# Убеждаемся что calamares можно запускать через sudo без пароля для пользователя vibe
+if ! grep -q 'calamares' /etc/sudoers.d/90_vibe 2>/dev/null; then
+  echo "vibe ALL=(ALL) NOPASSWD: /usr/bin/calamares" >> /etc/sudoers.d/90_vibe
 fi
 
 # Cleanup

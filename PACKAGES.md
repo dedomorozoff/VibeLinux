@@ -20,7 +20,7 @@
 
 ---
 
-## 🖥️ VibeCode OS Full
+## 🖥️ VibeCode OS Full (Ubuntu)
 
 ### Базовая система
 
@@ -57,6 +57,7 @@
 | **Rust** | rustup | Стабильный toolchain |
 | **Go** | Прямая установка | Свежая версия (1.26+) |
 | **Java** | SDKMAN! | Java 21 LTS (Temurin) |
+| **PHP** | Системный пакет | PHP 8.3+ с расширениями |
 
 ### Редакторы и IDE
 
@@ -159,6 +160,20 @@
 | **Cascadia Code** | Моноширинный шрифт от Microsoft |
 | **Hack** | Классический моноширинный шрифт |
 | **DejaVu** | Системные шрифты |
+
+### Графические приложения
+
+| Приложение | Назначение |
+|------------|------------|
+| **Pinta** | Лёгкий графический редактор (аналог Paint.NET) |
+| **Bruno** | API-клиент для тестирования REST/GraphQL (аналог Postman, open-source) |
+
+### Работа с базами данных
+
+| Инструмент | Назначение |
+|------------|------------|
+| **sqlite3** | CLI-клиент для SQLite |
+| **DB Browser for SQLite** | Лёгкий GUI для просмотра и редактирования SQLite-баз |
 
 ### Системные утилиты
 
@@ -263,6 +278,7 @@
 | Rust + rustup | ✅ | ❌ | ❌ |
 | Go | ✅ | ❌ | ❌ |
 | Java + SDKMAN! | ✅ | ❌ | ❌ |
+| PHP | ✅ | ❌ | ❌ |
 | VSCodium | ✅ | ❌ | ❌ |
 | VS Code | ✅ | ❌ | ❌ |
 | Neovim | ✅ | ❌ | ❌ |
@@ -274,6 +290,9 @@
 | ai-chat | ✅ | ❌ | ❌ |
 | Aider | ✅ | ❌ | ❌ |
 | ComfyUI | ✅ | ❌ | ❌ |
+| Pinta | ✅ | ❌ | ❌ |
+| Bruno | ✅ | ❌ | ❌ |
+| SQLite3 + DB Browser | ✅ | ❌ | ❌ |
 | Python AI-библиотеки | ✅ | ❌ | ❌ |
 | Шрифты (JetBrains Mono, Fira Code) | ✅ | ❌ | ❌ |
 | Tmux | ✅ | ✅ | ✅ |
@@ -284,6 +303,46 @@
 | tree | ✅ | ❌ | ✅ |
 | build-essential | ✅ | ❌ | ✅ |
 | linux-headers | ✅ | ❌ | ✅ |
+
+---
+
+## 🖥️ VibeLinux Arch
+
+Отдельная редакция на базе Arch Linux с KDE Plasma.
+
+### Базовая система
+
+| Компонент | Описание |
+|-----------|----------|
+| **База** | Arch Linux (rolling release) |
+| **Ядро** | linux (latest) |
+| **Окружение** | KDE Plasma Desktop |
+| **Дисплей-менеджер** | SDDM |
+| **Установщик** | Calamares (графический) |
+
+### Включённое ПО
+
+| Категория | Пакеты |
+|-----------|--------|
+| **Терминал и оболочка** | Kitty, Zsh, Oh My Zsh, Starship, eza, bat, fd, ripgrep, fzf, zoxide, btop |
+| **Языки** | Python, Node.js/npm/nvm, Rust/rustup, Go, Java (SDKMAN!), PHP, pyenv |
+| **Редакторы** | VS Code, Zed, Neovim + AstroNvim, Kate |
+| **AI-стек** | Ollama, opencode, qwen-code, Python AI-библиотеки (torch, transformers, accelerate, llama-index) |
+| **Графические приложения** | Pinta, Bruno, Spectacle, Ark, Flameshot |
+| **Базы данных** | sqlite3, sqliteman (GUI) |
+| **Контейнеры** | Docker, docker-compose |
+| **Браузер** | Firefox |
+| **Шрифты** | JetBrains Mono (вкл. Nerd Font), Fira Code, Cascadia Code, Hack, DejaVu, Noto |
+| **Утилиты** | fastfetch, mc, p7zip, lazygit, jq, git, flatpak, VirtualBox Guest |
+
+### Установка
+
+1. Загрузиться с ISO (BIOS или UEFI)
+2. На рабочем столе — ярлык **Install VibeLinux** (Calamares)
+3. Пройти шаги: язык → раскладка → разметка диска → пользователь → установка
+4. Перезагрузиться
+
+**Сборка ISO:** `make arch` или `sudo bash scripts/build/build-vibe-arch.sh`
 
 ---
 

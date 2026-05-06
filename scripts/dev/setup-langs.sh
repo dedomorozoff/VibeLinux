@@ -130,4 +130,29 @@ if [ -f "$USER_HOME/.zshrc" ] && ! grep -q 'export GOPATH' "$USER_HOME/.zshrc"; 
   printf '\n# Go\nexport GOPATH="$HOME/go"\nexport PATH="$HOME/go/bin:$PATH"\n' >> "$USER_HOME/.zshrc"
 fi
 
+# PHP
+echo "[setup-langs] Установка PHP..."
+apt-get install -y \
+  php \
+  php-cli \
+  php-common \
+  php-curl \
+  php-mbstring \
+  php-xml \
+  php-zip \
+  php-sqlite3 \
+  php-mysql \
+  php-pgsql \
+  php-json \
+  php-intl \
+  php-bcmath \
+  2>/dev/null || echo "[setup-langs] WARNING: PHP install failed"
+
+# Composer (менеджер зависимостей PHP)
+if check_network; then
+  if ! command -v composer >/dev/null 2>&1; then
+    curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer 2>/dev/null || echo "[setup-langs] WARNING: Composer install failed"
+  fi
+fi
+
 echo "[setup-langs] Готово."

@@ -27,13 +27,14 @@ make check
 
 ### 📦 Редакции
 
-| Параметр | **Full** | **Minimal** |
-|----------|----------|-------------|
-| **Размер** | ~3-4 ГБ | ~500 МБ - 1 ГБ |
-| **GUI** | ✅ MATE Desktop | ❌ Только CLI |
-| **Dev-стек** | ✅ Полный | ❌ Базовый |
-| **AI-стек** | ✅ Ollama, Open WebUI | ❌ Нет |
-| **Назначение** | Desktop для разработки | Сервер, контейнеры, база |
+| Параметр | **Full (Ubuntu)** | **Minimal (Ubuntu)** | **Arch** |
+|----------|----------|-------------|----------|
+| **Размер** | ~3-4 ГБ | ~500 МБ - 1 ГБ | ~3-4 ГБ |
+| **GUI** | ✅ MATE Desktop | ❌ Только CLI | ✅ KDE Plasma |
+| **Установщик** | ✅ Ubiquity | Текстовый скрипт | ✅ Calamares |
+| **Dev-стек** | ✅ Полный | ❌ Базовый | ✅ Полный |
+| **AI-стек** | ✅ Ollama, Open WebUI | ❌ Нет | ✅ Ollama, opencode, qwen-code |
+| **Назначение** | Desktop для разработки | Сервер, контейнеры, база | Desktop для vibe coding |
 
 **Подробнее:** [EDITIONS.md](EDITIONS.md) — подробное сравнение редакций
 
@@ -129,6 +130,53 @@ make check
 
 ---
 
+#### Arch Linux
+
+**Базовая система:**
+- Arch Linux (rolling release) — всегда свежие пакеты
+- KDE Plasma — современное окружение
+- SDDM — дисплей-менеджер с autologin
+- **Calamares** — графический установщик (ярлык на рабочем столе)
+
+**Терминал и оболочка:**
+- **Kitty** — GPU-ускоренный терминал
+- **Konsole** — терминал KDE
+- **Zsh** + **Oh My Zsh** + **Starship** — кастомный промпт VibeLinux
+
+**Языки программирования:**
+- **Python** через `pyenv`
+- **Node.js** через `nvm`
+- **Rust** через `rustup`
+- **Go** — системный пакет
+- **Java** через `SDKMAN!`
+- **PHP** — системный пакет
+
+**Редакторы и IDE:**
+- **VS Code** (из AUR)
+- **Zed** (из AUR)
+- **Neovim** + AstroNvim
+- **Kate** — редактор KDE
+
+**AI-стек:**
+- **Ollama** — локальные LLM
+- **opencode** — AI-агент для кодинга
+- **qwen-code** — Qwen AI-агент
+- **Python AI-библиотеки** — torch, transformers, accelerate, llama-index
+
+**Графические приложения:**
+- **Pinta** — графический редактор
+- **Bruno** — API-клиент (REST/GraphQL)
+- **Spectacle** — скриншоты
+- **Flameshot** — продвинутые скриншоты
+- **DB Browser for SQLite** — GUI для баз данных
+
+**Установка:**
+1. Загрузиться с ISO → рабочий стол KDE Plasma
+2. Ярлык **Install VibeLinux** на рабочем столе
+3. Calamares: язык → раскладка → разметка диска → пользователь → установка
+
+---
+
 ### 🚀 Быстрый старт
 
 #### Сборка ISO (через Makefile)
@@ -139,8 +187,9 @@ make check        # Для полной версии
 make check-mini   # Для минимальной версии
 
 # Сборка
-make full         # Полная версия (с GUI, dev и AI)
-make mini         # Минимальная версия (только CLI)
+make full         # Полная версия (Ubuntu, GUI + dev + AI)
+make mini         # Минимальная версия (Ubuntu, только CLI)
+make arch         # Arch Linux (KDE Plasma + полный стек)
 
 # Быстрая пересборка (сохраняет chroot)
 make full-keep

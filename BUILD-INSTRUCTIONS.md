@@ -8,9 +8,23 @@ make check
 make check-mini
 
 # 2. Сборка
-make mini    # минимальная версия (CLI)
-make full    # полная версия (GUI + dev + AI)
+make mini    # минимальная версия (CLI, Ubuntu)
+make full    # полная версия (GUI + dev + AI, Ubuntu)
+make arch    # Arch Linux (KDE Plasma + полный стек)
 ```
+
+---
+
+## Редакции
+
+| Параметр | **Full (Ubuntu)** | **Minimal (Ubuntu)** | **Arch** |
+|----------|-------------------|----------------------|----------|
+| **База** | Ubuntu 24.04 LTS | Ubuntu 24.04 LTS | Arch Linux (rolling) |
+| **GUI** | MATE Desktop | Нет (CLI) | KDE Plasma |
+| **Установщик** | Ubiquity | Текстовый скрипт | Calamares |
+| **Dev-стек** | Полный | Базовый | Полный |
+| **AI-стек** | ✅ | ❌ | ✅ |
+| **Размер ISO** | ~3-4 ГБ | ~600-800 МБ | ~3-4 ГБ |
 
 ## Состав сборок
 
@@ -45,6 +59,34 @@ make full    # полная версия (GUI + dev + AI)
 - **Шрифты:** JetBrains Mono, Fira Code, Cascadia Code
 
 **Размер ISO:** ~3-4 ГБ
+
+### Arch (scripts/build/build-vibe-arch.sh)
+**Скрипт:** `scripts/build/build-vibe-arch.sh`
+**Профиль:** `archiso-vibelinux/`
+**Кастомизация:** `archiso-vibelinux/airootfs/root/customize_airootfs.sh`
+
+**Компоненты:**
+- **KDE Plasma** + SDDM (autologin)
+- **Установщик:** Calamares (графический, ярлык на рабочем столе)
+- **Терминал:** Kitty, Konsole, Zsh + Oh My Zsh + Starship
+- **CLI утилиты:** eza, bat, fd, rg, fzf, zoxide, btop
+- **Языки:** Python + pyenv, Node.js + nvm, Rust + rustup, Go, Java (SDKMAN!), PHP
+- **Редакторы:** VS Code, Zed, Neovim + AstroNvim, Kate
+- **AI:** Ollama, opencode, qwen-code, Python AI-библиотеки (torch, transformers, llama-index)
+- **Графика:** Pinta, Spectacle, Flameshot
+- **API:** Bruno
+- **БД:** sqlite3 + sqliteman
+- **Контейнеры:** Docker + docker-compose
+- **Браузер:** Firefox
+- **AUR-пакеты:** yay, zed-editor-bin, visual-studio-code-bin, bruno-bin, calamares
+
+**Размер ISO:** ~3-4 ГБ
+
+**Установка на диск:**
+1. Загрузиться с ISO
+2. На рабочем столе KDE — ярлык **Install VibeLinux**
+3. Calamares проведёт через: язык → раскладка → разметка → пользователь → установка
+4. После завершения — перезагрузка
 
 ## Структура скриптов
 
