@@ -52,7 +52,7 @@
 │  • MATE Desktop Environment                 │
 │  • Полный Dev-стек из коробки               │
 │  • AI-инструменты (Ollama, Open WebUI)      │
-│  • VSCodium, Neovim, Zed                    │
+│  • VSCodium, VS Code, Neovim, Zed            │
 │  • Python, Node.js, Rust, Go, Java          │
 │  • Docker, lazygit                          │
 │  • Брендинг VibeCode OS                     │
@@ -76,7 +76,7 @@
 - Zsh + Oh My Zsh + Starship
 - CLI-утилиты (eza, bat, fd, rg, fzf, zoxide, btop)
 - Языки: Python, Node.js, Rust, Go, Java
-- Редакторы: VSCodium, Neovim (AstroNvim), Zed
+- Редакторы: VSCodium, VS Code, Neovim (AstroNvim), Zed
 - Инструменты: Git, lazygit, Docker
 - AI-стек: Ollama, Open WebUI, ai-chat, Aider, ComfyUI
 - Python AI-библиотеки (PyTorch, Transformers, LangChain)
@@ -100,7 +100,7 @@ sudo vibecode-upgrade
 |---|-----------|--------|--------------|
 | 1 | Терминал и оболочка | ~200 МБ | Kitty, Zsh, Oh My Zsh, Starship, CLI-утилиты |
 | 2 | Языки программирования | ~1-2 ГБ | Python, Node.js, Rust, Go, Java |
-| 3 | Редакторы и IDE | ~500 МБ - 1 ГБ | VSCodium, Neovim, Zed |
+| 3 | Редакторы и IDE | ~800 МБ - 1.5 ГБ | VSCodium, VS Code, Neovim, Zed |
 | 4 | Инструменты разработчика | ~500 МБ | Git, lazygit, Docker |
 | 5 | AI-стек | ~10-20 ГБ | Ollama, Open WebUI, ai-chat, Aider, ComfyUI, Python AI |
 | 6 | Драйверы NVIDIA | ~1 ГБ | Проприетарные драйверы |
@@ -131,6 +131,7 @@ sudo vibecode-upgrade
 | **Go** | ❌ | ✅ |
 | **Java + SDKMAN!** | ❌ | ✅ |
 | **VSCodium** | ❌ | ✅ |
+| **VS Code** | ❌ | ✅ |
 | **Neovim** | ✅ (базовый) | ✅ (AstroNvim) |
 | **Zed** | ❌ | ✅ |
 | **Git** | ✅ | ✅ |
@@ -152,23 +153,23 @@ sudo vibecode-upgrade
 ## 🚀 Сценарии использования
 
 ### Сценарий 1: Сервер
-**Выбор:** Minimal  
+**Выбор:** Minimal
 **Почему:** Минимальный размер, нет лишних компонентов, только базовые утилиты
 
 ### Сценарий 2: Разработка с нуля
-**Выбор:** Minimal → Full (через vibecode-upgrade)  
+**Выбор:** Minimal → Full (через vibecode-upgrade)
 **Почему:** Контроль над устанавливаемыми компонентами
 
 ### Сценарий 3: Рабочая станция
-**Выбор:** Full  
+**Выбор:** Full
 **Почему:** Готовая среда разработки из коробки
 
 ### Сценарий 4: Виртуальная машина
-**Выбор:** Minimal  
+**Выбор:** Minimal
 **Почему:** Меньше требований к ресурсам
 
 ### Сценарий 5: AI-разработка
-**Выбор:** Full  
+**Выбор:** Full
 **Почему:** Все AI-инструменты предустановлены
 
 ---

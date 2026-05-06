@@ -131,6 +131,25 @@ apt-get install -y codium
 # Neovim
 apt-get install -y neovim
 
+# Zed — быстрый современный редактор (официальный скрипт установки)
+echo "[full-chroot] Установка Zed..."
+if curl -sf --connect-timeout 5 https://zed.dev >/dev/null 2>&1; then
+  curl -f https://zed.dev/install.sh 2>/dev/null | sh || echo "[full-chroot] WARNING: Zed install failed"
+else
+  echo "[full-chroot] Пропуск Zed — нет сети"
+fi
+
+# VS Code — проприетарный редактор от Microsoft (опционально, для Full)
+echo "[full-chroot] Установка VS Code..."
+if curl -sf --connect-timeout 5 https://packages.microsoft.com >/dev/null 2>&1; then
+  curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /etc/apt/trusted.gpg.d/microsoft.gpg
+  echo "deb [arch=amd64 signed-by=/etc/apt/trusted.gpg.d/microsoft.gpg] https://packages.microsoft.com/repos/code stable main" > /etc/apt/sources.list.d/vscode.list
+  apt-get update
+  apt-get install -y code || echo "[full-chroot] WARNING: VS Code install failed"
+else
+  echo "[full-chroot] Пропуск VS Code — нет сети"
+fi
+
 # === GIT И DEVTOOLS ===
 echo "[full-chroot] Установка Git и инструментов..."
 apt-get install -y \

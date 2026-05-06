@@ -81,7 +81,8 @@ lazygit
 neovim
 
 # Editors (GUI)
-# VS Code installed via AUR (see customize_airootfs.sh)
+# Zed and VS Code installed via AUR in customize_airootfs.sh
+flatpak
 
 # AI tools
 ollama

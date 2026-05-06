@@ -689,7 +689,8 @@ A Linux distro for **vibe coding** and **AI development** — everything works o
 - **Go** — pre-installed (`go version`)
 
 ### Editors
-- **VS Code** — install after boot: `yay -S visual-studio-code-bin`
+- **VS Code** — pre-installed (`code`)
+- **Zed** — ultra-fast editor (`zed`)
 - **Neovim** — with AstroNvim config (`nvim`)
 - **Kate** — KDE text editor (`kate`)
 
@@ -796,17 +797,29 @@ Categories=System;
 EOF
 chmod 755 /home/vibe/Desktop/Install-AI-Tools.desktop
 
-# VS Code — не установлен в ISO, ярлык объясняет как поставить
+# VS Code — desktop shortcut
 cat > /home/vibe/Desktop/VS-Code.desktop << EOF
 [Desktop Entry]
 Type=Application
-Name=Install VS Code
-Icon=utilities-terminal
-Exec=konsole --hold -e bash -c 'echo "Installing Visual Studio Code..."; yay -S --noconfirm visual-studio-code-bin; read -p "Press Enter to exit"'
+Name=VS Code
+Icon=visual-studio-code
+Exec=code
 Terminal=false
 Categories=Development;IDE;
 EOF
 chmod 755 /home/vibe/Desktop/VS-Code.desktop
+
+# Zed — desktop shortcut
+cat > /home/vibe/Desktop/Zed.desktop << EOF
+[Desktop Entry]
+Type=Application
+Name=Zed
+Icon=dev.zed.Zed
+Exec=zed
+Terminal=false
+Categories=Development;IDE;
+EOF
+chmod 755 /home/vibe/Desktop/Zed.desktop
 
 # === AUR SETUP (bootstrap yay-bin) ===
 echo "Bootstrapping yay-bin from AUR..."
@@ -835,8 +848,39 @@ else
   echo "WARNING: yay build failed."
 fi
 
-# VS Code — ставится пользователем post-install: yay -S visual-studio-code-bin
-echo "VS Code: install after boot with: yay -S visual-studio-code-bin"
+# === Zed editor ===
+echo "Building Zed editor from AUR..."
+runuser -u builder -- bash -c '
+  cd /tmp/aur-build
+  git clone --depth 1 https://aur.archlinux.org/zed-editor-bin.git zed 2>/dev/null || true
+  cd zed
+  makepkg --noconfirm --skippgpcheck
+' 2>&1 | tail -15
+
+ZED_PKG=$(ls /tmp/aur-build/zed/zed-editor-bin-*.tar.zst 2>/dev/null | head -1)
+if [[ -n "$ZED_PKG" && -f "$ZED_PKG" ]]; then
+  bsdtar -xpf "$ZED_PKG" -C /
+  echo "Zed editor installed successfully"
+else
+  echo "WARNING: Zed build failed. Install after boot: yay -S zed-editor-bin"
+fi
+
+# === VS Code ===
+echo "Building VS Code from AUR..."
+runuser -u builder -- bash -c '
+  cd /tmp/aur-build
+  git clone --depth 1 https://aur.archlinux.org/visual-studio-code-bin.git vscode 2>/dev/null || true
+  cd vscode
+  makepkg --noconfirm --skippgpcheck
+' 2>&1 | tail -15
+
+VSCODE_PKG=$(ls /tmp/aur-build/vscode/visual-studio-code-bin-*.tar.zst 2>/dev/null | head -1)
+if [[ -n "$VSCODE_PKG" && -f "$VSCODE_PKG" ]]; then
+  bsdtar -xpf "$VSCODE_PKG" -C /
+  echo "VS Code installed successfully"
+else
+  echo "WARNING: VS Code build failed. Install after boot: yay -S visual-studio-code-bin"
+fi
 
 # Cleanup
 userdel builder 2>/dev/null || true

@@ -137,13 +137,6 @@ if command -v apt >/dev/null 2>&1; then
     python3-full python3-pip python3-venv \
     docker.io zstd systemd
 
-  # VS Code via official Microsoft repository
-  rm -f /etc/apt/trusted.gpg.d/microsoft.gpg
-  curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /etc/apt/trusted.gpg.d/microsoft.gpg
-  echo "deb [arch=amd64] https://packages.microsoft.com/repos/code stable main" > /etc/apt/sources.list.d/vscode.list
-  apt update
-  apt install -y code
-
   systemctl enable NetworkManager || true
   systemctl enable docker || true
 elif command -v pacman >/dev/null 2>&1; then
@@ -199,6 +192,29 @@ if [[ "__HAS_NEOVIM__" == "1" ]]; then
   if command -v pacman >/dev/null 2>&1; then pacman -Sy --noconfirm neovim; fi
   if command -v dnf >/dev/null 2>&1; then dnf -y install neovim; fi
 fi
+
+# VSCodium — open-source форк VS Code (без телеметрии)
+if command -v apt >/dev/null 2>&1; then
+  curl -fsSL https://gitlab.com/paulcarroty/vscodium-deb-rpm-repo/raw/master/pub.gpg | gpg --dearmor -o /etc/apt/trusted.gpg.d/vscodium.gpg
+  echo 'deb [signed-by=/etc/apt/trusted.gpg.d/vscodium.gpg] https://download.vscodium.com/debs vscodium main' > /etc/apt/sources.list.d/vscodium.list
+  apt update
+  apt install -y codium || echo "WARNING: VSCodium install failed"
+fi
+
+# VS Code — проприетарный редактор Microsoft
+if command -v apt >/dev/null 2>&1; then
+  rm -f /etc/apt/trusted.gpg.d/microsoft.gpg
+  curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /etc/apt/trusted.gpg.d/microsoft.gpg
+  echo "deb [arch=amd64 signed-by=/etc/apt/trusted.gpg.d/microsoft.gpg] https://packages.microsoft.com/repos/code stable main" > /etc/apt/sources.list.d/vscode.list
+  apt update
+  apt install -y code || echo "WARNING: VS Code install failed"
+fi
+
+# Zed — быстрый современный редактор
+if [[ "__HAS_ZED__" == "1" ]]; then
+  runuser -u "$USERNAME" -- bash -lc 'curl -f https://zed.dev/install.sh 2>/dev/null | sh' || echo "WARNING: Zed install failed"
+fi
+
 if [[ "__HAS_HELIX__" == "1" ]]; then
   if command -v cargo >/dev/null 2>&1; then runuser -u "$USERNAME" -- bash -lc 'cargo install --locked helix'; fi
 fi
@@ -358,7 +374,7 @@ EOS
 sed -i "s|__USER__|$USERNAME|g; s|__HOST__|$HOSTNAME|g" "$ROOTFS/tmp/customize.sh"
 sed -i "s/__NVIDIA__/0/g" "$ROOTFS/tmp/customize.sh"
 sed -i "s/__BUILD_TYPE__/$BUILD_TYPE/g" "$ROOTFS/tmp/customize.sh"
-sed -i "s/__FLATPAKS__/dev.zed.Zed/g" "$ROOTFS/tmp/customize.sh"
+sed -i "s/__HAS_ZED__/1/g" "$ROOTFS/tmp/customize.sh"
 sed -i "s/__HAS_NODE__/1/g" "$ROOTFS/tmp/customize.sh"
 sed -i "s/__HAS_BUN__/1/g" "$ROOTFS/tmp/customize.sh"
 sed -i "s/__HAS_DENO__/1/g" "$ROOTFS/tmp/customize.sh"

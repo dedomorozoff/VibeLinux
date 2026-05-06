@@ -181,6 +181,12 @@ if [[ "__HAS_NEOVIM__" == "1" ]]; then
     apt install -y neovim || apt install -y vim
   fi
 fi
+
+# Zed — быстрый современный редактор (только для full)
+if [[ "__HAS_ZED__" == "1" ]]; then
+  runuser -u "$USERNAME" -- bash -lc 'curl -f https://zed.dev/install.sh 2>/dev/null | sh' || echo "WARNING: Zed install failed"
+fi
+
 if [[ "__HAS_HELIX__" == "1" ]]; then
   if command -v cargo >/dev/null 2>&1; then runuser -u "$USERNAME" -- bash -lc 'cargo install --locked helix'; fi
 fi
@@ -269,7 +275,7 @@ EOS
 sed -i "s|__USER__|$USERNAME|g; s|__HOST__|$HOSTNAME|g" "$ROOTFS/tmp/customize.sh"
 sed -i "s/__NVIDIA__/0/g" "$ROOTFS/tmp/customize.sh"
 sed -i "s/__BUILD_TYPE__/$BUILD_TYPE/g" "$ROOTFS/tmp/customize.sh"
-sed -i "s/__FLATPAKS__//g" "$ROOTFS/tmp/customize.sh"
+sed -i "s/__HAS_ZED__/0/g" "$ROOTFS/tmp/customize.sh"
 sed -i "s/__HAS_NODE__/0/g" "$ROOTFS/tmp/customize.sh"
 sed -i "s/__HAS_BUN__/0/g" "$ROOTFS/tmp/customize.sh"
 sed -i "s/__HAS_DENO__/0/g" "$ROOTFS/tmp/customize.sh"
