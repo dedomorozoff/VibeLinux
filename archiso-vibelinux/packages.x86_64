@@ -1,10 +1,11 @@
-# VibeLinux base packages
+# VibeLinux packages — Arch Linux + KDE Plasma (CachyOS-style)
 base
 linux
 linux-firmware
 archiso
 mkinitcpio
 mkinitcpio-archiso
+pacman-mirrorlist
 
 # Boot
 syslinux
@@ -13,36 +14,104 @@ memtest86+-efi
 efibootmgr
 edk2-shell
 
+# KDE Plasma Desktop
+plasma-desktop
+plasma-workspace
+plasma-nm
+plasma-pa
+plasma-systemmonitor
+kdeconnect
+dolphin
+konsole
+sddm
+xorg-server
+wayland
+
+# Audio
+pipewire
+pipewire-pulse
+wireplumber
+
 # Network
 networkmanager
 iwd
 
-# Shell
-zsh
-curl
-wget
-git
-
-# Audio
-pipewire
-wireplumber
-
 # Fonts
-ttf-fira-code
 noto-fonts
+noto-fonts-cjk
 noto-fonts-emoji
+noto-fonts-extra
+ttf-fira-code
+ttf-jetbrains-mono
+ttf-cascadia-code
+ttf-hack
+ttf-dejavu
+ttf-liberation
 
 # Shell & prompt
+zsh
 starship
+eza
+bat
+fd
+zoxide
+btop
+htop
 
 # Dev tools
 base-devel
 python
 python-pip
+go
+rustup
+nodejs
+npm
+nvm
+pyenv
 docker
+docker-compose
 jq
 fzf
 ripgrep
 tmux
 unzip
 zstd
+git
+lazygit
+neovim
+
+# Editors (GUI)
+# VS Code installed via AUR (see customize_airootfs.sh)
+
+# AI tools
+ollama
+opencode
+
+# VirtualBox Guest Additions
+virtualbox-guest-utils
+
+# Browser & Internet
+firefox
+flatpak
+plasma-browser-integration
+
+# GUI apps
+kate
+spectacle
+ark
+flameshot
+
+# Utilities
+fastfetch
+wget
+curl
+p7zip
+mc
+xdg-user-dirs
+xdg-utils
+
+# Terminal
+kitty
+
+# Nerd Fonts (for icons in terminal)
+ttf-jetbrains-mono-nerd

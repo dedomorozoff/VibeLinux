@@ -31,6 +31,15 @@ if [[ ! -d "$PROFILE_DIR" ]]; then
     exit 1
 fi
 
+# 2.5) Копирование брендинга в airootfs
+BRANDING_DIR="$(cd "$(dirname "$(readlink -f "$0")")/../../branding" 2>/dev/null && pwd)"
+if [[ -d "$BRANDING_DIR/wallpapers" ]]; then
+    log "Copying branding assets to airootfs..."
+    mkdir -p "$PROFILE_DIR/airootfs/root/branding"
+    cp -r "$BRANDING_DIR/wallpapers" "$PROFILE_DIR/airootfs/root/branding/"
+    cp -r "$BRANDING_DIR/logos" "$PROFILE_DIR/airootfs/root/branding/" 2>/dev/null || true
+fi
+
 log "Using profile: $PROFILE_DIR"
 log "Work dir: $WORKDIR"
 log "Output dir: $OUTDIR"

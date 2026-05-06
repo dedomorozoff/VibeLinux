@@ -350,10 +350,11 @@ MODULES
     # Шаг 5: SquashFS
     log "Шаг 5: Создание SquashFS..."
     mkdir -p "${IMAGE_DIR}/casper"
+    # Создаём пустые mount-точки внутри chroot, чтобы они попали в squashfs
+    mkdir -p "${CHROOT_DIR}/proc" "${CHROOT_DIR}/sys" "${CHROOT_DIR}/dev" "${CHROOT_DIR}/run" "${CHROOT_DIR}/tmp"
     rm -f "${IMAGE_DIR}/casper/filesystem.squashfs"
     mksquashfs "${CHROOT_DIR}" "${IMAGE_DIR}/casper/filesystem.squashfs" \
-      -comp zstd \
-      -e boot proc sys dev run tmp
+      -comp zstd
 
     # Шаг 6: Подготовка ISO структуры
     log "Шаг 6: Подготовка структуры ISO..."

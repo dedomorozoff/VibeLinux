@@ -730,10 +730,12 @@ CASPERCONF
 
     # Шаг 5: Подготовка SquashFS (zstd для баланса скорость/сжатие)
     log "Шаг 5: Упаковка rootfs в SquashFS"
+    # Создаём пустые mount-точки внутри chroot, чтобы они попали в squashfs
+    mkdir -p "${CHROOT_DIR}/proc" "${CHROOT_DIR}/sys" "${CHROOT_DIR}/dev" "${CHROOT_DIR}/run" "${CHROOT_DIR}/tmp"
     mkdir -p "${IMAGE_DIR}/casper"
     mksquashfs "${CHROOT_DIR}" "${IMAGE_DIR}/casper/filesystem.squashfs" \
       -comp zstd \
-      -e boot proc sys dev run tmp
+      -e boot
 
     # Шаг 6: Подготовка структуры live-ISO
     log "Шаг 6: Подготовка структуры live-ISO"
