@@ -102,9 +102,8 @@ kate
 spectacle
 ark
 flameshot
-pinta
 sqlite3
-sqliteman
+sqlitebrowser
 
 # Utilities
 fastfetch
@@ -120,3 +119,9 @@ kitty
 
 # Nerd Fonts (for icons in terminal)
 ttf-jetbrains-mono-nerd
+
+# AUR dependencies (for Calamares, VS Code, Zed)
+lsof
+kpmcore
+libpwquality
+yaml-cpp

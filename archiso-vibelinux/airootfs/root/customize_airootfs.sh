@@ -122,7 +122,7 @@ chsh -s /usr/bin/zsh root 2>/dev/null || true
 
 # User
 if ! id vibe &>/dev/null; then
-  useradd -m -G wheel,vboxsf -s /usr/bin/zsh vibe
+  useradd -m -G wheel -s /usr/bin/zsh vibe
   echo "vibe:vibe" | chpasswd
 fi
 echo "vibe ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/90_vibe
@@ -134,7 +134,6 @@ systemctl enable systemd-timesyncd || true
 systemctl enable docker || true
 systemctl enable sddm || true
 systemctl enable ollama || true
-systemctl enable vboxservice || true
 
 # SDDM autologin
 mkdir -p /etc/sddm.conf.d
@@ -859,38 +858,21 @@ else
   echo "WARNING: yay build failed."
 fi
 
-# === Zed editor ===
-echo "Building Zed editor from AUR..."
+# === Pinta — lightweight image editor ===
+echo "Building Pinta from AUR..."
 runuser -u builder -- bash -c '
   cd /tmp/aur-build
-  git clone --depth 1 https://aur.archlinux.org/zed-editor-bin.git zed 2>/dev/null || true
-  cd zed
+  git clone --depth 1 https://aur.archlinux.org/pinta.git 2>/dev/null || true
+  cd pinta
   makepkg --noconfirm --skippgpcheck
 ' 2>&1 | tail -15
 
-ZED_PKG=$(ls /tmp/aur-build/zed/zed-editor-bin-*.tar.zst 2>/dev/null | head -1)
-if [[ -n "$ZED_PKG" && -f "$ZED_PKG" ]]; then
-  bsdtar -xpf "$ZED_PKG" -C /
-  echo "Zed editor installed successfully"
+PINTA_PKG=$(ls /tmp/aur-build/pinta/pinta-*.tar.zst 2>/dev/null | head -1)
+if [[ -n "$PINTA_PKG" && -f "$PINTA_PKG" ]]; then
+  bsdtar -xpf "$PINTA_PKG" -C /
+  echo "Pinta installed successfully"
 else
-  echo "WARNING: Zed build failed. Install after boot: yay -S zed-editor-bin"
-fi
-
-# === VS Code ===
-echo "Building VS Code from AUR..."
-runuser -u builder -- bash -c '
-  cd /tmp/aur-build
-  git clone --depth 1 https://aur.archlinux.org/visual-studio-code-bin.git vscode 2>/dev/null || true
-  cd vscode
-  makepkg --noconfirm --skippgpcheck
-' 2>&1 | tail -15
-
-VSCODE_PKG=$(ls /tmp/aur-build/vscode/visual-studio-code-bin-*.tar.zst 2>/dev/null | head -1)
-if [[ -n "$VSCODE_PKG" && -f "$VSCODE_PKG" ]]; then
-  bsdtar -xpf "$VSCODE_PKG" -C /
-  echo "VS Code installed successfully"
-else
-  echo "WARNING: VS Code build failed. Install after boot: yay -S visual-studio-code-bin"
+  echo "WARNING: Pinta build failed. Install after boot: yay -S pinta"
 fi
 
 # === Bruno — API клиент (аналог Postman, open-source) ===
@@ -925,6 +907,40 @@ if [[ -n "$CALAMARES_PKG" && -f "$CALAMARES_PKG" ]]; then
   echo "Calamares installed successfully"
 else
   echo "WARNING: Calamares build failed. Install after boot: yay -S calamares"
+fi
+
+# === Zed editor ===
+echo "Building Zed editor from AUR..."
+runuser -u builder -- bash -c '
+  cd /tmp/aur-build
+  git clone --depth 1 https://aur.archlinux.org/zed-editor-bin.git zed 2>/dev/null || true
+  cd zed
+  makepkg --noconfirm --skippgpcheck
+' 2>&1 | tail -15
+
+ZED_PKG=$(ls /tmp/aur-build/zed/zed-editor-bin-*.tar.zst 2>/dev/null | head -1)
+if [[ -n "$ZED_PKG" && -f "$ZED_PKG" ]]; then
+  bsdtar -xpf "$ZED_PKG" -C /
+  echo "Zed editor installed successfully"
+else
+  echo "WARNING: Zed build failed. Install after boot: yay -S zed-editor-bin"
+fi
+
+# === VS Code ===
+echo "Building VS Code from AUR..."
+runuser -u builder -- bash -c '
+  cd /tmp/aur-build
+  git clone --depth 1 https://aur.archlinux.org/visual-studio-code-bin.git vscode 2>/dev/null || true
+  cd vscode
+  makepkg --noconfirm --skippgpcheck
+' 2>&1 | tail -15
+
+VSCODE_PKG=$(ls /tmp/aur-build/vscode/visual-studio-code-bin-*.tar.zst 2>/dev/null | head -1)
+if [[ -n "$VSCODE_PKG" && -f "$VSCODE_PKG" ]]; then
+  bsdtar -xpf "$VSCODE_PKG" -C /
+  echo "VS Code installed successfully"
+else
+  echo "WARNING: VS Code build failed. Install after boot: yay -S visual-studio-code-bin"
 fi
 
 # Calamares — конфигурация для VibeLinux
