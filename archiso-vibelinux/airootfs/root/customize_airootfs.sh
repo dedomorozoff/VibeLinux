@@ -122,7 +122,7 @@ chsh -s /usr/bin/zsh root 2>/dev/null || true
 
 # User
 if ! id vibe &>/dev/null; then
-  useradd -m -G wheel -s /usr/bin/zsh vibe
+  useradd -m -G wheel,vboxsf -s /usr/bin/zsh vibe
   echo "vibe:vibe" | chpasswd
 fi
 echo "vibe ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/90_vibe
@@ -134,6 +134,7 @@ systemctl enable systemd-timesyncd || true
 systemctl enable docker || true
 systemctl enable sddm || true
 systemctl enable ollama || true
+systemctl enable vboxservice || true
 
 # SDDM autologin
 mkdir -p /etc/sddm.conf.d
@@ -831,117 +832,8 @@ Categories=Development;IDE;
 EOF
 chmod 755 /home/vibe/Desktop/Zed.desktop
 
-# === AUR SETUP (bootstrap yay-bin) ===
-echo "Bootstrapping yay-bin from AUR..."
-# makepkg нельзя запускать из-под root — создаём временного билд-юзера
-if ! id builder &>/dev/null; then
-  useradd -m builder
-fi
-mkdir -p /tmp/aur-build
-chown builder:builder /tmp/aur-build
-
-# Собираем пакет от имени builder
-runuser -u builder -- bash -c '
-  cd /tmp/aur-build
-  git clone --depth 1 https://aur.archlinux.org/yay-bin.git yay
-  cd yay
-  makepkg --noconfirm --skippgpcheck
-' 2>&1 | tail -15
-
-# Устанавливаем вручную (pacman -U не работает в chroot)
-YAY_PKG=$(ls /tmp/aur-build/yay/yay-*.tar.zst 2>/dev/null | head -1)
-if [[ -n "$YAY_PKG" && -f "$YAY_PKG" ]]; then
-  bsdtar -xpf "$YAY_PKG" -C /
-  pacman -D --asexplicit yay-bin 2>/dev/null || true
-  echo "yay installed successfully"
-else
-  echo "WARNING: yay build failed."
-fi
-
-# === Pinta — lightweight image editor ===
-echo "Building Pinta from AUR..."
-runuser -u builder -- bash -c '
-  cd /tmp/aur-build
-  git clone --depth 1 https://aur.archlinux.org/pinta.git 2>/dev/null || true
-  cd pinta
-  makepkg --noconfirm --skippgpcheck
-' 2>&1 | tail -15
-
-PINTA_PKG=$(ls /tmp/aur-build/pinta/pinta-*.tar.zst 2>/dev/null | head -1)
-if [[ -n "$PINTA_PKG" && -f "$PINTA_PKG" ]]; then
-  bsdtar -xpf "$PINTA_PKG" -C /
-  echo "Pinta installed successfully"
-else
-  echo "WARNING: Pinta build failed. Install after boot: yay -S pinta"
-fi
-
-# === Bruno — API клиент (аналог Postman, open-source) ===
-echo "Building Bruno from AUR..."
-runuser -u builder -- bash -c '
-  cd /tmp/aur-build
-  git clone --depth 1 https://aur.archlinux.org/bruno-bin.git bruno 2>/dev/null || true
-  cd bruno
-  makepkg --noconfirm --skippgpcheck
-' 2>&1 | tail -15
-
-BRUNO_PKG=$(ls /tmp/aur-build/bruno/bruno-bin-*.tar.zst 2>/dev/null | head -1)
-if [[ -n "$BRUNO_PKG" && -f "$BRUNO_PKG" ]]; then
-  bsdtar -xpf "$BRUNO_PKG" -C /
-  echo "Bruno installed successfully"
-else
-  echo "WARNING: Bruno build failed. Install after boot: yay -S bruno-bin"
-fi
-
-# === Calamares — графический установщик ===
-echo "Building Calamares from AUR..."
-runuser -u builder -- bash -c '
-  cd /tmp/aur-build
-  git clone --depth 1 https://aur.archlinux.org/calamares.git calamares 2>/dev/null || true
-  cd calamares
-  makepkg --noconfirm --skippgpcheck
-' 2>&1 | tail -20
-
-CALAMARES_PKG=$(ls /tmp/aur-build/calamares/calamares-*.tar.zst 2>/dev/null | head -1)
-if [[ -n "$CALAMARES_PKG" && -f "$CALAMARES_PKG" ]]; then
-  bsdtar -xpf "$CALAMARES_PKG" -C /
-  echo "Calamares installed successfully"
-else
-  echo "WARNING: Calamares build failed. Install after boot: yay -S calamares"
-fi
-
-# === Zed editor ===
-echo "Building Zed editor from AUR..."
-runuser -u builder -- bash -c '
-  cd /tmp/aur-build
-  git clone --depth 1 https://aur.archlinux.org/zed-editor-bin.git zed 2>/dev/null || true
-  cd zed
-  makepkg --noconfirm --skippgpcheck
-' 2>&1 | tail -15
-
-ZED_PKG=$(ls /tmp/aur-build/zed/zed-editor-bin-*.tar.zst 2>/dev/null | head -1)
-if [[ -n "$ZED_PKG" && -f "$ZED_PKG" ]]; then
-  bsdtar -xpf "$ZED_PKG" -C /
-  echo "Zed editor installed successfully"
-else
-  echo "WARNING: Zed build failed. Install after boot: yay -S zed-editor-bin"
-fi
-
-# === VS Code ===
-echo "Building VS Code from AUR..."
-runuser -u builder -- bash -c '
-  cd /tmp/aur-build
-  git clone --depth 1 https://aur.archlinux.org/visual-studio-code-bin.git vscode 2>/dev/null || true
-  cd vscode
-  makepkg --noconfirm --skippgpcheck
-' 2>&1 | tail -15
-
-VSCODE_PKG=$(ls /tmp/aur-build/vscode/visual-studio-code-bin-*.tar.zst 2>/dev/null | head -1)
-if [[ -n "$VSCODE_PKG" && -f "$VSCODE_PKG" ]]; then
-  bsdtar -xpf "$VSCODE_PKG" -C /
-  echo "VS Code installed successfully"
-else
-  echo "WARNING: VS Code build failed. Install after boot: yay -S visual-studio-code-bin"
-fi
+# AUR packages are pre-built on the host and installed via local pacman repo
+# See: scripts/build/prepare-aur.sh
 
 # Calamares — конфигурация для VibeLinux
 mkdir -p /etc/calamares
@@ -1044,10 +936,6 @@ chmod 755 /home/vibe/Desktop/Install-VibeLinux.desktop
 if ! grep -q 'calamares' /etc/sudoers.d/90_vibe 2>/dev/null; then
   echo "vibe ALL=(ALL) NOPASSWD: /usr/bin/calamares" >> /etc/sudoers.d/90_vibe
 fi
-
-# Cleanup
-userdel builder 2>/dev/null || true
-rm -rf /tmp/aur-build
 
 chown -R vibe:vibe /home/vibe
 

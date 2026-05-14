@@ -82,7 +82,8 @@ lazygit
 neovim
 
 # Editors (GUI)
-# Zed and VS Code installed via AUR in customize_airootfs.sh
+code
+zed
 flatpak
 
 # AI tools
@@ -94,7 +95,6 @@ virtualbox-guest-utils
 
 # Browser & Internet
 firefox
-flatpak
 plasma-browser-integration
 
 # GUI apps
@@ -120,8 +120,10 @@ kitty
 # Nerd Fonts (for icons in terminal)
 ttf-jetbrains-mono-nerd
 
-# AUR dependencies (for Calamares, VS Code, Zed)
-lsof
-kpmcore
-libpwquality
-yaml-cpp
+# AUR packages (pre-built, local repo) — requires prepare-aur.sh first
+# Build: scripts/build/prepare-aur.sh
+yay-bin
+bruno-bin
+pinta-appimage
+calamares
+
