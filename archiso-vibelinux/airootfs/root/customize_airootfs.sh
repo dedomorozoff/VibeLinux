@@ -832,8 +832,42 @@ Categories=Development;IDE;
 EOF
 chmod 755 /home/vibe/Desktop/Zed.desktop
 
-# AUR packages are pre-built on the host and installed via local pacman repo
-# See: scripts/build/prepare-aur.sh
+# === AUR packages ===
+echo "Installing AUR packages..."
+if ! id builder &>/dev/null; then
+  useradd -m builder
+fi
+# builder needs sudo for makepkg to install dependencies
+echo "builder ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/90-builder
+mkdir -p /tmp/aur-build
+chown builder:builder /tmp/aur-build
+
+aur_build() {
+  local pkg=$1 dir=$2
+  echo "Building $pkg from AUR..."
+  runuser -u builder -- bash -c "
+    cd /tmp/aur-build
+    rm -rf $dir
+    git clone --depth 1 https://aur.archlinux.org/$pkg.git $dir 2>/dev/null
+    cd $dir
+    makepkg --noconfirm --skippgpcheck
+  " 2>&1 | tail -5 || echo "WARNING: $pkg build failed"
+  local pkg_file
+  pkg_file=$(ls /tmp/aur-build/$dir/*.pkg.tar.zst 2>/dev/null | head -1)
+  if [[ -n "$pkg_file" && -f "$pkg_file" ]]; then
+    pacman -U --noconfirm "$pkg_file" 2>/dev/null || bsdtar -xpf "$pkg_file" -C /
+    echo "$pkg installed"
+  fi
+}
+
+aur_build yay-bin yay
+aur_build bruno-bin bruno
+aur_build pinta-appimage pinta
+aur_build calamares calamares
+
+rm -f /etc/sudoers.d/90-builder
+userdel builder 2>/dev/null || true
+rm -rf /tmp/aur-build
 
 # Calamares — конфигурация для VibeLinux
 mkdir -p /etc/calamares

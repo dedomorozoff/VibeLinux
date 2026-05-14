@@ -120,10 +120,5 @@ kitty
 # Nerd Fonts (for icons in terminal)
 ttf-jetbrains-mono-nerd
 
-# AUR packages (pre-built, local repo) — requires prepare-aur.sh first
-# Build: scripts/build/prepare-aur.sh
-yay-bin
-bruno-bin
-pinta-appimage
-calamares
+# AUR packages are built in customize_airootfs.sh (or pre-built on host)
 
