@@ -595,12 +595,37 @@ cat > /home/vibe/.config/konsolerc << EOF
 DefaultProfile=VibeLinux.profile
 EOF
 
-# SDDM wallpaper
+# SDDM wallpaper + theme
 mkdir -p /usr/share/sddm/themes/breeze
 cat > /usr/share/sddm/themes/breeze/theme.conf.user << EOF
 [General]
 background=/usr/share/wallpapers/VibeLinux/contents/images/2560x1440.svg
+type=image
 EOF
+cat > /etc/sddm.conf.d/theme.conf << EOF
+[Theme]
+Current=breeze
+CursorTheme=breeze_cursors
+EOF
+
+# Plymouth — VibeLinux boot splash
+if [[ -d /root/branding/plymouth ]]; then
+  mkdir -p /usr/share/plymouth/themes/vibecode
+  cp /root/branding/plymouth/* /usr/share/plymouth/themes/vibecode/
+  plymouth-set-default-theme vibecode 2>/dev/null || true
+fi
+
+# GRUB — VibeLinux branding
+cat >> /etc/default/grub << 'EOF'
+
+# VibeLinux branding
+GRUB_BACKGROUND=/usr/share/wallpapers/VibeLinux/contents/images/2560x1440.svg
+GRUB_GFXMODE=1920x1080,auto
+GRUB_GFXPAYLOAD_LINUX=keep
+GRUB_THEME=
+EOF
+# Remove default GRUB_THEME line if arch added one
+sed -i 's/^GRUB_THEME=.*/#GRUB_THEME=/' /etc/default/grub 2>/dev/null || true
 
 # Welcome App
 cat > /usr/local/bin/vibe-welcome << 'WELCOMEEOF'
@@ -814,7 +839,7 @@ cat > /home/vibe/Desktop/VS-Code.desktop << EOF
 Type=Application
 Name=VS Code
 Icon=visual-studio-code
-Exec=code
+Exec=/usr/bin/code
 Terminal=false
 Categories=Development;IDE;
 EOF
@@ -826,7 +851,7 @@ cat > /home/vibe/Desktop/Zed.desktop << EOF
 Type=Application
 Name=Zed
 Icon=dev.zed.Zed
-Exec=zed
+Exec=/usr/bin/zed
 Terminal=false
 Categories=Development;IDE;
 EOF
@@ -959,12 +984,41 @@ GenericName=System Installer
 Comment=Install VibeLinux to your hard drive
 Comment[ru]=Установить VibeLinux на жёсткий диск
 Icon=calamares
-Exec=sudo calamares
+TryExec=/usr/bin/calamares
+Exec=sudo /usr/bin/calamares
 Terminal=false
 Categories=System;
 StartupNotify=true
 DESKTOP
 chmod 755 /home/vibe/Desktop/Install-VibeLinux.desktop
+
+# Копируем ярлыки в /etc/skel/Desktop (кроме Install-VibeLinux — он только для live-сессии)
+mkdir -p /etc/skel/Desktop
+for f in /home/vibe/Desktop/*.desktop; do
+  if [[ "$(basename "$f")" != "Install-VibeLinux.desktop" ]]; then
+    cp "$f" /etc/skel/Desktop/
+  fi
+done
+
+# Копируем обои в /etc/skel
+mkdir -p /etc/skel/.config
+if [[ -f /home/vibe/.config/plasma-org.kde.plasma.desktop-appletsrc ]]; then
+  cp /home/vibe/.config/plasma-org.kde.plasma.desktop-appletsrc /etc/skel/.config/
+fi
+if [[ -f /home/vibe/.config/kdeglobals ]]; then
+  cp /home/vibe/.config/kdeglobals /etc/skel/.config/
+fi
+if [[ -f /home/vibe/.config/konsolerc ]]; then
+  cp /home/vibe/.config/konsolerc /etc/skel/.config/
+fi
+
+# Копируем Konsole theme
+if [[ -d /home/vibe/.local/share/konsole ]]; then
+  mkdir -p /etc/skel/.local/share/konsole
+  cp -r /home/vibe/.local/share/konsole/* /etc/skel/.local/share/konsole/
+fi
+
+chown -R root:root /etc/skel
 
 # Убеждаемся что calamares можно запускать через sudo без пароля для пользователя vibe
 if ! grep -q 'calamares' /etc/sudoers.d/90_vibe 2>/dev/null; then
