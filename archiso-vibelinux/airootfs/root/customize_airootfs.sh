@@ -615,17 +615,20 @@ if [[ -d /root/branding/plymouth ]]; then
   plymouth-set-default-theme vibecode 2>/dev/null || true
 fi
 
-# GRUB — VibeLinux branding
-cat >> /etc/default/grub << 'EOF'
+# GRUB — VibeLinux branding (PNG, because GRUB doesn't support SVG)
+if [[ -f /root/branding/wallpapers/vibecode-dark.png ]]; then
+  cp /root/branding/wallpapers/vibecode-dark.png /usr/share/wallpapers/VibeLinux/contents/images/2560x1440.png
+  cat >> /etc/default/grub << 'EOF'
 
 # VibeLinux branding
-GRUB_BACKGROUND=/usr/share/wallpapers/VibeLinux/contents/images/2560x1440.svg
+GRUB_BACKGROUND=/usr/share/wallpapers/VibeLinux/contents/images/2560x1440.png
 GRUB_GFXMODE=1920x1080,auto
 GRUB_GFXPAYLOAD_LINUX=keep
 GRUB_THEME=
 EOF
-# Remove default GRUB_THEME line if arch added one
-sed -i 's/^GRUB_THEME=.*/#GRUB_THEME=/' /etc/default/grub 2>/dev/null || true
+  # Remove default GRUB_THEME line if arch added one
+  sed -i 's/^GRUB_THEME=.*/#GRUB_THEME=/' /etc/default/grub 2>/dev/null || true
+fi
 
 # Welcome App
 cat > /usr/local/bin/vibe-welcome << 'WELCOMEEOF'
@@ -833,29 +836,17 @@ Categories=System;
 EOF
 chmod 755 /home/vibe/Desktop/Install-AI-Tools.desktop
 
-# VS Code — desktop shortcut
-cat > /home/vibe/Desktop/VS-Code.desktop << EOF
-[Desktop Entry]
-Type=Application
-Name=VS Code
-Icon=visual-studio-code
-Exec=/usr/bin/code
-Terminal=false
-Categories=Development;IDE;
-EOF
-chmod 755 /home/vibe/Desktop/VS-Code.desktop
+# VS Code — desktop shortcut (copy from package .desktop)
+if [[ -f /usr/share/applications/code-oss.desktop ]]; then
+  cp /usr/share/applications/code-oss.desktop /home/vibe/Desktop/VS-Code.desktop
+  chmod 755 /home/vibe/Desktop/VS-Code.desktop
+fi
 
-# Zed — desktop shortcut
-cat > /home/vibe/Desktop/Zed.desktop << EOF
-[Desktop Entry]
-Type=Application
-Name=Zed
-Icon=dev.zed.Zed
-Exec=/usr/bin/zed
-Terminal=false
-Categories=Development;IDE;
-EOF
-chmod 755 /home/vibe/Desktop/Zed.desktop
+# Zed — desktop shortcut (copy from package .desktop)
+if [[ -f /usr/share/applications/dev.zed.Zed.desktop ]]; then
+  cp /usr/share/applications/dev.zed.Zed.desktop /home/vibe/Desktop/Zed.desktop
+  chmod 755 /home/vibe/Desktop/Zed.desktop
+fi
 
 # === AUR packages ===
 echo "Installing AUR packages..."

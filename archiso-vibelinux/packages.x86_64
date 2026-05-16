@@ -8,6 +8,7 @@ mkinitcpio-archiso
 pacman-mirrorlist
 
 # Boot
+plymouth
 syslinux
 memtest86+
 memtest86+-efi
