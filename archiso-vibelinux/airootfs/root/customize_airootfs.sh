@@ -135,13 +135,36 @@ systemctl enable docker || true
 systemctl enable sddm || true
 systemctl enable ollama || true
 systemctl enable vboxservice || true
+systemctl enable nvidia-persistenced || true
 
-# SDDM autologin
+# NVIDIA: modprobe config for DRM modeset (fallback if kernel cmdline missing)
+mkdir -p /etc/modprobe.d
+cat > /etc/modprobe.d/nvidia.conf << 'EOF'
+options nvidia_drm modeset=1
+options nvidia NVreg_EnableBacklightHandler=1
+EOF
+
+# NVIDIA: rebuild initramfs with nvidia modules
+# Force-write mkinitcpio.conf (pacman may overwrite it during install)
+cat > /etc/mkinitcpio.conf << 'EOF'
+MODULES=(nvidia nvidia_modeset nvidia_uvm nvidia_drm vboxguest vboxsf vboxvideo)
+BINARIES=()
+FILES=()
+HOOKS=(base udev autodetect modconf kms block filesystems keyboard fsck archiso)
+COMPRESSION="zstd"
+COMPRESSION_OPTIONS=(-19)
+EOF
+
+if command -v mkinitcpio &>/dev/null; then
+  mkinitcpio -P
+fi
+
+# SDDM autologin (X11 — для совместимости с NVIDIA)
 mkdir -p /etc/sddm.conf.d
 cat > /etc/sddm.conf.d/autologin.conf << EOF
 [Autologin]
 User=vibe
-Session=plasma.desktop
+Session=plasma-x11.desktop
 EOF
 
 # Oh My Zsh (install via script)

@@ -429,27 +429,27 @@ set gfxpayload=text
 terminal_output console
 
 menuentry "VibeCode OS Minimal (Live)" {
-    linux /casper/vmlinuz boot=casper noprompt nomodeset quiet username=vibecode hostname=vibecode-minimal --
+    linux /casper/vmlinuz boot=casper noprompt nvidia-drm.modeset=1 quiet username=vibecode hostname=vibecode-minimal --
     initrd /casper/initrd
 }
 
 menuentry "VibeCode OS Minimal (Live - toram)" {
-    linux /casper/vmlinuz boot=casper toram noprompt nomodeset quiet username=vibecode hostname=vibecode-minimal --
+    linux /casper/vmlinuz boot=casper toram noprompt nvidia-drm.modeset=1 quiet username=vibecode hostname=vibecode-minimal --
     initrd /casper/initrd
 }
 
-menuentry "VibeCode OS Minimal (safe graphics)" {
-    linux /casper/vmlinuz boot=casper noprompt nomodeset quiet username=vibecode hostname=vibecode-minimal --
+menuentry "VibeCode OS Minimal (safe graphics — nomodeset)" {
+    linux /casper/vmlinuz boot=casper noprompt nomodeset nouveau.modeset=0 quiet username=vibecode hostname=vibecode-minimal --
     initrd /casper/initrd
 }
 
 menuentry "VibeCode OS Minimal (rescue mode)" {
-    linux /casper/vmlinuz boot=casper noprompt rescue nomodeset username=vibecode hostname=vibecode-minimal --
+    linux /casper/vmlinuz boot=casper noprompt rescue nvidia-drm.modeset=1 username=vibecode hostname=vibecode-minimal --
     initrd /casper/initrd
 }
 
 menuentry "VibeCode OS Minimal (debug mode)" {
-    linux /casper/vmlinuz boot=casper noprompt debug break=bottom nomodeset username=vibecode hostname=vibecode-minimal --
+    linux /casper/vmlinuz boot=casper noprompt debug break=bottom nvidia-drm.modeset=1 username=vibecode hostname=vibecode-minimal --
     initrd /casper/initrd
 }
 GRUBEOF

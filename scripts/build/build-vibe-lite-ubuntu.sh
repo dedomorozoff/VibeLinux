@@ -205,6 +205,10 @@ if [[ "__NVIDIA__" == "1" ]]; then
   if command -v apt >/dev/null 2>&1; then
     apt install -y ubuntu-drivers-common
     ubuntu-drivers autoinstall || true
+  elif command -v pacman >/dev/null 2>&1; then
+    pacman -Sy --noconfirm nvidia nvidia-utils
+  elif command -v dnf >/dev/null 2>&1; then
+    dnf -y install akmod-nvidia
   fi
 fi
 
@@ -273,7 +277,7 @@ EOS
 
 # apply replacements
 sed -i "s|__USER__|$USERNAME|g; s|__HOST__|$HOSTNAME|g" "$ROOTFS/tmp/customize.sh"
-sed -i "s/__NVIDIA__/0/g" "$ROOTFS/tmp/customize.sh"
+sed -i "s/__NVIDIA__/1/g" "$ROOTFS/tmp/customize.sh"
 sed -i "s/__BUILD_TYPE__/$BUILD_TYPE/g" "$ROOTFS/tmp/customize.sh"
 sed -i "s/__HAS_ZED__/0/g" "$ROOTFS/tmp/customize.sh"
 sed -i "s/__HAS_NODE__/0/g" "$ROOTFS/tmp/customize.sh"

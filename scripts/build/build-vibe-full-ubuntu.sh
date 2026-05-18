@@ -405,7 +405,7 @@ EOS
 
 # apply replacements
 sed -i "s|__USER__|$USERNAME|g; s|__HOST__|$HOSTNAME|g" "$ROOTFS/tmp/customize.sh"
-sed -i "s/__NVIDIA__/0/g" "$ROOTFS/tmp/customize.sh"
+sed -i "s/__NVIDIA__/1/g" "$ROOTFS/tmp/customize.sh"
 sed -i "s/__BUILD_TYPE__/$BUILD_TYPE/g" "$ROOTFS/tmp/customize.sh"
 sed -i "s/__HAS_ZED__/1/g" "$ROOTFS/tmp/customize.sh"
 sed -i "s/__HAS_NODE__/1/g" "$ROOTFS/tmp/customize.sh"

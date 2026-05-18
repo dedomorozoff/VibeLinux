@@ -1,43 +1,58 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Draft script to install NVIDIA proprietary drivers for VibeCode OS.
-# Target: Ubuntu 24.04 (noble) or compatible, running with root privileges.
-#
-# Strategy for alpha:
-#   - Основной сценарий — post-install: запуск скрипта после установки системы.
-#   - Интеграция с установщиком (выбор проприетарных драйверов) будет рассматриваться позже.
+# Install NVIDIA proprietary drivers for VibeLinux.
+# Supports Ubuntu (24.04+) and Debian-based distros.
 #
 # Profiles:
-#   - desktop — стандартный драйвер для рабочего стола.
-#   - ai      — драйвер + базовый набор CUDA/compute-компонентов (в будущем).
+#   desktop  — стандартный драйвер для рабочего стола.
+#   ai       — драйвер + CUDA toolkit + nvidia-container-toolkit.
+#
+# Overrides:
+#   NVIDIA_DRIVER_VERSION=550  — принудительная версия драйвера.
+#   PROFILE=ai                — AI-профиль.
 
 if [[ $EUID -ne 0 ]]; then
   echo "Пожалуйста, запустите этот скрипт с sudo или от root."
   exit 1
 fi
 
-PROFILE="${PROFILE:-desktop}" # desktop|ai
-DRIVER_VERSION="${NVIDIA_DRIVER_VERSION:-535}" # 535 for LTS stability, can be overridden via env
+PROFILE="${PROFILE:-desktop}"
+ARCH=$(uname -m)
 
-echo "[drivers/nvidia] Обновление списка пакетов..."
-apt-get update -y
+echo "[drivers/nvidia] Определение рекомендуемой версии драйвера..."
 
-echo "[drivers/nvidia] Установка проприетарных драйверов NVIDIA (версия ${DRIVER_VERSION})..."
+DRIVER_VERSION=""
+if command -v ubuntu-drivers &>/dev/null; then
+  DRIVER_VERSION=$(ubuntu-drivers list 2>/dev/null | grep -oP 'nvidia-driver-\K[0-9]+' | sort -V | tail -1 || true)
+fi
+if [[ -z "$DRIVER_VERSION" ]]; then
+  DRIVER_VERSION="${NVIDIA_DRIVER_VERSION:-550}"
+fi
+echo "[drivers/nvidia] Версия драйвера: $DRIVER_VERSION"
 
-case "$PROFILE" in
+echo "[drivers/nvidia] Установка проприетарных драйверов NVIDIA..."
+case "${PROFILE}" in
   ai)
-    # Для AI-профиля: драйвер + CUDA toolkit
-    DEBIAN_FRONTEND=noninteractive apt-get install -y\
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
       "nvidia-driver-${DRIVER_VERSION}" \
+      nvidia-dkms \
+      nvidia-cuda-toolkit \
+      nvidia-container-toolkit 2>/dev/null || \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
+      "nvidia-driver-${DRIVER_VERSION}" \
+      nvidia-dkms \
       nvidia-cuda-toolkit
     ;;
   desktop|*)
-    DEBIAN_FRONTEND=noninteractive apt-get install -y\
-      "nvidia-driver-${DRIVER_VERSION}"
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
+      "nvidia-driver-${DRIVER_VERSION}" \
+      nvidia-dkms
     ;;
 esac
 
-echo "[drivers/nvidia] Готово. Для применения драйвера может потребоваться перезагрузка."
-echo "[drivers/nvidia] Расширенная поддержка (CUDA, AI-профили) будет оформлена отдельными шагами и докой."
+# nvidia-persistenced — keep GPU active (avoids GPU reset on idle)
+systemctl enable nvidia-persistenced 2>/dev/null || true
 
+echo "[drivers/nvidia] Готово. Перезагрузите систему для применения драйвера."
+echo "[drivers/nvidia] Проверка: nvidia-smi"

@@ -1,6 +1,7 @@
 # VibeLinux packages — Arch Linux + KDE Plasma (CachyOS-style)
 base
 linux
+
 linux-firmware
 archiso
 mkinitcpio
@@ -90,6 +91,11 @@ flatpak
 # AI tools
 ollama
 opencode
+
+# NVIDIA drivers (open kernel module — nvidia-open)
+nvidia-open
+nvidia-utils
+nvidia-settings
 
 # VirtualBox Guest Additions
 virtualbox-guest-utils

@@ -18,11 +18,9 @@ if [[ -f /etc/default/grub ]]; then
   # Настраиваем GRUB
   sed -i 's/GRUB_DISTRIBUTOR=.*/GRUB_DISTRIBUTOR="VibeCode OS"/' /etc/default/grub
 
-  # Safe video режим для VirtualBox и проблемных видеокарт
-  # nomodeset - отключает режим setting ядра для видеокарт
-  # vga=normal - стандартный VGA режим
-  # fb=false - отключает framebuffer (можно убрать для графического режима GRUB)
-  sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT="nomodeset vga=normal fb=false quiet splash"/' /etc/default/grub
+  # NVIDIA KMS modesetting — включено для поддержки проприетарного драйвера
+  # nvidia-drm.modeset=1 — включает KMS для NVIDIA, предотвращает перезагрузки
+  sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT="nvidia-drm.modeset=1 quiet splash"/' /etc/default/grub
 
   # Устанавливаем безопасное разрешение для GRUB
   sed -i 's/GRUB_GFXMODE=.*/GRUB_GFXMODE=1024x768,800x600,640x480/' /etc/default/grub
@@ -40,7 +38,7 @@ GRUB_DEFAULT=0
 GRUB_TIMEOUT_STYLE=menu
 GRUB_TIMEOUT=5
 GRUB_DISTRIBUTOR="VibeCode OS"
-GRUB_CMDLINE_LINUX_DEFAULT="nomodeset vga=normal fb=false"
+GRUB_CMDLINE_LINUX_DEFAULT="nvidia-drm.modeset=1"
 GRUB_CMDLINE_LINUX=""
 GRUB_GFXMODE=1024x768,800x600,640x480
 GRUB_GFXPAYLOAD=text

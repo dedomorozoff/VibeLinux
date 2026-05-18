@@ -354,6 +354,10 @@ case "${BUILD_MODE}" in
     # Установка devtools (Git, lazygit, Docker)
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/setup-devtools.sh vibecode"
 
+    # Установка проприетарных драйверов NVIDIA
+    log "Установка драйверов NVIDIA..."
+    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/install-nvidia.sh"
+
     # Настройка autologin для live сессии
     log "Настройка autologin и локали..."
 
@@ -919,22 +923,22 @@ fi
 # Safe video режим по умолчанию для VirtualBox и проблемных видеокарт
 # quiet splash - могут быть удалены для отладки
 menuentry "VibeCode OS (Live)" {
-    linux /casper/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false quiet splash --
+    linux /casper/vmlinuz boot=casper noprompt nvidia-drm.modeset=1 quiet splash --
     initrd /casper/initrd
 }
 
 menuentry "VibeCode OS Live Try" {
-    linux /casper/vmlinuz boot=casper only-ubiquity nomodeset vga=normal fb=false quiet splash --
+    linux /casper/vmlinuz boot=casper only-ubiquity nvidia-drm.modeset=1 quiet splash --
     initrd /casper/initrd
 }
 
-menuentry "VibeCode OS (compatibility mode)" {
-    linux /casper/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false ---
+menuentry "VibeCode OS (compatibility mode — nomodeset)" {
+    linux /casper/vmlinuz boot=casper noprompt nomodeset nouveau.modeset=0 ---
     initrd /casper/initrd
 }
 
 menuentry "VibeCode OS (rescue mode)" {
-    linux /casper/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false rescue ---
+    linux /casper/vmlinuz boot=casper noprompt nvidia-drm.modeset=1 rescue ---
     initrd /casper/initrd
 }
 GRUBEOF
@@ -960,22 +964,22 @@ fi
 
 # Safe video режим по умолчанию
 menuentry "VibeCode OS (Live)" {
-    linux /casper/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false quiet splash --
+    linux /casper/vmlinuz boot=casper noprompt nvidia-drm.modeset=1 quiet splash --
     initrd /casper/initrd
 }
 
 menuentry "VibeCode OS (Live - Try VibeCode OS without installing)" {
-    linux /casper/vmlinuz boot=casper only-ubiquity nomodeset vga=normal fb=false quiet splash --
+    linux /casper/vmlinuz boot=casper only-ubiquity nvidia-drm.modeset=1 quiet splash --
     initrd /casper/initrd
 }
 
-menuentry "VibeCode OS (compatibility mode)" {
-    linux /casper/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false ---
+menuentry "VibeCode OS (compatibility mode — nomodeset)" {
+    linux /casper/vmlinuz boot=casper noprompt nomodeset nouveau.modeset=0 ---
     initrd /casper/initrd
 }
 
 menuentry "VibeCode OS (rescue mode)" {
-    linux /casper/vmlinuz boot=casper noprompt nomodeset vga=normal fb=false rescue ---
+    linux /casper/vmlinuz boot=casper noprompt nvidia-drm.modeset=1 rescue ---
     initrd /casper/initrd
 }
 EOF

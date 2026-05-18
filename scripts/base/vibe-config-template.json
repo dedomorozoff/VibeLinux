@@ -7,7 +7,7 @@
   "agents": ["aider", "ollama", "continue", "cline"],
   "runtimes": ["node-lts", "python", "rust-stable", "bun", "go", "deno"],
   "tools": ["git", "gh", "tmux", "fzf", "ripgrep", "jq", "docker", "podman"],
-  "nvidia": false,
+  "nvidia": true,
   "ollama": false,
   "locale": "ru_RU.UTF-8",
   "keyboard": {
