@@ -2,7 +2,7 @@
 set -e
 
 # Скрипт настройки Full версии VibeCode OS в chroot
-# Включает: MATE Desktop, терминалы, dev-инструменты, AI-стек
+# Включает: KDE Plasma, терминалы, dev-инструменты, AI-стек
 
 echo "[full-chroot] Настройка sources.list..."
 cat > /etc/apt/sources.list << 'EOF'
@@ -28,28 +28,19 @@ apt-get install -y \
     console-setup \
     kbd
 
-# === MATE DESKTOP ===
-echo "[full-chroot] Установка MATE Desktop..."
+# === KDE PLASMA DESKTOP ===
+echo "[full-chroot] Установка KDE Plasma Desktop..."
 apt-get install -y \
-    ubuntu-mate-desktop \
-    lightdm \
-    lightdm-gtk-greeter \
-    mate-tweak \
-    marco \
-    compiz-mate \
-    mate-terminal \
-    caja \
-    eom \
-    atril \
-    engrampa \
-    pluma \
-    mate-system-monitor \
-    mate-control-center \
-    mate-panel \
-    mate-menu \
-    mate-notification-daemon \
-    mate-screensaver \
-    mate-power-manager \
+    kde-full \
+    sddm \
+    konsole \
+    dolphin \
+    okular \
+    gwenview \
+    kate \
+    ksysguard \
+    ksystemsettings \
+    kdeconnect \
     network-manager \
     network-manager-gnome \
     gnome-disk-utility \
@@ -296,16 +287,13 @@ usermod -aG docker vibecode
 cp -r /root/.config /home/vibecode/ 2>/dev/null || true
 chown -R vibecode:vibecode /home/vibecode
 
-# === НАСТРОЙКА LIGHTDM ===
-echo "[full-chroot] Настройка LightDM..."
-cat > /etc/lightdm/lightdm.conf << 'EOF'
-[Seat:*]
-autologin-user=vibecode
-autologin-user-timeout=0
-autologin-guest=false
-allow-guest=false
-greeter-session=lightdm-gtk-greeter
-user-session=mate
+# === НАСТРОЙКА SDDM ===
+echo "[full-chroot] Настройка SDDM..."
+cat > /etc/sddm.conf.d/autologin.conf << 'EOF'
+[Autologin]
+User=vibecode
+Session=plasma.desktop
+Relogin=false
 EOF
 
 # === НАСТРОЙКА CASPER ===

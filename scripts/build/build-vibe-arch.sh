@@ -41,10 +41,30 @@ if [[ -d "$BRANDING_DIR" ]]; then
     cp -r "$BRANDING_DIR/config" "$PROFILE_DIR/airootfs/root/branding/" 2>/dev/null || true
 
     # Convert wallpaper SVG to PNG for GRUB (GRUB doesn't support SVG)
-    if command -v convert &>/dev/null && [[ -f "$BRANDING_DIR/wallpapers/vibecode-dark.svg" ]]; then
-        log "Converting wallpaper to PNG for GRUB..."
-        convert "$BRANDING_DIR/wallpapers/vibecode-dark.svg" \
-            "$PROFILE_DIR/airootfs/root/branding/wallpapers/vibecode-dark.png" 2>/dev/null || true
+    if [[ -f "$BRANDING_DIR/wallpapers/vibecode-dark.svg" ]]; then
+        if command -v convert &>/dev/null; then
+            log "Converting wallpaper to PNG (ImageMagick)..."
+            convert "$BRANDING_DIR/wallpapers/vibecode-dark.svg" \
+                "$PROFILE_DIR/airootfs/root/branding/wallpapers/vibecode-dark.png" 2>/dev/null || true
+        elif command -v rsvg-convert &>/dev/null; then
+            log "Converting wallpaper to PNG (librsvg)..."
+            rsvg-convert -w 1920 -h 1080 "$BRANDING_DIR/wallpapers/vibecode-dark.svg" \
+                -o "$PROFILE_DIR/airootfs/root/branding/wallpapers/vibecode-dark.png" 2>/dev/null || true
+        else
+            warn "Cannot convert SVG to PNG — install imagemagick or librsvg"
+        fi
+    fi
+
+    # Convert logo SVG to PNG for Calamares
+    if [[ -f "$BRANDING_DIR/logos/vibecodeos-logo.svg" ]] && [[ ! -f "$PROFILE_DIR/airootfs/root/branding/logos/vibecodeos-logo.png" ]]; then
+        if command -v convert &>/dev/null; then
+            log "Converting logo to PNG..."
+            convert -background none "$BRANDING_DIR/logos/vibecodeos-logo.svg" \
+                "$PROFILE_DIR/airootfs/root/branding/logos/vibecodeos-logo.png" 2>/dev/null || true
+        elif command -v rsvg-convert &>/dev/null; then
+            rsvg-convert -w 256 -h 256 "$BRANDING_DIR/logos/vibecodeos-logo.svg" \
+                -o "$PROFILE_DIR/airootfs/root/branding/logos/vibecodeos-logo.png" 2>/dev/null || true
+        fi
     fi
 fi
 

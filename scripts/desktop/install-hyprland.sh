@@ -57,16 +57,16 @@ apt-get update -y
 # Удаление GNOME/MATE (если есть)
 # ============================================================================
 
-log "Удаление GNOME/MATE (если есть) для предотвращения конфликтов..."
+log "Удаление GNOME/KDE (если есть) для предотвращения конфликтов..."
 apt-get remove --purge -y \
-  mate-desktop-environment* \
-  mate-* \
+  kde-plasma-desktop* \
+  kde-full* \
+  sddm* \
   gnome-shell \
   gnome-session \
   gnome-software \
   gnome-control-center \
   gdm3 \
-  lightdm \
   2>/dev/null || true
 
 # Очистка после удаления

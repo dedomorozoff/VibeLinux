@@ -11,7 +11,7 @@ Window.SetBackgroundTopColor (bg_color.red, bg_color.green, bg_color.blue);
 Window.SetBackgroundBottomColor (bg_color.red, bg_color.green, bg_color.blue);
 
 # Logo text
-logo_image = Image.Text ("VibeCode OS", "DejaVu Sans Bold", 36, text_color.red, text_color.green, text_color.blue);
+logo_image = Image.Text ("VibeLinux", "DejaVu Sans Bold", 36, text_color.red, text_color.green, text_color.blue);
 
 # Position logo in center
 logo_width = logo_image.GetWidth ();
@@ -25,7 +25,7 @@ logo_y = (screen_height / 2) - 50;
 logo_image.SetPosition (logo_x, logo_y, -1);
 
 # Version text
-version_image = Image.Text ("Loading...", "DejaVu Sans", 18, accent_color.red, accent_color.green, accent_color.blue);
+version_image = Image.Text ("Linux for vibe coding & AI", "DejaVu Sans", 18, accent_color.red, accent_color.green, accent_color.blue);
 version_width = version_image.GetWidth ();
 version_x = (screen_width - version_width) / 2;
 version_y = logo_y + logo_height + 20;

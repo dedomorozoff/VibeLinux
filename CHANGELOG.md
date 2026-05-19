@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+### Added
+- **Russian Language Support:** Полная поддержка русского языка во всей системе
+  - Языковые пакеты: language-pack-ru, language-pack-gnome-ru, kde-l10n-ru
+  - Локаль ru_RU.UTF-8 по умолчанию
+  - Раскладка клавиатуры RU/US с переключением по Alt+Shift
+  - Русская локаль в KDE Plasma, терминале и всех приложениях
+  - Шрифты с поддержкой кириллицы (Noto CJK, Noto Color Emoji)
+- **nlsh (Natural Language Shell):** Локальный AI-ассистент для управления системой
+  - Бинарник из `soft/nlsh/` встроен в ISO
+  - Ярлык на рабочем столе KDE Plasma
+  - Команды: `nlsh ask`, `nlsh run`, `nlsh repl`, `nlsh info`
+  - Работает с локальными LLM через llama.cpp (без облака)
+
 ### Fixed
 - **Minimal ISO:** Убран параметр `init=/lib/systemd/systemd` из GRUB-конфига live-образа
   - Этот параметр конфликтовал с casper и вызывал kernel panic (`exitcode=0x00000100`)
@@ -75,7 +88,7 @@
    - ✅ Добавлен параметр `init=/lib/systemd/systemd` в GRUB конфигурацию
    - ✅ Добавлена проверка systemd и `/sbin/init` после установки пакетов
 
-5. **scripts/desktop/install-mate.sh:**
+5. **scripts/desktop/install-kde.sh:**
    - ✅ Использован флаг `--important` для `apt-get autoremove` (защита критических пакетов)
    - ✅ Добавлена проверка systemd после `autoremove`
    - ✅ Восстановление symlink `/sbin/init` при необходимости

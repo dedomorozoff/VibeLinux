@@ -49,7 +49,7 @@
 │  VibeCode OS Full                           │
 │  ──────────────────                         │
 │  • Графический установщик (Ubiquity)        │
-│  • MATE Desktop Environment                 │
+│  • KDE Plasma Desktop Environment           │
 │  • Полный Dev-стек из коробки               │
 │  • AI-инструменты (Ollama, Open WebUI)      │
 │  • VSCodium, VS Code, Neovim, Zed            │
@@ -70,8 +70,8 @@
 
 **Состав:**
 - Всё из Minimal +
-- MATE Desktop Environment
-- LightDM (дисплей-менеджер)
+- KDE Plasma Desktop Environment
+- SDDM (дисплей-менеджер)
 - Kitty (GPU-ускоренный терминал)
 - Zsh + Oh My Zsh + Starship
 - CLI-утилиты (eza, bat, fd, rg, fzf, zoxide, btop)
@@ -81,7 +81,7 @@
 - AI-стек: Ollama, Open WebUI, ai-chat, Aider, ComfyUI
 - Python AI-библиотеки (PyTorch, Transformers, LangChain)
 - Шрифты: JetBrains Mono, Fira Code, Cascadia Code
-- Брендинг: темы, обои, иконки, Plymouth
+- Брендинг: темы, обои, иконки, Plymouth, KDE-тема
 
 ---
 
@@ -120,7 +120,7 @@ sudo vibecode-upgrade
 
 | Компонент | Minimal | Full |
 |-----------|---------|------|
-| **GUI (MATE Desktop)** | ❌ | ✅ |
+| **GUI (KDE Plasma)** | ❌ | ✅ |
 | **Kitty терминал** | ❌ | ✅ |
 | **Zsh + Oh My Zsh** | ✅ | ✅ |
 | **Starship** | ❌ | ✅ |
@@ -162,7 +162,7 @@ sudo vibecode-upgrade
 
 ### Сценарий 3: Рабочая станция
 **Выбор:** Full
-**Почему:** Готовая среда разработки из коробки
+**Почему:** Готовая среда разработки с KDE Plasma из коробки
 
 ### Сценарий 4: Виртуальная машина
 **Выбор:** Minimal

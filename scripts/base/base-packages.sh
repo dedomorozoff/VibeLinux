@@ -77,13 +77,55 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y \
   tmux \
   || true
 
+echo "[base-packages] Установка поддержки русского языка..."
+DEBIAN_FRONTEND=noninteractive apt-get install -y \
+  language-pack-ru \
+  language-pack-ru-base \
+  language-pack-gnome-ru \
+  language-pack-gnome-ru-base \
+  kde-l10n-ru \
+  locales \
+  keyboard-configuration \
+  console-setup \
+  xkb-data \
+  fonts-noto-cjk \
+  fonts-noto-color-emoji \
+  || true
+
+# Настройка локали
+echo "[base-packages] Генерация локали ru_RU.UTF-8..."
+sed -i 's/# ru_RU.UTF-8 UTF-8/ru_RU.UTF-8 UTF-8/' /etc/locale.gen 2>/dev/null || true
+locale-gen ru_RU.UTF-8 2>/dev/null || true
+update-locale LANG=ru_RU.UTF-8 LANGUAGE=ru_RU:ru 2>/dev/null || true
+
+# Настройка раскладки клавиатуры (RU/US с переключением по Alt+Shift)
+echo "[base-packages] Настройка раскладки клавиатуры (RU/US)..."
+cat > /etc/default/keyboard << 'KEYBOARDEOF'
+XKBMODEL="pc105"
+XKBLAYOUT="us,ru"
+XKBVARIANT=",typewriter"
+XKBOPTIONS="grp:alt_shift_toggle,grp_led:scroll"
+BACKSPACE="guess"
+KEYBOARDEOF
+
+# Применяем настройки консоли
+echo "[base-packages] Настройка консоли..."
+cat > /etc/default/console-setup << 'CONSOLEEOF'
+ACTIVE_CONSOLES="/dev/tty[1-6]"
+CHARMAP="UTF-8"
+CODESET="guess"
+FONTFACE="Terminus"
+FONTSIZE="16"
+CONSOLEFONT="Uni2-Terminus16"
+CONSOLEEOF
+
 echo "[base-packages] Опциональные \"nice-to-have\" утилиты установлены:"
 echo "  - neofetch ✓"
 echo "  - nano, vim ✓"
 echo "  - network tools ✓"
 echo "  - firefox ✓"
-echo "  - mate-core, mate-desktop-environment ✓"
-echo "  - lightdm, themes ✓"
-echo "  - caja, atril, eom ✓"
+echo "  - kde-plasma-desktop, kde-full ✓"
+echo "  - sddm, themes ✓"
+echo "  - dolphin, okular, gwenview ✓"
 
 echo "[base-packages] Готово."

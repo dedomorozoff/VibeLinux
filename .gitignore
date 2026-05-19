@@ -32,6 +32,9 @@ build/
 
 # Временные директории
 temp/
+soft/
+!soft/nlsh/nlsh.desktop
+!soft/nlsh/nlsh.svg
 
 # AI assistants
 .junie/

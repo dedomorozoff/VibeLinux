@@ -97,8 +97,8 @@ sudo ./scripts/ai/setup-ai-stack.sh
 
 | Скрипт | Назначение |
 |--------|------------|
-| `install-mate.sh` | Установка MATE Desktop |
-| `configure-mate-panel.sh` | Настройка панели MATE |
+| `install-kde.sh` | Установка KDE Plasma Desktop |
+| `configure-kde.sh` | Настройка KDE Plasma |
 | `setup-installer.sh` | Установка Ubiquity (установщик) |
 | `apply-branding.sh` | Применение брендинга |
 

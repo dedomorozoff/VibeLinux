@@ -113,7 +113,7 @@ case "${BUILD_MODE}" in
     need_file "${ROOT_DIR}/scripts/base/cleanup.sh"
     need_file "${ROOT_DIR}/scripts/base/setup-distro-info.sh"
     need_file "${ROOT_DIR}/scripts/base/setup-bootloader.sh"
-    need_file "${ROOT_DIR}/scripts/desktop/install-i3wm.sh"
+    need_file "${ROOT_DIR}/scripts/desktop/install-kde.sh"
     need_file "${ROOT_DIR}/scripts/desktop/setup-installer.sh"
     need_file "${ROOT_DIR}/scripts/desktop/apply-branding.sh"
     need_file "${ROOT_DIR}/scripts/drivers/install-nvidia.sh"
@@ -187,7 +187,7 @@ case "${BUILD_MODE}" in
     cp "${ROOT_DIR}/scripts/base/cleanup.sh" "${CHROOT_DIR}/root/cleanup.sh"
     cp "${ROOT_DIR}/scripts/base/setup-distro-info.sh" "${CHROOT_DIR}/root/setup-distro-info.sh"
     cp "${ROOT_DIR}/scripts/base/setup-bootloader.sh" "${CHROOT_DIR}/root/setup-bootloader.sh"
-    cp "${ROOT_DIR}/scripts/desktop/install-i3wm.sh" "${CHROOT_DIR}/root/install-i3wm.sh"
+    cp "${ROOT_DIR}/scripts/desktop/install-kde.sh" "${CHROOT_DIR}/root/install-kde.sh"
     cp "${ROOT_DIR}/scripts/desktop/setup-installer.sh" "${CHROOT_DIR}/root/setup-installer.sh"
     cp "${ROOT_DIR}/scripts/desktop/apply-branding.sh" "${CHROOT_DIR}/root/apply-branding.sh"
     cp "${ROOT_DIR}/scripts/drivers/install-nvidia.sh" "${CHROOT_DIR}/root/install-nvidia.sh"
@@ -266,7 +266,7 @@ case "${BUILD_MODE}" in
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/setup-distro-info.sh"
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/setup-bootloader.sh"
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/cleanup.sh"
-    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/install-i3wm.sh"
+    chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/install-kde.sh"
 
     # === Критическая проверка: systemd и /sbin/init ===
     log "Проверка установки systemd и init-процесса..."
@@ -358,42 +358,68 @@ case "${BUILD_MODE}" in
     log "Установка драйверов NVIDIA..."
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/install-nvidia.sh"
 
+    # === Установка nlsh (Natural Language Shell) ===
+    log "Установка nlsh (AI Shell Assistant)..."
+    if [[ -f "${ROOT_DIR}/soft/nlsh/nlsh" ]]; then
+      cp "${ROOT_DIR}/soft/nlsh/nlsh" "${CHROOT_DIR}/usr/local/bin/nlsh"
+      chmod +x "${CHROOT_DIR}/usr/local/bin/nlsh"
+      log "nlsh бинарник скопирован в /usr/local/bin/nlsh"
+    else
+      log "WARNING: nlsh бинарник не найден в soft/nlsh/"
+    fi
+
     # Настройка autologin для live сессии
     log "Настройка autologin и локали..."
 
-    # Устанавливаем русскую локаль
+    # Устанавливаем русскую локаль и настраиваем язык
     chroot "${CHROOT_DIR}" /bin/bash -c '
-      DEBIAN_FRONTEND=noninteractive apt-get install -y language-pack-ru-base
+      DEBIAN_FRONTEND=noninteractive apt-get install -y \
+        language-pack-ru \
+        language-pack-ru-base \
+        language-pack-gnome-ru \
+        language-pack-gnome-ru-base \
+        locales \
+        keyboard-configuration \
+        console-setup \
+        xkb-data
       locale-gen ru_RU.UTF-8
+      update-locale LANG=ru_RU.UTF-8 LANGUAGE=ru_RU:ru
     '
 
     # Настройка системной локали по умолчанию
     echo "LANG=ru_RU.UTF-8" > "${CHROOT_DIR}/etc/default/locale"
-    echo "LANGUAGE=ru_RU.UTF-8" >> "${CHROOT_DIR}/etc/default/locale"
+    echo "LANGUAGE=ru_RU:ru" >> "${CHROOT_DIR}/etc/default/locale"
 
-    # Настройка LightDM для autologin (i3wm)
-    mkdir -p "${CHROOT_DIR}/etc/lightdm/lightdm.conf.d"
-    cat > "${CHROOT_DIR}/etc/lightdm/lightdm.conf.d/vibecode.conf" << 'LIGHTDMEOF'
-[Seat:*]
-autologin-user=vibecode
-autologin-user-timeout=0
-user-session=i3
+    # Настройка раскладки клавиатуры (RU/US с переключением по Alt+Shift)
+    cat > "${CHROOT_DIR}/etc/default/keyboard" << 'KEYBOARDEOF'
+XKBMODEL="pc105"
+XKBLAYOUT="us,ru"
+XKBVARIANT=",typewriter"
+XKBOPTIONS="grp:alt_shift_toggle,grp_led:scroll"
+BACKSPACE="guess"
+KEYBOARDEOF
 
-LIGHTDMEOF
+    # Настройка SDDM для autologin (KDE Plasma)
+    log "Настройка SDDM для autologin..."
+    mkdir -p "${CHROOT_DIR}/etc/sddm.conf.d"
+    cat > "${CHROOT_DIR}/etc/sddm.conf.d/autologin.conf" << 'SDDMEOF'
+[Autologin]
+User=vibecode
+Session=plasma.desktop
+Relogin=false
+SDDMEOF
 
-    # Настройка пользовательских конфигов i3wm
-    log "Настройка i3wm конфигурации..."
+    # Настройка пользовательских конфигов KDE Plasma
+    log "Настройка KDE Plasma конфигурации..."
 
-    # Создаём директорию для настроек i3
-    mkdir -p "${CHROOT_DIR}/home/vibecode/.config/i3"
-    mkdir -p "${CHROOT_DIR}/home/vibecode/.config/picom"
-    mkdir -p "${CHROOT_DIR}/home/vibecode/.config/i3status"
-    mkdir -p "${CHROOT_DIR}/home/vibecode/.config/kitty"
+    # Создаём директорию для настроек KDE
+    mkdir -p "${CHROOT_DIR}/home/vibecode/.config"
+    mkdir -p "${CHROOT_DIR}/home/vibecode/.local/share"
 
-    # Копирование конфигураций из scripts/desktop/configs/
-    if [[ -d "${ROOT_DIR}/scripts/desktop/configs/i3wm" ]]; then
-      log "Копирование конфигурации i3wm..."
-      cp -r "${ROOT_DIR}/scripts/desktop/configs/i3wm/"* "${CHROOT_DIR}/home/vibecode/.config/i3/"
+    # Копирование конфигураций из scripts/desktop/configs/kde/
+    if [[ -d "${ROOT_DIR}/scripts/desktop/configs/kde" ]]; then
+      log "Копирование конфигурации KDE Plasma..."
+      cp -r "${ROOT_DIR}/scripts/desktop/configs/kde/"* "${CHROOT_DIR}/home/vibecode/.config/"
     fi
 
     if [[ -d "${ROOT_DIR}/scripts/desktop/configs/i3status" ]]; then
@@ -414,6 +440,8 @@ LIGHTDMEOF
     # Устанавливаем права на файлы настроек
     chroot "${CHROOT_DIR}" /bin/bash -c '
       chown -R vibecode:vibecode /home/vibecode/.config
+      chown -R vibecode:vibecode /home/vibecode/Desktop
+      chown -R vibecode:vibecode /home/vibecode/.local/share/applications
     '
 
     # Установка и настройка установщика
@@ -423,6 +451,39 @@ LIGHTDMEOF
     # Применение брендинга
     log "Применение брендинга VibeCode OS..."
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/apply-branding.sh /root/branding vibecode"
+
+    # === Ярлык nlsh на рабочем столе ===
+    log "Создание ярлыка nlsh на рабочем столе..."
+    mkdir -p "${CHROOT_DIR}/home/vibecode/Desktop"
+    mkdir -p "${CHROOT_DIR}/home/vibecode/.local/share/applications"
+    mkdir -p "${CHROOT_DIR}/usr/share/pixmaps"
+    mkdir -p "${CHROOT_DIR}/home/vibecode/.config"
+
+    # Копируем .desktop файл
+    if [[ -f "${ROOT_DIR}/soft/nlsh/nlsh.desktop" ]]; then
+      cp "${ROOT_DIR}/soft/nlsh/nlsh.desktop" "${CHROOT_DIR}/home/vibecode/Desktop/nlsh.desktop"
+      cp "${ROOT_DIR}/soft/nlsh/nlsh.desktop" "${CHROOT_DIR}/home/vibecode/.local/share/applications/nlsh.desktop"
+      chmod +x "${CHROOT_DIR}/home/vibecode/Desktop/nlsh.desktop"
+      log "nlsh.desktop скопирован на рабочий стол"
+    fi
+
+    # Копируем иконку
+    if [[ -f "${ROOT_DIR}/soft/nlsh/nlsh.svg" ]]; then
+      cp "${ROOT_DIR}/soft/nlsh/nlsh.svg" "${CHROOT_DIR}/usr/share/pixmaps/nlsh.svg"
+      log "nlsh.svg иконка скопирована"
+    fi
+
+    # Включаем отображение иконок на рабочем столе KDE Plasma
+    mkdir -p "${CHROOT_DIR}/home/vibecode/.config/plasma-org.kde.plasma.desktop-appletsrc"
+    cat > "${CHROOT_DIR}/home/vibecode/.config/plasma-localerc" << 'PLASMAEOF'
+[Containments][1][General]
+formfactor=2
+location=0
+wallpaperplugin=org.kde.image
+
+[Containments][1][Configuration][General]
+icons=/home/vibecode/Desktop
+PLASMAEOF
 
     # Устанавливаем casper для live-сессии (до размонтирования!)
     log "Установка casper для live-сессии..."

@@ -11,16 +11,20 @@ cat > /etc/hosts << EOF
 ::1       localhost
 EOF
 
-# MOTD
-cat > /etc/motd << 'EOF'
+# MOTD — из файла брендинга
+if [[ -f /root/branding/logos/ascii-logo.txt ]]; then
+  cp /root/branding/logos/ascii-logo.txt /etc/motd
+else
+  cat > /etc/motd << 'EOF'
  __     ___  ____     ___  _     ____
  \ \   / / ||  _ \   / _ \| |   / ___|
   \ \ / /| || |_) | | | | | |   \___ \
    \ V / | ||  _ <  | |_| | |___ ___) |
     \_/  |_||_| \_\  \__\_\_____|____/
 
- VibeLinux — Linux for vibe coding & AI development
+ VibeLinux — Linux для вайбкодинга и AI
 EOF
+fi
 
 # OS Release (for fastfetch / lsb_release)
 cat > /etc/os-release << 'EOF'
@@ -30,12 +34,11 @@ ID=vibelinux
 ID_LIKE=arch
 VERSION=2026.04
 VERSION_CODENAME=genesis
-ANSI_COLOR="0;36"
 HOME_URL="https://vibelinux.org"
 DOCUMENTATION_URL="https://github.com/vibelinux/docs"
 SUPPORT_URL="https://github.com/vibelinux"
 BUG_REPORT_URL="https://github.com/vibelinux/issues"
-LOGO=vibelinux
+LOGO=/usr/share/pixmaps/vibelinux.svg
 EOF
 
 # Fastfetch config
@@ -44,12 +47,15 @@ cat > /home/vibe/.config/fastfetch/config.jsonc << 'EOF'
 {
   "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/config.schema.jsonc",
   "logo": {
-    "type": "small",
+    "source": "/usr/share/vibelinux/ascii-logo.txt",
     "padding": {
       "top": 0,
       "bottom": 0,
       "left": 2,
       "right": 2
+    },
+    "color": {
+      "1": "cyan"
     }
   },
   "modules": [
@@ -104,7 +110,7 @@ EOF
 sed -i 's/#en_US.UTF-8/en_US.UTF-8/' /etc/locale.gen
 sed -i 's/#ru_RU.UTF-8/ru_RU.UTF-8/' /etc/locale.gen
 locale-gen
-echo "LANG=en_US.UTF-8" > /etc/locale.conf
+echo "LANG=ru_RU.UTF-8" > /etc/locale.conf
 
 # Keyboard layout
 cat > /etc/X11/xorg.conf.d/00-keyboard.conf << EOF
@@ -491,10 +497,36 @@ chmod +x /usr/local/bin/ai-install
 
 # === BRANDING ===
 
+# ASCII logo для fastfetch
+if [[ -f /root/branding/logos/ascii-logo.txt ]]; then
+  mkdir -p /usr/share/vibelinux
+  cp /root/branding/logos/ascii-logo.txt /usr/share/vibelinux/ascii-logo.txt
+fi
+
 # Wallpapers — copy to system location
 mkdir -p /usr/share/wallpapers/VibeLinux/contents/images
 if [[ -f /root/branding/wallpapers/vibecode-dark.svg ]]; then
   cp /root/branding/wallpapers/vibecode-dark.svg /usr/share/wallpapers/VibeLinux/contents/images/2560x1440.svg
+fi
+
+# System logo — SVG в hicolor icons
+if [[ -f /root/branding/logos/vibecodeos-logo.svg ]]; then
+  mkdir -p /usr/share/icons/hicolor/scalable/apps
+  cp /root/branding/logos/vibecodeos-logo.svg /usr/share/icons/hicolor/scalable/apps/vibelinux.svg
+  # Также кладём в pixmaps для совместимости
+  cp /root/branding/logos/vibecodeos-logo.svg /usr/share/pixmaps/vibelinux.svg
+fi
+
+# Генерируем PNG-лого для Calamares
+if [[ -f /root/branding/logos/vibecodeos-logo.svg ]]; then
+  if command -v rsvg-convert &>/dev/null; then
+    rsvg-convert -w 256 -h 256 /root/branding/logos/vibecodeos-logo.svg -o /tmp/vibelinux-logo.png 2>/dev/null || true
+  elif command -v convert &>/dev/null; then
+    convert -background none -size 256x256 /root/branding/logos/vibecodeos-logo.svg /tmp/vibelinux-logo.png 2>/dev/null || true
+  fi
+  if [[ -f /tmp/vibelinux-logo.png ]]; then
+    cp /tmp/vibelinux-logo.png /usr/share/pixmaps/vibelinux.png
+  fi
 fi
 
 # Set default wallpaper via KDE system config
@@ -618,13 +650,14 @@ cat > /home/vibe/.config/konsolerc << EOF
 DefaultProfile=VibeLinux.profile
 EOF
 
-# SDDM wallpaper + theme
+# SDDM wallpaper + theme + logo
 mkdir -p /usr/share/sddm/themes/breeze
 cat > /usr/share/sddm/themes/breeze/theme.conf.user << EOF
 [General]
 background=/usr/share/wallpapers/VibeLinux/contents/images/2560x1440.svg
 type=image
 EOF
+
 cat > /etc/sddm.conf.d/theme.conf << EOF
 [Theme]
 Current=breeze
@@ -633,9 +666,9 @@ EOF
 
 # Plymouth — VibeLinux boot splash
 if [[ -d /root/branding/plymouth ]]; then
-  mkdir -p /usr/share/plymouth/themes/vibecode
-  cp /root/branding/plymouth/* /usr/share/plymouth/themes/vibecode/
-  plymouth-set-default-theme vibecode 2>/dev/null || true
+  mkdir -p /usr/share/plymouth/themes/vibelinux
+  cp /root/branding/plymouth/* /usr/share/plymouth/themes/vibelinux/
+  plymouth-set-default-theme vibelinux 2>/dev/null || true
 fi
 
 # GRUB — VibeLinux branding (PNG, because GRUB doesn't support SVG)
@@ -657,14 +690,12 @@ fi
 cat > /usr/local/bin/vibe-welcome << 'WELCOMEEOF'
 #!/usr/bin/env bash
 clear
-cat << 'ASCII'
- __     ___  ____     ___  _     ____
- \ \   / / ||  _ \   / _ \| |   / ___|
-  \ \ / /| || |_) | | | | | |   \___ \
-   \ V / | ||  _ <  | |_| | |___ ___) |
-    \_/  |_||_| \_\  \__\_\_____|____/
-
-ASCII
+if [[ -f /usr/share/vibelinux/ascii-logo.txt ]]; then
+  cat /usr/share/vibelinux/ascii-logo.txt
+else
+  echo "  VibeLinux"
+fi
+echo ""
 echo "  Welcome to VibeLinux!"
 echo "  Linux for vibe coding and AI development"
 echo "  ========================================="
@@ -948,6 +979,13 @@ CALCONF
 
 # VibeLinux брендинг для Calamares
 mkdir -p /usr/share/calamares/branding/vibelinux
+# Копируем логотип для Calamares
+if [[ -f /usr/share/pixmaps/vibelinux.png ]]; then
+  cp /usr/share/pixmaps/vibelinux.png /usr/share/calamares/branding/vibelinux/logo.png
+elif [[ -f /root/branding/logos/vibecodeos-logo.svg ]]; then
+  # Fallback: копируем SVG если PNG не сгенерировался
+  cp /root/branding/logos/vibecodeos-logo.svg /usr/share/calamares/branding/vibelinux/logo.svg
+fi
 cat > /usr/share/calamares/branding/vibelinux/branding.desc << 'BRANDCONF'
 ---
 componentName: vibelinux
@@ -966,7 +1004,7 @@ strings:
 images:
   productLogo: "logo.png"
   productIcon: "logo.png"
-  productWelcome: "welcome.png"
+  productWelcome: "logo.png"
 slideshow: "show.qml"
 style:
   sidebarBackground: "#0B1020"
@@ -989,6 +1027,11 @@ Rectangle {
 SHOWQML
 
 # Ярлык Calamares на рабочем столе
+INSTALLER_ICON="calamares"
+if [[ ! -f /usr/share/icons/hicolor/scalable/apps/calamares.svg ]] && \
+   [[ ! -f /usr/share/icons/hicolor/128x128/apps/calamares.png ]]; then
+  INSTALLER_ICON="system-software-install"
+fi
 cat > /home/vibe/Desktop/Install-VibeLinux.desktop << 'DESKTOP'
 [Desktop Entry]
 Type=Application
@@ -997,13 +1040,14 @@ Name[ru]=Установить VibeLinux
 GenericName=System Installer
 Comment=Install VibeLinux to your hard drive
 Comment[ru]=Установить VibeLinux на жёсткий диск
-Icon=calamares
+Icon=INSTALLER_ICON_PLACEHOLDER
 TryExec=/usr/bin/calamares
 Exec=sudo /usr/bin/calamares
 Terminal=false
 Categories=System;
 StartupNotify=true
 DESKTOP
+sed -i "s/INSTALLER_ICON_PLACEHOLDER/$INSTALLER_ICON/" /home/vibe/Desktop/Install-VibeLinux.desktop
 chmod 755 /home/vibe/Desktop/Install-VibeLinux.desktop
 
 # Копируем ярлыки в /etc/skel/Desktop (кроме Install-VibeLinux — он только для live-сессии)

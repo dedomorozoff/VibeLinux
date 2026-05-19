@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=VibeLinux
+Description=VibeLinux custom Plymouth theme
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/vibelinux
+ScriptFile=/usr/share/plymouth/themes/vibelinux/vibelinux.script

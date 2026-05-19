@@ -109,6 +109,9 @@ set $mod Mod4
 # Шрифт
 font pango:JetBrains Mono 10
 
+# Раскладка клавиатуры (RU/US с переключением по Alt+Shift)
+exec --no-startup-id setxkbmap -layout us,ru -variant ,typewriter -option grp:alt_shift_toggle,grp_led:scroll
+
 # Запуск терминала
 bindsym $mod+Return exec xfce4-terminal
 bindsym $mod+d exec dmenu_run

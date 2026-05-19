@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Скрипт применения брендинга VibeCode OS
+# Скрипт применения брендинга VibeCode OS для KDE Plasma
 
 if [[ $EUID -ne 0 ]]; then
   echo "Пожалуйста, запустите этот скрипт с sudo или от root."
@@ -23,7 +23,7 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y \
 # Создаём директории для пользовательских настроек
 mkdir -p "/home/${TARGET_USER}/.local/share/backgrounds"
 mkdir -p "/home/${TARGET_USER}/.local/share/icons"
-mkdir -p "/home/${TARGET_USER}/.config/gtk-3.0"
+mkdir -p "/home/${TARGET_USER}/.config"
 mkdir -p "/home/${TARGET_USER}/.themes"
 
 # Копируем обои
@@ -32,7 +32,6 @@ if [[ -d "${BRANDING_DIR}/wallpapers" ]]; then
   mkdir -p /usr/share/backgrounds
   cp -r "${BRANDING_DIR}/wallpapers"/* "/home/${TARGET_USER}/.local/share/backgrounds/" 2>/dev/null || true
   cp -r "${BRANDING_DIR}/wallpapers"/* /usr/share/backgrounds/ 2>/dev/null || true
-  # Убедимся что файл называется правильно для dconf
   if [[ -f /usr/share/backgrounds/vibecode-dark.svg ]]; then
     : # already copied
   else
@@ -50,19 +49,16 @@ if [[ -d "${BRANDING_DIR}/logos" ]]; then
   cp -r "${BRANDING_DIR}/logos"/* /usr/share/pixmaps/vibecodeos/ 2>/dev/null || true
 fi
 
-# Настройка темы MATE
-echo "[branding] Настройка темы MATE..."
+# Настройка темы KDE Plasma
+echo "[branding] Настройка темы KDE Plasma..."
 
 # Устанавливаем популярные темы
 DEBIAN_FRONTEND=noninteractive apt-get install -y \
   arc-theme \
   papirus-icon-theme \
-  materia-gtk-theme \
+  materia-kde \
   plymouth-themes \
   || true
-
-# Устанавливаем dconf-cli отдельно (гарантированно)
-DEBIAN_FRONTEND=noninteractive apt-get install -y dconf-cli || true
 
 # Настройка Plymouth темы загрузки
 echo "[branding] Настройка Plymouth темы загрузки..."
@@ -73,39 +69,6 @@ if [[ -d "${BRANDING_DIR}/plymouth" ]]; then
   plymouth-set-default-theme vibecode 2>/dev/null || true
 fi
 
-# Применяем настройки напрямую через dconf (для Live-сессии)
-echo "[branding] Применение настроек темы для пользователя ${TARGET_USER}..."
-
-# Создаём dconf профиль пользователя
-mkdir -p "/home/${TARGET_USER}/.config/dconf"
-
-# Создаём скрипт с настройками dconf
-cat > "/home/${TARGET_USER}/.config/vibecodeos-dconf.sh" << 'DCONFEOF'
-#!/usr/bin/env bash
-# Применение настроек dconf для VibeCode OS
-
-# Интерфейс MATE
-dconf write /org/mate/desktop/interface/gtk-theme "'Arc-Dark'"
-dconf write /org/mate/desktop/interface/icon-theme "'Papirus-Dark'"
-dconf write /org/mate/desktop/interface/monospace-font-name "'JetBrains Mono 11'"
-
-# Обои
-dconf write /org/mate/desktop/background/picture-filename "'/usr/share/backgrounds/vibecode-dark.svg'"
-dconf write /org/mate/desktop/background/picture-options "'zoom'"
-dconf write /org/mate/desktop/background/primary-color "'#0B1020'"
-dconf write /org/mate/desktop/background/secondary-color "'#0B1020'"
-
-# Терминал
-dconf write /org/mate/terminal/profiles/default/use-system-font false
-dconf write /org/mate/terminal/profiles/default/font "'JetBrains Mono 11'"
-dconf write /org/mate/terminal/profiles/default/use-theme-colors false
-dconf write /org/mate/terminal/profiles/default/background-color "'#0B1020'"
-dconf write /org/mate/terminal/profiles/default/foreground-color "'#4CC9F0'"
-DCONFEOF
-
-chmod +x "/home/${TARGET_USER}/.config/vibecodeos-dconf.sh"
-chown "${TARGET_USER}:${TARGET_USER}" "/home/${TARGET_USER}/.config/vibecodeos-dconf.sh"
-
 # Создаём скрипт автонастройки темы при первом входе
 cat > "/usr/local/bin/vibecodeos-theme-setup.sh" << 'THEMEEOF'
 #!/usr/bin/env bash
@@ -113,100 +76,45 @@ cat > "/usr/local/bin/vibecodeos-theme-setup.sh" << 'THEMEEOF'
 
 MARKER="$HOME/.config/vibecodeos-theme-configured"
 
-# Создаём директорию .config если её нет
 mkdir -p "$HOME/.config"
 
 if [[ -f "$MARKER" ]]; then
   exit 0
 fi
 
-# Ждём загрузки MATE
 sleep 3
 
-# Применяем настройки через dconf если файл существует
-if [[ -f "$HOME/.config/vibecodeos-dconf.sh" ]]; then
-  bash "$HOME/.config/vibecodeos-dconf.sh" 2>/dev/null || true
-fi
+# KDE Plasma настройки через kwriteconfig5
+kwriteconfig5 --file kdeglobals --group General --key AccentColor "#4CC9F0" 2>/dev/null || true
+kwriteconfig5 --file kdeglobals --group WM --group Colors --group Active --key BackgroundNormal "#0B1020" 2>/dev/null || true
 
-# Настраиваем тему GTK через gsettings (работает в live сессии)
-export DISPLAY=:0
-export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
-
-gsettings set org.mate.interface gtk-theme 'Arc-Dark' 2>/dev/null || true
-gsettings set org.mate.interface icon-theme 'Papirus-Dark' 2>/dev/null || true
-
-# Настраиваем обои
+# Обои KDE Plasma
 WALLPAPER="/usr/share/backgrounds/vibecode-dark.svg"
 if [[ -f "$WALLPAPER" ]]; then
-  gsettings set org.mate.background picture-filename "$WALLPAPER" 2>/dev/null || true
-  gsettings set org.mate.background picture-options 'zoom' 2>/dev/null || true
-  gsettings set org.mate.background primary-color '#0B1020' 2>/dev/null || true
+  kwriteconfig5 --file plasmarc --group Wallpaper --group org.kde.image --group General --key Image "$WALLPAPER" 2>/dev/null || true
 fi
 
-# Настраиваем шрифты
-gsettings set org.mate.interface monospace-font-name 'JetBrains Mono 11' 2>/dev/null || true
+# Шрифт KDE
+kwriteconfig5 --file kdeglobals --group General --key font "JetBrains Mono,11,-1,5,50,0,0,0,0,0,0,0,0,0,0,1" 2>/dev/null || true
+kwriteconfig5 --file kdeglobals --group General --key fixed "JetBrains Mono,11,-1,5,50,0,0,0,0,0,0,0,0,0,0,1" 2>/dev/null || true
 
-# Настраиваем терминал
-gsettings set org.mate.terminal.profile:/org/mate/terminal/profiles/default/ use-system-font false 2>/dev/null || true
-gsettings set org.mate.terminal.profile:/org/mate/terminal/profiles/default/ font 'JetBrains Mono 11' 2>/dev/null || true
-gsettings set org.mate.terminal.profile:/org/mate/terminal/profiles/default/ use-theme-colors false 2>/dev/null || true
-gsettings set org.mate.terminal.profile:/org/mate/terminal/profiles/default/ background-color '#0B1020' 2>/dev/null || true
-gsettings set org.mate.terminal.profile:/org/mate/terminal/profiles/default/ foreground-color '#4CC9F0' 2>/dev/null || true
-
-# Отмечаем, что настройка выполнена
 touch "$MARKER"
 THEMEEOF
 
 chmod +x "/usr/local/bin/vibecodeos-theme-setup.sh"
 
-# Создаём настройки в /etc/skel для live-сессии (применяются для всех новых пользователей)
+# Создаём настройки в /etc/skel для live-сессии
 echo "[branding] Настройка /etc/skel для live-сессии..."
-mkdir -p /etc/skel/.config/mate-panel
+mkdir -p /etc/skel/.config
 mkdir -p /etc/skel/.config/autostart
-mkdir -p /etc/skel/.config/dconf
 mkdir -p /etc/skel/.local/share/backgrounds
 
 # Копируем обои в /etc/skel
 if [[ -d "${BRANDING_DIR}/wallpapers" ]]; then
   cp -r "${BRANDING_DIR}/wallpapers"/* /etc/skel/.local/share/backgrounds/ 2>/dev/null || true
-  # Копируем с правильным именем для dconf
   if [[ -f "${BRANDING_DIR}/wallpapers"/*.svg ]]; then
     cp "${BRANDING_DIR}/wallpapers"/*.svg /etc/skel/.local/share/backgrounds/vibecode-dark.svg 2>/dev/null || true
   fi
-fi
-
-# Копируем dconf скрипт в /etc/skel
-cp "/home/${TARGET_USER}/.config/vibecodeos-dconf.sh" /etc/skel/.config/ 2>/dev/null || true
-chmod +x /etc/skel/.config/vibecodeos-dconf.sh
-
-# Настройки dconf на уровне системы (/etc/dconf/db/local.d/)
-echo "[branding] Настройка системных dconf..."
-mkdir -p /etc/dconf/db/local.d
-cat > /etc/dconf/db/local.d/00-vibecodeos << 'DCONFSYSEOF'
-# VibeCode OS system dconf settings
-
-[org/mate/desktop/interface]
-gtk-theme='Arc-Dark'
-icon-theme='Papirus-Dark'
-monospace-font-name='JetBrains Mono 11'
-
-[org/mate/desktop/background]
-picture-filename='/usr/share/backgrounds/vibecode-dark.svg'
-picture-options='zoom'
-primary-color='#0B1020'
-secondary-color='#0B1020'
-
-[org/mate/terminal/profiles/default]
-use-system-font=false
-font='JetBrains Mono 11'
-use-theme-colors=false
-background-color='#0B1020'
-foreground-color='#4CC9F0'
-DCONFSYSEOF
-
-# Обновляем dconf базу
-if command -v dconf &>/dev/null; then
-  dconf update
 fi
 
 # Добавляем автозапуск настройки темы
@@ -218,7 +126,7 @@ Name=VibeCode OS Theme Setup
 Exec=/usr/local/bin/vibecodeos-theme-setup.sh
 Hidden=false
 NoDisplay=true
-X-MATE-Autostart-enabled=true
+X-KDE-autostart-condition=true
 EOF
 
 # Копируем autostart в /etc/skel после создания файла
@@ -249,13 +157,10 @@ print_info() {
     info cols
 }
 
-# Настройки ASCII-арта
 image_backend="ascii"
 ascii_distro="auto"
 ascii_colors=(6 7 1 8 3 2)
 ascii_bold="on"
-
-# Цвета
 colors=(6 7 7 6 7 7)
 NEOFETCHEOF
 fi
@@ -265,7 +170,6 @@ if [[ ! -f "/home/${TARGET_USER}/.bashrc" ]]; then
   touch "/home/${TARGET_USER}/.bashrc"
 fi
 
-# Проверяем, не добавлено ли уже
 if ! grep -q "VibeCode OS приветствие" "/home/${TARGET_USER}/.bashrc"; then
   cat >> "/home/${TARGET_USER}/.bashrc" << 'BASHEOF'
 
@@ -280,4 +184,4 @@ fi
 # Устанавливаем права
 chown -R "${TARGET_USER}:${TARGET_USER}" "/home/${TARGET_USER}"
 
-echo "[branding] Брендинг применён."
+echo "[branding] Готово."

@@ -121,6 +121,10 @@ mc
 xdg-user-dirs
 xdg-utils
 
+# Image processing (branding — SVG→PNG)
+librsvg
+imagemagick
+
 # Terminal
 kitty
 

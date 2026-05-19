@@ -175,7 +175,7 @@ exec /lib/systemd/systemd
 - ✅ Добавлен параметр `init=/lib/systemd/systemd` в GRUB конфигурацию
 - ✅ Добавлены комментарии для отладки (удаление `quiet splash`)
 
-### Файл: `scripts/desktop/install-mate.sh`
+### Файл: `scripts/desktop/install-kde.sh`
 - ✅ Использован флаг `--important` для `autoremove`
 - ✅ Добавлена проверка systemd после `autoremove`
 - ✅ Добавлено восстановление symlink `/sbin/init`

@@ -34,11 +34,11 @@ Dev- и AI-скрипты вынесены отдельно и описаны в
 
 ### 3. Слой Desktop (`scripts/desktop/`)
 
-- `scripts/desktop/install-mate.sh`
+- `scripts/desktop/install-kde.sh`
   - Устанавливает MATE и дисплей-менеджер LightDM.
   - Режим выбирается переменной `PROFILE`:
-    - `PROFILE=minimal` — на базе `mate-desktop-environment` (чистый MATE).
-    - `PROFILE=standard` (по умолчанию) — на базе `ubuntu-mate-desktop` (стек Ubuntu MATE).
+    - `PROFILE=minimal` — на базе `kde-plasma-desktop` (минимальная KDE).
+    - `PROFILE=standard` (по умолчанию) — на базе `kde-full` (полный стек KDE Plasma).
   - Настраивает LightDM как дисплей-менеджер по умолчанию, когда это уместно.
   - Может работать как внутри chroot при сборке ISO, так и на установленной системе.
 

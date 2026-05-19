@@ -46,10 +46,10 @@ make check
 
 **Базовая система:**
 - Ubuntu 24.04 LTS — стабильная база
-- MATE Desktop — лёгкое окружение
-- Брендинг VibeCode OS — темы, обои, шрифты
+- KDE Plasma Desktop — современное окружение
+- Брендинг VibeCode OS — темы, обои, шрифты, KDE-тема
 - Установщик Ubiquity
-- LightDM — дисплей-менеджер
+- SDDM — дисплей-менеджер
 
 **Терминал и оболочка:**
 - **Kitty** — GPU-ускоренный терминал
@@ -91,6 +91,7 @@ make check
 **AI-стек:**
 - **Ollama** — локальные LLM (llama3.2, codellama, qwen2.5-coder)
 - **Open WebUI** — веб-интерфейс для моделей
+- **nlsh** — Natural Language Shell, AI-ассистент для управления системой (ярлык на рабочем столе)
 - **ai-chat** — терминальный AI-чат
 - **Aider** — AI-парное программирование
 - **Python AI-библиотеки:**
@@ -104,6 +105,13 @@ make check
 - Fira Code
 - Cascadia Code
 - Hack
+- Noto CJK (поддержка азиатских языков)
+- Noto Color Emoji
+
+**Локализация:**
+- 🇷🇺 Русский язык по умолчанию
+- Раскладка клавиатуры: RU/US (переключение по Alt+Shift)
+- Полная поддержка кириллицы во всех приложениях
 
 ---
 
@@ -127,6 +135,10 @@ make check
 - **Дополнительно:** sudo, ca-certificates, software-properties-common
 
 **VirtualBox Guest Utils** — поддержка гостевой ОС
+
+**Локализация:**
+- 🇷🇺 Русский язык по умолчанию
+- Раскладка клавиатуры: RU/US (переключение по Alt+Shift)
 
 ---
 
@@ -174,6 +186,11 @@ make check
 1. Загрузиться с ISO → рабочий стол KDE Plasma
 2. Ярлык **Install VibeLinux** на рабочем столе
 3. Calamares: язык → раскладка → разметка диска → пользователь → установка
+
+**Локализация:**
+- 🇷🇺 Русский язык по умолчанию
+- Раскладка клавиатуры: RU/US (переключение по Alt+Shift)
+- Полная поддержка кириллицы в KDE Plasma
 
 ---
 
@@ -320,8 +337,8 @@ git push origin v0.1.0-alpha
 - `scripts/base/cleanup.sh` — очистка системы
 
 **Desktop:**
-- `scripts/desktop/install-mate.sh` — установка MATE Desktop
-- `scripts/desktop/configure-mate-panel.sh` — настройка панели MATE
+- `scripts/desktop/install-kde.sh` — установка KDE Plasma Desktop
+- `scripts/desktop/configure-kde.sh` — настройка KDE Plasma
 - `scripts/desktop/setup-installer.sh` — установка Ubiquity (установщик)
 - `scripts/desktop/apply-branding.sh` — применение брендинга
 

@@ -10,7 +10,7 @@
 2. `scripts/base/minimal-packages.sh` - добавлены systemd, live-tools
 3. `scripts/build-iso.sh` - добавлен `init=/lib/systemd/systemd` в GRUB + проверка systemd
 4. `scripts/build-minimal-iso.sh` - добавлен `init=/lib/systemd/systemd` в GRUB + проверка systemd
-5. `scripts/desktop/install-mate.sh` - защита autoremove + проверка systemd
+5. `scripts/desktop/install-kde.sh` - защита autoremove + проверка systemd
 6. `scripts/base/cleanup.sh` - удалён опасный autoremove + проверка systemd
 
 ---

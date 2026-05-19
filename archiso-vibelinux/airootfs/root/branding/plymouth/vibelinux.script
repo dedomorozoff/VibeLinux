@@ -1,0 +1,49 @@
+# VibeCode OS Plymouth Theme Script
+# Draws a simple branded boot screen
+
+# Colors (VibeCode OS palette)
+bg_color = Color (0.04, 0.06, 0.12);  # #0B1020
+accent_color = Color (0.30, 0.79, 0.94);  # #4CC9F0
+text_color = Color (1, 1, 1);
+
+# Background
+Window.SetBackgroundTopColor (bg_color.red, bg_color.green, bg_color.blue);
+Window.SetBackgroundBottomColor (bg_color.red, bg_color.green, bg_color.blue);
+
+# Logo text
+logo_image = Image.Text ("VibeLinux", "DejaVu Sans Bold", 36, text_color.red, text_color.green, text_color.blue);
+
+# Position logo in center
+logo_width = logo_image.GetWidth ();
+logo_height = logo_image.GetHeight ();
+screen_width = Window.GetWidth ();
+screen_height = Window.GetHeight ();
+
+logo_x = (screen_width - logo_width) / 2;
+logo_y = (screen_height / 2) - 50;
+
+logo_image.SetPosition (logo_x, logo_y, -1);
+
+# Version text
+version_image = Image.Text ("Linux for vibe coding & AI", "DejaVu Sans", 18, accent_color.red, accent_color.green, accent_color.blue);
+version_width = version_image.GetWidth ();
+version_x = (screen_width - version_width) / 2;
+version_y = logo_y + logo_height + 20;
+version_image.SetPosition (version_x, version_y, -1);
+
+# Simple progress indicator using text
+progress_status = 0;
+
+fun progress_callback (progress) {
+    # progress is 0.0 to 1.0
+    # Can add progress bar using rectangles if needed
+}
+
+Plymouth.SetBootProgressFunction (progress_callback);
+
+# Animation callback
+fun refresh_callback () {
+    # Can add animation here if needed
+}
+
+Plymouth.SetRefreshFunction (refresh_callback);
