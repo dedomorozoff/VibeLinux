@@ -68,6 +68,26 @@ if [[ -d "$BRANDING_DIR" ]]; then
     fi
 fi
 
+# 3b) Copy nlsh to airootfs
+SOFT_DIR="$(cd "$(dirname "$(readlink -f "$0")")/../../soft" 2>/dev/null && pwd)"
+if [[ -d "$SOFT_DIR/nlsh" ]]; then
+    log "Copying nlsh to airootfs..."
+    mkdir -p "$PROFILE_DIR/airootfs/root/nlsh"
+    if [[ -f "$SOFT_DIR/nlsh/nlsh" ]]; then
+        cp "$SOFT_DIR/nlsh/nlsh" "$PROFILE_DIR/airootfs/root/nlsh/"
+        chmod +x "$PROFILE_DIR/airootfs/root/nlsh/nlsh"
+    fi
+    if [[ -f "$SOFT_DIR/nlsh/nlsh.svg" ]]; then
+        cp "$SOFT_DIR/nlsh/nlsh.svg" "$PROFILE_DIR/airootfs/root/nlsh/"
+    fi
+    if [[ -f "$SOFT_DIR/nlsh/nlsh.desktop" ]]; then
+        cp "$SOFT_DIR/nlsh/nlsh.desktop" "$PROFILE_DIR/airootfs/root/nlsh/"
+    fi
+    log "nlsh copied to airootfs/root/nlsh/"
+else
+    warn "nlsh not found in soft/nlsh/ — skipping"
+fi
+
 log "Using profile: $PROFILE_DIR"
 log "Work dir: $WORKDIR"
 log "Output dir: $OUTDIR"

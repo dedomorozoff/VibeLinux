@@ -902,6 +902,35 @@ if [[ -f /usr/share/applications/dev.zed.Zed.desktop ]]; then
   chmod 755 /home/vibe/Desktop/Zed.desktop
 fi
 
+# nlsh — Natural Language Shell (AI Shell Assistant)
+echo "Installing nlsh..."
+if [[ -f /root/nlsh/nlsh ]]; then
+  cp /root/nlsh/nlsh /usr/local/bin/nlsh
+  chmod +x /usr/local/bin/nlsh
+
+  if [[ -f /root/nlsh/nlsh.svg ]]; then
+    cp /root/nlsh/nlsh.svg /usr/share/pixmaps/nlsh.svg
+  fi
+
+  cat > /home/vibe/Desktop/nlsh.desktop << 'EOF'
+[Desktop Entry]
+Type=Application
+Name=nlsh — AI Shell Assistant
+GenericName=Natural Language Shell
+Comment=Локальный AI-ассистент для управления системой через естественный язык
+Exec=konsole --hold -e nlsh repl
+Icon=nlsh
+Terminal=false
+Categories=Development;Utility;AI;
+Keywords=ai;llm;shell;assistant;local;
+StartupNotify=false
+EOF
+  chmod 755 /home/vibe/Desktop/nlsh.desktop
+  echo "nlsh installed with desktop shortcut"
+else
+  echo "WARNING: nlsh binary not found in /root/nlsh/"
+fi
+
 # === AUR packages ===
 echo "Installing AUR packages..."
 if ! id builder &>/dev/null; then

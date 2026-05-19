@@ -364,6 +364,11 @@ case "${BUILD_MODE}" in
       cp "${ROOT_DIR}/soft/nlsh/nlsh" "${CHROOT_DIR}/usr/local/bin/nlsh"
       chmod +x "${CHROOT_DIR}/usr/local/bin/nlsh"
       log "nlsh бинарник скопирован в /usr/local/bin/nlsh"
+
+      if [[ -f "${ROOT_DIR}/soft/nlsh/nlsh.svg" ]]; then
+        cp "${ROOT_DIR}/soft/nlsh/nlsh.svg" "${CHROOT_DIR}/usr/share/pixmaps/nlsh.svg"
+        log "nlsh иконка скопирована"
+      fi
     else
       log "WARNING: nlsh бинарник не найден в soft/nlsh/"
     fi
@@ -465,12 +470,6 @@ SDDMEOF
       cp "${ROOT_DIR}/soft/nlsh/nlsh.desktop" "${CHROOT_DIR}/home/vibecode/.local/share/applications/nlsh.desktop"
       chmod +x "${CHROOT_DIR}/home/vibecode/Desktop/nlsh.desktop"
       log "nlsh.desktop скопирован на рабочий стол"
-    fi
-
-    # Копируем иконку
-    if [[ -f "${ROOT_DIR}/soft/nlsh/nlsh.svg" ]]; then
-      cp "${ROOT_DIR}/soft/nlsh/nlsh.svg" "${CHROOT_DIR}/usr/share/pixmaps/nlsh.svg"
-      log "nlsh.svg иконка скопирована"
     fi
 
     # Включаем отображение иконок на рабочем столе KDE Plasma
