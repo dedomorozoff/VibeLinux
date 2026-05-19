@@ -497,63 +497,101 @@ chmod +x /usr/local/bin/ai-install
 
 # === BRANDING ===
 
-# ASCII logo для fastfetch
+# === BRANDING: Check files exist ===
+echo "=== Checking branding files ==="
+ls -la /root/branding/ 2>/dev/null || echo "WARNING: /root/branding/ not found!"
+
+# ASCII logo для fastfetch / MOTD
 if [[ -f /root/branding/logos/ascii-logo.txt ]]; then
   mkdir -p /usr/share/vibelinux
   cp /root/branding/logos/ascii-logo.txt /usr/share/vibelinux/ascii-logo.txt
+  cp /root/branding/logos/ascii-logo.txt /etc/motd
+  echo "OK: ascii-logo.txt copied to /etc/motd"
+else
+  echo "WARNING: ascii-logo.txt not found!"
 fi
 
 # Wallpapers — copy to system location
 mkdir -p /usr/share/wallpapers/VibeLinux/contents/images
 if [[ -f /root/branding/wallpapers/vibecode-dark.svg ]]; then
   cp /root/branding/wallpapers/vibecode-dark.svg /usr/share/wallpapers/VibeLinux/contents/images/2560x1440.svg
+  echo "OK: wallpaper SVG copied"
+elif [[ -f /root/branding/wallpapers/vibecode-dark.png ]]; then
+  cp /root/branding/wallpapers/vibecode-dark.png /usr/share/wallpapers/VibeLinux/contents/images/2560x1440.png
+  echo "OK: wallpaper PNG copied"
+else
+  echo "WARNING: wallpaper not found!"
 fi
 
 # System logo — SVG в hicolor icons
 if [[ -f /root/branding/logos/vibecodeos-logo.svg ]]; then
   mkdir -p /usr/share/icons/hicolor/scalable/apps
   cp /root/branding/logos/vibecodeos-logo.svg /usr/share/icons/hicolor/scalable/apps/vibelinux.svg
-  # Также кладём в pixmaps для совместимости
   cp /root/branding/logos/vibecodeos-logo.svg /usr/share/pixmaps/vibelinux.svg
+  echo "OK: logo SVG copied"
 fi
 
-# Генерируем PNG-лого для Calamares
+# Convert logo to PNG for Calamares
 if [[ -f /root/branding/logos/vibecodeos-logo.svg ]]; then
   if command -v rsvg-convert &>/dev/null; then
-    rsvg-convert -w 256 -h 256 /root/branding/logos/vibecodeos-logo.svg -o /tmp/vibelinux-logo.png 2>/dev/null || true
+    rsvg-convert -w 256 -h 256 /root/branding/logos/vibecodeos-logo.svg -o /usr/share/pixmaps/vibelinux.png 2>/dev/null || true
   elif command -v convert &>/dev/null; then
-    convert -background none -size 256x256 /root/branding/logos/vibecodeos-logo.svg /tmp/vibelinux-logo.png 2>/dev/null || true
-  fi
-  if [[ -f /tmp/vibelinux-logo.png ]]; then
-    cp /tmp/vibelinux-logo.png /usr/share/pixmaps/vibelinux.png
+    convert -background none -size 256x256 /root/branding/logos/vibecodeos-logo.svg /usr/share/pixmaps/vibelinux.png 2>/dev/null || true
   fi
 fi
 
-# Set default wallpaper via KDE system config
+# === KDE Plasma 6 Configuration ===
 mkdir -p /home/vibe/.config
-cat > /home/vibe/.config/plasma-org.kde.plasma.desktop-appletsrc << EOF
-[Containments][1]
-ItemGeometries-1920x1080=
-wallpaperplugin=org.kde.image
-wallpaperpluginmode=SingleImage
 
-[Containments][1][Wallpaper][org.kde.image][General]
-Image=/usr/share/wallpapers/VibeLinux/contents/images/2560x1440.svg
-EOF
+# 1. Set Wallpaper via kwriteconfig6 (Plasma 6)
+WALLPAPER_PATH="/usr/share/wallpapers/VibeLinux/contents/images/2560x1440.svg"
+if [[ -f "${WALLPAPER_PATH}" ]] || [[ -f "${WALLPAPER_PATH%.svg}.png" ]]; then
+  if [[ ! -f "${WALLPAPER_PATH}" ]]; then
+    WALLPAPER_PATH="${WALLPAPER_PATH%.svg}.png"
+  fi
+  
+  if command -v kwriteconfig6 &>/dev/null; then
+    runuser -u vibe -- kwriteconfig6 --file plasmarc --group Wallpaper --group org.kde.image --group General --key Image "$WALLPAPER_PATH" 2>/dev/null || true
+    echo "OK: Wallpaper set via kwriteconfig6"
+  else
+    echo "WARNING: kwriteconfig6 not found"
+  fi
+fi
 
-# KDE globals — dark theme
-cat > /home/vibe/.config/kdeglobals << EOF
+# 2. Dark Theme
+cat > /home/vibe/.config/kdeglobals << 'EOF'
+[KDE]
+widgetStyle=Breeze
 [General]
 ColorScheme=BreezeDark
 Name=VibeLinux
-
-[KDE]
-widgetStyle=Breeze
-
 [Colors:Window]
 BackgroundNormal=11,16,32
 ForegroundNormal=255,255,255
 EOF
+chown vibe:vibe /home/vibe/.config/kdeglobals
+
+# 3. Desktop Layout (Icons on desktop)
+cat > /home/vibe/.config/plasma-org.kde.plasma.desktop-appletsrc << 'EOF'
+[Containments][1]
+ItemGeometries-1920x1080=
+wallpaperplugin=org.kde.image
+wallpaperpluginmode=SingleImage
+[Containments][1][Wallpaper][org.kde.image][General]
+Image=/usr/share/wallpapers/VibeLinux/contents/images/2560x1440.svg
+EOF
+chown vibe:vibe /home/vibe/.config/plasma-org.kde.plasma.desktop-appletsrc
+
+# Apply wallpaper via kwriteconfig6 (Plasma 6)
+if command -v kwriteconfig6 &>/dev/null; then
+  runuser -u vibe -- kwriteconfig6 --file plasmarc --group Wallpaper --group org.kde.image --group General --key Image /usr/share/wallpapers/VibeLinux/contents/images/2560x1440.svg 2>/dev/null || true
+  echo "OK: wallpaper set via kwriteconfig6"
+elif command -v kwriteconfig5 &>/dev/null; then
+  runuser -u vibe -- kwriteconfig5 --file plasmarc --group Wallpaper --group org.kde.image --group General --key Image /usr/share/wallpapers/VibeLinux/contents/images/2560x1440.svg 2>/dev/null || true
+  echo "OK: wallpaper set via kwriteconfig5"
+else
+  echo "WARNING: kwriteconfig not found, using config file only"
+fi
 
 # Konsole theme — VibeLinux dark
 mkdir -p /home/vibe/.local/share/konsole
