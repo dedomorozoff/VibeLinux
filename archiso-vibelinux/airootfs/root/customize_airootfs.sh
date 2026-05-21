@@ -709,19 +709,54 @@ if [[ -d /root/branding/plymouth ]]; then
   plymouth-set-default-theme vibelinux 2>/dev/null || true
 fi
 
-# GRUB — VibeLinux branding (PNG, because GRUB doesn't support SVG)
+# GRUB config for installed system
+# Ensure base defaults exist
+GRUB_DEFAULT_FILE="/etc/default/grub"
+if [[ ! -f "$GRUB_DEFAULT_FILE" ]]; then
+  cat > "$GRUB_DEFAULT_FILE" << 'GRUBBASE'
+# GRUB boot loader configuration
+GRUB_TIMEOUT=5
+GRUB_DISTRIBUTOR="VibeLinux"
+GRUB_CMDLINE_LINUX_DEFAULT="nvidia-drm.modeset=1 quiet splash"
+GRUB_CMDLINE_LINUX="nvidia-drm.modeset=1"
+GRUB_PRELOAD_MODULES="part_gpt part_msdos"
+GRUB_TERMINAL_INPUT="console"
+GRUB_GFXMODE=1920x1080,auto
+GRUB_GFXPAYLOAD_LINUX="keep"
+GRUB_DISABLE_LINUX_UUID=true
+GRUB_DISABLE_RECOVERY=true
+GRUB_ENABLE_CRYPTODISK=y
+GRUB_SAVEDEFAULT=true
+GRUB_DEFAULT=saved
+GRUB_DISABLE_SUBMENU=y
+GRUBBASE
+fi
+
+# VibeLinux branding (PNG, because GRUB doesn't support SVG)
 if [[ -f /root/branding/wallpapers/vibecode-dark.png ]]; then
   cp /root/branding/wallpapers/vibecode-dark.png /usr/share/wallpapers/VibeLinux/contents/images/2560x1440.png
-  cat >> /etc/default/grub << 'EOF'
+  cat >> "$GRUB_DEFAULT_FILE" << 'GRUBRAND'
 
 # VibeLinux branding
 GRUB_BACKGROUND=/usr/share/wallpapers/VibeLinux/contents/images/2560x1440.png
 GRUB_GFXMODE=1920x1080,auto
 GRUB_GFXPAYLOAD_LINUX=keep
-GRUB_THEME=
-EOF
+#GRUB_THEME=
+GRUBRAND
   # Remove default GRUB_THEME line if arch added one
-  sed -i 's/^GRUB_THEME=.*/#GRUB_THEME=/' /etc/default/grub 2>/dev/null || true
+  sed -i 's/^GRUB_THEME=.*/#GRUB_THEME=/' "$GRUB_DEFAULT_FILE" 2>/dev/null || true
+fi
+
+# Ensure nvidia-drm.modeset=1 is in GRUB_CMDLINE_LINUX_DEFAULT
+if grep -q "^GRUB_CMDLINE_LINUX_DEFAULT=" "$GRUB_DEFAULT_FILE" 2>/dev/null; then
+  if ! grep -q "nvidia-drm.modeset=1" "$GRUB_DEFAULT_FILE"; then
+    sed -i 's/^GRUB_CMDLINE_LINUX_DEFAULT="\(.*\)"/GRUB_CMDLINE_LINUX_DEFAULT="\1 nvidia-drm.modeset=1"/' "$GRUB_DEFAULT_FILE"
+  fi
+fi
+if grep -q "^GRUB_CMDLINE_LINUX=" "$GRUB_DEFAULT_FILE" 2>/dev/null; then
+  if ! grep -q "nvidia-drm.modeset=1" "$GRUB_DEFAULT_FILE"; then
+    sed -i 's/^GRUB_CMDLINE_LINUX="\(.*\)"/GRUB_CMDLINE_LINUX="\1 nvidia-drm.modeset=1"/' "$GRUB_DEFAULT_FILE"
+  fi
 fi
 
 # Welcome App
@@ -830,6 +865,11 @@ A Linux distro for **vibe coding** and **AI development** — everything works o
 
 ### Containers
 - **Docker** — already running (`docker ps`)
+
+## nlsh — Natural Language Shell
+- **nlsh** — локальный AI Shell Assistant (~200MB модель Q2_K)
+- Запускается: `nlsh repl` или через ярлык на рабочем столе
+- Работает оффлайн, без интернета
 
 ### AI Tools (open source)
 - **opencode** — open source AI coding agent (`opencode`)
@@ -946,6 +986,40 @@ if [[ -f /root/nlsh/nlsh ]]; then
   cp /root/nlsh/nlsh /usr/local/bin/nlsh
   chmod +x /usr/local/bin/nlsh
 
+  # Bundle small AI model for offline use (Q2_K ~200MB for weak machines)
+  NLSH_MODELS_DIR="/home/vibe/.config/nlsh/models"
+  mkdir -p "$NLSH_MODELS_DIR"
+  
+  MODEL_NAME="qwen2.5-0.5b-instruct-q2_k.gguf"
+  MODEL_URL="https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q2_k.gguf"
+  
+  if [[ -f /root/nlsh/models/$MODEL_NAME ]]; then
+    cp /root/nlsh/models/$MODEL_NAME "$NLSH_MODELS_DIR/"
+    chown vibe:vibe "$NLSH_MODELS_DIR/$MODEL_NAME"
+    echo "OK: bundled model Q2_K from local file"
+  else
+    echo "Downloading Q2_K model (~200MB)..."
+    curl -L "$MODEL_URL" -o "$NLSH_MODELS_DIR/$MODEL_NAME" 2>&1 | tail -5 || \
+      echo "WARNING: model download failed"
+    chown vibe:vibe "$NLSH_MODELS_DIR/$MODEL_NAME" 2>/dev/null || true
+  fi
+
+  # Default config for vibe user
+  NLSH_CONFIG_DIR="/home/vibe/.config/nlsh"
+  mkdir -p "$NLSH_CONFIG_DIR"
+  cat > "$NLSH_CONFIG_DIR/config.json" << NLSCONF
+{
+  "default_model": "$MODEL_NAME",
+  "ctx_size": 2048,
+  "max_tokens": 256,
+  "temperature": 0.2,
+  "top_p": 0.9,
+  "mode": "ai",
+  "shell": "/bin/zsh"
+}
+NLSCONF
+  chown -R vibe:vibe "$NLSH_CONFIG_DIR"
+
   if [[ -f /root/nlsh/nlsh.svg ]]; then
     cp /root/nlsh/nlsh.svg /usr/share/pixmaps/nlsh.svg
   fi
@@ -955,7 +1029,7 @@ if [[ -f /root/nlsh/nlsh ]]; then
 Type=Application
 Name=nlsh — AI Shell Assistant
 GenericName=Natural Language Shell
-Comment=Локальный AI-ассистент для управления системой через естественный язык
+Comment=AI-ассистент для управления системой через естественный язык
 Exec=konsole --hold -e nlsh repl
 Icon=nlsh
 Terminal=false
@@ -964,10 +1038,23 @@ Keywords=ai;llm;shell;assistant;local;
 StartupNotify=false
 EOF
   chmod 755 /home/vibe/Desktop/nlsh.desktop
-  echo "nlsh installed with desktop shortcut"
+  echo "nlsh installed with llama.cpp engine + offline model"
 else
   echo "WARNING: nlsh binary not found in /root/nlsh/"
 fi
+
+# Copy desktop shortcuts to system applications so they appear in Kickoff menu
+for f in /home/vibe/Desktop/*.desktop; do
+  cp "$f" /usr/share/applications/
+done
+
+# KDE Kickoff Favorites
+mkdir -p /home/vibe/.config
+cat > /home/vibe/.config/kickoffrc << 'EOF'
+[General]
+favorites=preferred://browser,org.kde.dolphin.desktop,org.kde.konsole.desktop,nlsh.desktop,AI-Chat.desktop,OpenCode.desktop,Qwen-Code.desktop,Open-WebUI.desktop,Install-AI-Tools.desktop,VibeLinux-Welcome.desktop
+EOF
+chown vibe:vibe /home/vibe/.config/kickoffrc
 
 # === AUR packages ===
 echo "Installing AUR packages..."
@@ -987,8 +1074,8 @@ aur_build() {
     rm -rf $dir
     git clone --depth 1 https://aur.archlinux.org/$pkg.git $dir 2>/dev/null
     cd $dir
-    makepkg --noconfirm --skippgpcheck
-  " 2>&1 | tail -5 || echo "WARNING: $pkg build failed"
+    makepkg --noconfirm --skippgpcheck -s
+  " 2>&1 | tail -10 || echo "WARNING: $pkg build failed"
   local pkg_file
   pkg_file=$(ls /tmp/aur-build/$dir/*.pkg.tar.zst 2>/dev/null | head -1)
   if [[ -n "$pkg_file" && -f "$pkg_file" ]]; then
@@ -1000,11 +1087,13 @@ aur_build() {
 aur_build yay-bin yay
 aur_build bruno-bin bruno
 aur_build pinta-appimage pinta
-aur_build calamares calamares
+# calamares installed from official repos (avoids Python ABI mismatch)
 
 rm -f /etc/sudoers.d/90-builder
 userdel builder 2>/dev/null || true
 rm -rf /tmp/aur-build
+
+# (Python/Boost compat not needed — calamares built from AUR without Python support)
 
 # Calamares — конфигурация для VibeLinux
 mkdir -p /etc/calamares
@@ -1136,11 +1225,28 @@ fi
 if [[ -f /home/vibe/.config/konsolerc ]]; then
   cp /home/vibe/.config/konsolerc /etc/skel/.config/
 fi
+if [[ -f /home/vibe/.config/kickoffrc ]]; then
+  cp /home/vibe/.config/kickoffrc /etc/skel/.config/
+fi
+
+# Копируем nlsh config и model в /etc/skel
+if [[ -d /home/vibe/.config/nlsh ]]; then
+  mkdir -p /etc/skel/.config/nlsh
+  cp -r /home/vibe/.config/nlsh/* /etc/skel/.config/nlsh/
+  chown -R root:root /etc/skel/.config/nlsh
+fi
 
 # Копируем Konsole theme
 if [[ -d /home/vibe/.local/share/konsole ]]; then
   mkdir -p /etc/skel/.local/share/konsole
   cp -r /home/vibe/.local/share/konsole/* /etc/skel/.local/share/konsole/
+fi
+
+# Копируем nlsh model в /etc/skel для новых пользователей
+if [[ -d /home/vibe/.config/nlsh/models ]]; then
+  mkdir -p /etc/skel/.config/nlsh/models
+  cp -r /home/vibe/.config/nlsh/models/* /etc/skel/.config/nlsh/models/
+  chown -R root:root /etc/skel/.config/nlsh
 fi
 
 chown -R root:root /etc/skel

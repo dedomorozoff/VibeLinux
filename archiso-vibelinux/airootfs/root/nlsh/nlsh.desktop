@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=nlsh — AI Shell Assistant
+GenericName=Natural Language Shell
+Comment=Локальный AI-ассистент для управления системой через естественный язык
+Exec=nlsh repl
+Icon=nlsh
+Terminal=true
+Categories=Development;Utility;AI;
+Keywords=ai;llm;shell;assistant;local;
+StartupNotify=false

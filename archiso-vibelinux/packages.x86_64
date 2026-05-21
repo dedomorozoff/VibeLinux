@@ -112,6 +112,14 @@ flameshot
 sqlite3
 sqlitebrowser
 
+# Calamares installer (with Python support)
+calamares
+extra-cmake-modules
+ninja
+qt6-tools
+qt6-translations
+libglvnd
+
 # Utilities
 fastfetch
 wget
