@@ -511,16 +511,28 @@ else
   echo "WARNING: ascii-logo.txt not found!"
 fi
 
-# Wallpapers — copy to system location
+# Wallpapers — copy to system location (Plasma 6: PNG preferred over SVG)
 mkdir -p /usr/share/wallpapers/VibeLinux/contents/images
+
+# Конвертируем SVG→PNG (Plasma 6 лучше работает с PNG)
 if [[ -f /root/branding/wallpapers/vibecode-dark.svg ]]; then
   cp /root/branding/wallpapers/vibecode-dark.svg /usr/share/wallpapers/VibeLinux/contents/images/2560x1440.svg
   echo "OK: wallpaper SVG copied"
-elif [[ -f /root/branding/wallpapers/vibecode-dark.png ]]; then
-  cp /root/branding/wallpapers/vibecode-dark.png /usr/share/wallpapers/VibeLinux/contents/images/2560x1440.png
-  echo "OK: wallpaper PNG copied"
-else
-  echo "WARNING: wallpaper not found!"
+  if command -v rsvg-convert &>/dev/null; then
+    rsvg-convert -w 1920 -h 1080 /root/branding/wallpapers/vibecode-dark.svg \
+      -o /usr/share/wallpapers/VibeLinux/contents/images/2560x1440.png 2>/dev/null || true
+    echo "OK: wallpaper PNG converted from SVG"
+  elif command -v convert &>/dev/null; then
+    convert -background none /root/branding/wallpapers/vibecode-dark.svg \
+      /usr/share/wallpapers/VibeLinux/contents/images/2560x1440.png 2>/dev/null || true
+    echo "OK: wallpaper PNG converted from SVG (ImageMagick)"
+  fi
+fi
+if [[ ! -f /usr/share/wallpapers/VibeLinux/contents/images/2560x1440.png ]]; then
+  if [[ -f /root/branding/wallpapers/vibecode-dark.png ]]; then
+    cp /root/branding/wallpapers/vibecode-dark.png /usr/share/wallpapers/VibeLinux/contents/images/2560x1440.png
+    echo "OK: wallpaper PNG copied (from build artifact)"
+  fi
 fi
 
 # System logo — SVG в hicolor icons
@@ -542,55 +554,104 @@ fi
 
 # === KDE Plasma 6 Configuration ===
 mkdir -p /home/vibe/.config
+WALL="/usr/share/wallpapers/VibeLinux/contents/images/2560x1440"
 
-# 1. Set Wallpaper via kwriteconfig6 (Plasma 6)
-WALLPAPER_PATH="/usr/share/wallpapers/VibeLinux/contents/images/2560x1440.svg"
-if [[ -f "${WALLPAPER_PATH}" ]] || [[ -f "${WALLPAPER_PATH%.svg}.png" ]]; then
-  if [[ ! -f "${WALLPAPER_PATH}" ]]; then
-    WALLPAPER_PATH="${WALLPAPER_PATH%.svg}.png"
-  fi
-  
-  if command -v kwriteconfig6 &>/dev/null; then
-    runuser -u vibe -- kwriteconfig6 --file plasmarc --group Wallpaper --group org.kde.image --group General --key Image "$WALLPAPER_PATH" 2>/dev/null || true
-    echo "OK: Wallpaper set via kwriteconfig6"
-  else
-    echo "WARNING: kwriteconfig6 not found"
-  fi
-fi
+# Wallpaper: PNG приоритет (Plasma 6 лучше работает с PNG, чем с SVG)
+WALLPAPER_PATH=""
+for ext in png jpg svg; do
+  fp="${WALL}.${ext}"
+  [[ -f "$fp" ]] && { WALLPAPER_PATH="$fp"; break; }
+done
+WALL_URI="file://${WALLPAPER_PATH}"
 
-# 2. Dark Theme
-cat > /home/vibe/.config/kdeglobals << 'EOF'
-[KDE]
-widgetStyle=Breeze
-[General]
-ColorScheme=BreezeDark
-Name=VibeLinux
-[Colors:Window]
-BackgroundNormal=11,16,32
-ForegroundNormal=255,255,255
-EOF
-chown vibe:vibe /home/vibe/.config/kdeglobals
-
-# 3. Desktop Layout (Icons on desktop)
-cat > /home/vibe/.config/plasma-org.kde.plasma.desktop-appletsrc << 'EOF'
+# 1. Desktop Layout — базовый конфиг с обоями
+cat > /home/vibe/.config/plasma-org.kde.plasma.desktop-appletsrc << PLASMACONF
 [Containments][1]
 ItemGeometries-1920x1080=
 wallpaperplugin=org.kde.image
 wallpaperpluginmode=SingleImage
 [Containments][1][Wallpaper][org.kde.image][General]
-Image=/usr/share/wallpapers/VibeLinux/contents/images/2560x1440.svg
-EOF
+FillMode=2
+Image=${WALL_URI}
+PLASMACONF
 chown vibe:vibe /home/vibe/.config/plasma-org.kde.plasma.desktop-appletsrc
 
-# Apply wallpaper via kwriteconfig6 (Plasma 6)
-if command -v kwriteconfig6 &>/dev/null; then
-  runuser -u vibe -- kwriteconfig6 --file plasmarc --group Wallpaper --group org.kde.image --group General --key Image /usr/share/wallpapers/VibeLinux/contents/images/2560x1440.svg 2>/dev/null || true
+# 2. Wallpaper через plasma-apply-wallpaperimage (Plasma 6 API, поверх конфига)
+if [[ -n "$WALLPAPER_PATH" ]] && command -v plasma-apply-wallpaperimage &>/dev/null; then
+  runuser -u vibe -- plasma-apply-wallpaperimage "$WALLPAPER_PATH" 2>/dev/null || true
+  echo "OK: wallpaper set via plasma-apply-wallpaperimage"
+fi
+
+# 3. Wallpaper через kwriteconfig6 (дублирование на случай plasma-apply сбоя)
+if [[ -n "$WALLPAPER_PATH" ]] && command -v kwriteconfig6 &>/dev/null; then
+  runuser -u vibe -- kwriteconfig6 \
+    --file plasma-org.kde.plasma.desktop-appletsrc \
+    --group "Containments" --group "1" \
+    --group "Wallpaper" --group "org.kde.image" --group "General" \
+    --key "Image" "${WALL_URI}" 2>/dev/null || true
   echo "OK: wallpaper set via kwriteconfig6"
-elif command -v kwriteconfig5 &>/dev/null; then
-  runuser -u vibe -- kwriteconfig5 --file plasmarc --group Wallpaper --group org.kde.image --group General --key Image /usr/share/wallpapers/VibeLinux/contents/images/2560x1440.svg 2>/dev/null || true
-  echo "OK: wallpaper set via kwriteconfig5"
-else
-  echo "WARNING: kwriteconfig not found, using config file only"
+fi
+
+# 4. Dark Theme + VibeLinux акцентный цвет (Plasma 6)
+cat > /home/vibe/.config/kdeglobals << 'KDEGLOBALS'
+[KDE]
+widgetStyle=Breeze
+AnimationDurationFactor=0.75
+
+[General]
+ColorScheme=BreezeDark
+Name=VibeLinux
+AccentColor=76,201,240
+AccentColorFromWallpaper=false
+TerminalApplication=konsole
+TerminalService=org.kde.konsole
+
+[Icons]
+Theme=breeze-dark
+
+[UiSettings]
+ColorScheme=BreezeDark
+
+[Colors:Window]
+BackgroundNormal=11,16,32
+ForegroundNormal=255,255,255
+BackgroundAlternate=16,22,42
+ForegroundInactive=180,180,200
+ForegroundLink=76,201,240
+ForegroundVisited=114,9,183
+
+[Colors:Selection]
+BackgroundNormal=76,201,240
+ForegroundNormal=11,16,32
+BackgroundAlternate=60,180,220
+ForegroundAccent=76,201,240
+
+[Colors:Button]
+BackgroundNormal=20,28,48
+ForegroundNormal=255,255,255
+BackgroundAlternate=16,22,42
+
+[Colors:View]
+BackgroundNormal=11,16,32
+ForegroundNormal=220,220,240
+BackgroundAlternate=16,22,42
+
+[Colors:Complementary]
+BackgroundNormal=11,16,32
+ForegroundNormal=255,255,255
+KDEGLOBALS
+chown vibe:vibe /home/vibe/.config/kdeglobals
+
+# 5. Применить ColorScheme через plasma-apply-colorscheme (Plasma 6)
+if command -v plasma-apply-colorscheme &>/dev/null; then
+  runuser -u vibe -- plasma-apply-colorscheme BreezeDark 2>/dev/null || true
+  echo "OK: colorscheme set via plasma-apply-colorscheme"
+fi
+
+# 6. Акцентный цвет через kwriteconfig6
+if command -v kwriteconfig6 &>/dev/null; then
+  runuser -u vibe -- kwriteconfig6 --file kdeglobals --group "General" --key "AccentColor" "76,201,240" 2>/dev/null || true
+  runuser -u vibe -- kwriteconfig6 --file kdeglobals --group "General" --key "AccentColorFromWallpaper" "false" 2>/dev/null || true
 fi
 
 # Konsole theme — VibeLinux dark
@@ -671,20 +732,26 @@ EOF
 cat > /home/vibe/.local/share/konsole/VibeLinux.profile << EOF
 [Appearance]
 ColorScheme=VibeLinux
-Font=JetBrainsMono Nerd Font,12,-1,5,500,0,0,0,0,0,Regular
+Font=JetBrainsMono Nerd Font,12,-1,5,50,0,0,0,0,0,Regular
 
 [General]
 Name=VibeLinux
-Parent=FALLBACK/
+Parent=FALLBACK
+
+[Scrolling]
+ScrollBarPosition=2
 
 [TerminalFeatures]
 HorizontalScrollbar=false
+
+[Main]
+TerminalCenter=false
 EOF
 
 # Set Konsole as default terminal
 mkdir -p /home/vibe/.config
 cat > /home/vibe/.config/konsolerc << EOF
-[Desktop Entry]
+[General]
 DefaultProfile=VibeLinux.profile
 EOF
 
@@ -732,20 +799,76 @@ GRUB_DISABLE_SUBMENU=y
 GRUBBASE
 fi
 
-# VibeLinux branding (PNG, because GRUB doesn't support SVG)
+# VibeLinux branding (PNG, потому что GRUB не поддерживает SVG)
+# Конвертируем SVG→PNG если PNG ещё нет
+if [[ -f /root/branding/wallpapers/vibecode-dark.svg ]] && [[ ! -f /root/branding/wallpapers/vibecode-dark.png ]]; then
+  if command -v rsvg-convert &>/dev/null; then
+    rsvg-convert -w 1920 -h 1080 /root/branding/wallpapers/vibecode-dark.svg -o /root/branding/wallpapers/vibecode-dark.png 2>/dev/null || true
+  elif command -v convert &>/dev/null; then
+    convert /root/branding/wallpapers/vibecode-dark.svg /root/branding/wallpapers/vibecode-dark.png 2>/dev/null || true
+  fi
+fi
+WALL_PNG="/usr/share/wallpapers/VibeLinux/contents/images/2560x1440.png"
 if [[ -f /root/branding/wallpapers/vibecode-dark.png ]]; then
-  cp /root/branding/wallpapers/vibecode-dark.png /usr/share/wallpapers/VibeLinux/contents/images/2560x1440.png
-  cat >> "$GRUB_DEFAULT_FILE" << 'GRUBRAND'
+  cp /root/branding/wallpapers/vibecode-dark.png "$WALL_PNG"
+fi
+
+cat >> "$GRUB_DEFAULT_FILE" << 'GRUBRAND'
 
 # VibeLinux branding
-GRUB_BACKGROUND=/usr/share/wallpapers/VibeLinux/contents/images/2560x1440.png
+GRUB_COLOR_NORMAL=white/black
+GRUB_COLOR_HIGHLIGHT=white/dark-gray
 GRUB_GFXMODE=1920x1080,auto
 GRUB_GFXPAYLOAD_LINUX=keep
-#GRUB_THEME=
+GRUB_FONT_PATH=/usr/share/grub/unicode.pf2
 GRUBRAND
-  # Remove default GRUB_THEME line if arch added one
-  sed -i 's/^GRUB_THEME=.*/#GRUB_THEME=/' "$GRUB_DEFAULT_FILE" 2>/dev/null || true
+
+if [[ -f "$WALL_PNG" ]]; then
+  echo 'GRUB_BACKGROUND='"$WALL_PNG" >> "$GRUB_DEFAULT_FILE"
 fi
+
+# GRUB theme — VibeLinux minimal
+STARFIELD="/usr/share/grub/starfield.png"
+if [[ ! -f "$STARFIELD" ]]; then
+  # Создаём простой фон из PNG если есть
+  if [[ -f "$WALL_PNG" ]]; then
+    STARFIELD="$WALL_PNG"
+  fi
+fi
+mkdir -p /boot/grub/themes/vibelinux
+cat > /boot/grub/themes/vibelinux/theme.txt << GRUBTHEME
+# VibeLinux GRUB theme
+title-text: "VibeLinux"
+title-color: "#4CC9F0"
+title-font: "unicode"
+desktop-image: "${STARFIELD}"
+desktop-color: "#0B1020"
+terminal-font: "unicode"
++ boot_menu {
+    left = 18%
+    top = 20%
+    width = 64%
+    height = 60%
+    item_color = "#C0C0C0"
+    selected_item_color = "#4CC9F0"
+    item_height = 36
+    item_padding = 8
+    item_spacing = 6
+    item_font = "unicode"
+    selected_item_font = "unicode"
+    scrollbar = false
+}
++ progress_bar {
+    id = "progress_module"
+    left = 18%
+    top = 85%
+    width = 64%
+    height = 8%
+    fg_color = "#4CC9F0"
+    bg_color = "#0B1020"
+}
+GRUBTHEME
+echo 'GRUB_THEME=/boot/grub/themes/vibelinux/theme.txt' >> "$GRUB_DEFAULT_FILE"
 
 # Ensure nvidia-drm.modeset=1 is in GRUB_CMDLINE_LINUX_DEFAULT
 if grep -q "^GRUB_CMDLINE_LINUX_DEFAULT=" "$GRUB_DEFAULT_FILE" 2>/dev/null; then
@@ -1089,17 +1212,75 @@ aur_build bruno-bin bruno
 aur_build pinta-appimage pinta
 # calamares installed from official repos (avoids Python ABI mismatch)
 
+# Fix: ensure libpython3.13.so.1.0 is available for calamares
+echo "Checking calamares Python library dependency..."
+PYTHON_LIB=$(find /usr/lib -name 'libpython3.*.so.1.0' 2>/dev/null | head -1)
+if [[ -z "$PYTHON_LIB" ]]; then
+  echo "WARNING: no libpython shared library found, reinstalling python..."
+  pacman -S --noconfirm --needed python 2>/dev/null || true
+  PYTHON_LIB=$(find /usr/lib -name 'libpython3.*.so.1.0' 2>/dev/null | head -1)
+fi
+if [[ -n "$PYTHON_LIB" ]]; then
+  LIB_BASENAME=$(basename "$PYTHON_LIB")
+  if [[ "$LIB_BASENAME" != "libpython3.13.so.1.0" ]]; then
+    echo "Creating symlink: $LIB_BASENAME -> libpython3.13.so.1.0"
+    ln -sf "$PYTHON_LIB" /usr/lib/libpython3.13.so.1.0
+  fi
+  ldconfig
+  echo "OK: Python library linked for calamares"
+else
+  echo "WARNING: libpython not found — calamares may fail"
+fi
+
+# Fix: ensure libyaml-cpp.so.0.8 is available for calamares
+echo "Checking calamares yaml-cpp library dependency..."
+YAML_CPP_LIB=$(find /usr/lib -name 'libyaml-cpp.so.*' 2>/dev/null | head -1)
+if [[ -n "$YAML_CPP_LIB" ]]; then
+  YAML_BASENAME=$(basename "$YAML_CPP_LIB")
+  if [[ "$YAML_BASENAME" != "libyaml-cpp.so.0.8" ]]; then
+    echo "Creating symlink: $YAML_BASENAME -> libyaml-cpp.so.0.8"
+    ln -sf "$YAML_CPP_LIB" /usr/lib/libyaml-cpp.so.0.8
+  fi
+  ldconfig
+  echo "OK: yaml-cpp library linked for calamares"
+else
+  echo "WARNING: libyaml-cpp not found, installing..."
+  pacman -S --noconfirm --needed yaml-cpp 2>/dev/null || true
+  YAML_CPP_LIB=$(find /usr/lib -name 'libyaml-cpp.so.*' 2>/dev/null | head -1)
+  if [[ -n "$YAML_CPP_LIB" ]]; then
+    ln -sf "$YAML_CPP_LIB" /usr/lib/libyaml-cpp.so.0.8
+    ldconfig
+    echo "OK: yaml-cpp installed and linked"
+  fi
+fi
+
+# Fix: ensure libboost_python is available for calamares (version mismatch workaround)
+echo "Checking calamares Boost.Python library dependency..."
+BOOST_PYTHON_LIB=$(find /usr/lib -name 'libboost_python*.so.*' 2>/dev/null | head -1)
+if [[ -n "$BOOST_PYTHON_LIB" ]]; then
+  BOOST_PYTHON_NAME="libboost_python314.so.1.89.0"
+  if [[ "$(basename "$BOOST_PYTHON_LIB")" != "$BOOST_PYTHON_NAME" ]]; then
+    echo "Creating symlink: $(basename "$BOOST_PYTHON_LIB") -> $BOOST_PYTHON_NAME"
+    ln -sf "$BOOST_PYTHON_LIB" "/usr/lib/$BOOST_PYTHON_NAME"
+    ldconfig
+  fi
+  echo "OK: Boost.Python library linked for calamares"
+else
+  echo "WARNING: libboost_python not found — calamares may fail"
+fi
+
 rm -f /etc/sudoers.d/90-builder
 userdel builder 2>/dev/null || true
 rm -rf /tmp/aur-build
 
-# (Python/Boost compat not needed — calamares built from AUR without Python support)
-
 # Calamares — конфигурация для VibeLinux
-mkdir -p /etc/calamares
+mkdir -p /etc/calamares /etc/calamares/modules /usr/share/calamares/modules
 cat > /etc/calamares/settings.conf << 'CALCONF'
 ---
+modules-search: [ local ]
+
 branding: vibelinux
+
 sequence:
   - show:
     - welcome
@@ -1117,6 +1298,8 @@ sequence:
     - locale
     - keyboard
     - localecfg
+    - initcpiocfg
+    - initcpio
     - users
     - displaymanager
     - networkcfg
@@ -1126,12 +1309,187 @@ sequence:
     - umount
   - show:
     - finished
+
 prompt-install: false
 dont-chroot: false
 oem-setup: false
 disable-cancel: false
 disable-cancel-during-exec: true
 CALCONF
+
+# Конфигурации модулей Calamares
+mkdir -p /etc/calamares/modules
+
+# welcome — приветствие и проверка требований
+cat > /etc/calamares/modules/welcome.conf << 'EOF'
+---
+showSupportUrl: true
+showKnownIssuesUrl: true
+showReleaseNotesUrl: false
+requirements:
+  requiredStorage: 8.0
+  requiredRam: 2.0
+  check:
+    - storage
+    - ram
+    - root
+    - screen
+  required:
+    - ram
+    - root
+EOF
+
+# locale — выбор языка и часового пояса
+cat > /etc/calamares/modules/locale.conf << 'EOF'
+---
+geoipUrl: "https://ipapi.co/json/"
+geoipStyle: "json"
+geoipSelector: "timezone"
+EOF
+
+# keyboard — раскладка клавиатуры
+cat > /etc/calamares/modules/keyboard.conf << 'EOF'
+---
+EOF
+
+# partition — разметка диска
+cat > /etc/calamares/modules/partition.conf << 'EOF'
+---
+efiSystemPartition: "/boot"
+efiSystemPartitionSize: 512M
+userSwapChoices:
+  - none
+  - file
+drawNestedPartitions: false
+alwaysShowPartitionLabels: true
+initialPartitioningChoice: none
+initialSwapChoice: none
+defaultFileSystemType: "btrfs"
+defaultPartitionTableType: gpt
+availableFileSystemTypes: ["btrfs", "ext4", "xfs", "f2fs"]
+EOF
+
+# users — создание пользователя
+cat > /etc/calamares/modules/users.conf << 'EOF'
+---
+defaultGroups:
+  - wheel
+  - audio
+  - video
+  - storage
+  - power
+  - network
+  - docker
+autologinGroup: wheel
+doAutologin: true
+EOF
+
+# mount — монтирование разделов
+cat > /etc/calamares/modules/mount.conf << 'EOF'
+---
+EOF
+
+# unpackfs — копирование системы в целевой раздел
+cat > /etc/calamares/modules/unpackfs.conf << 'EOF'
+---
+unpack:
+  - source: "/run/archiso/bootmnt/arch/x86_64/airootfs.sfs"
+    sourcefs: "squashfs"
+    destination: ""
+  - source: "/run/archiso/bootmnt/arch/boot/x86_64/vmlinuz-linux"
+    sourcefs: "file"
+    destination: "/boot/vmlinuz-linux"
+EOF
+
+# machineid — генерация machine-id
+cat > /etc/calamares/modules/machineid.conf << 'EOF'
+---
+EOF
+
+# fstab — генерация fstab
+cat > /etc/calamares/modules/fstab.conf << 'EOF'
+---
+EOF
+
+# localecfg — настройка локали в целевой системе
+cat > /etc/calamares/modules/localecfg.conf << 'EOF'
+---
+EOF
+
+# initcpiocfg — конфигурация mkinitcpio (initramfs)
+cat > /etc/calamares/modules/initcpiocfg.conf << 'EOF'
+---
+kernel: linux
+hooks:
+  - base
+  - udev
+  - autodetect
+  - modconf
+  - kms
+  - keyboard
+  - keymap
+  - consolefont
+  - block
+  - plymouth
+  - filesystems
+  - fsck
+EOF
+
+# initcpio — генерация initramfs
+cat > /etc/calamares/modules/initcpio.conf << 'EOF'
+---
+EOF
+
+# displaymanager — настройка DM (SDDM для KDE Plasma)
+cat > /etc/calamares/modules/displaymanager.conf << 'EOF'
+---
+displaymanagers:
+  - sddm
+sysconfigSetup: false
+EOF
+
+# networkcfg — копирование настроек сети
+cat > /etc/calamares/modules/networkcfg.conf << 'EOF'
+---
+EOF
+
+# hwclock — настройка аппаратных часов
+cat > /etc/calamares/modules/hwclock.conf << 'EOF'
+---
+EOF
+
+# services-systemd — включение служб
+cat > /etc/calamares/modules/services-systemd.conf << 'EOF'
+---
+services:
+  - name: NetworkManager
+    action: enable
+  - name: bluetooth
+    action: enable
+  - name: sddm
+    action: enable
+  - name: docker
+    action: enable
+  - name: ollama
+    action: enable
+EOF
+
+# bootloader — установка загрузчика (GRUB)
+cat > /etc/calamares/modules/bootloader.conf << 'EOF'
+---
+efiBootLoader: "grub"
+grubInstall: "grub-install"
+grubMkconfig: "grub-mkconfig"
+grubCfg: "/boot/grub/grub.cfg"
+grubProbe: "grub-probe"
+efiBootMgr: "efibootmgr"
+installEFIFallback: true
+EOF
+
+# umount — размонтирование
+cat > /etc/calamares/modules/umount.conf << 'EOF'
+---
+EOF
 
 # VibeLinux брендинг для Calamares
 mkdir -p /usr/share/calamares/branding/vibelinux
@@ -1242,6 +1600,31 @@ if [[ -d /home/vibe/.local/share/konsole ]]; then
   cp -r /home/vibe/.local/share/konsole/* /etc/skel/.local/share/konsole/
 fi
 
+# Копируем конфиги терминала и оболочки для новых пользователей
+# starship
+if [[ -f /home/vibe/.config/starship.toml ]]; then
+  mkdir -p /etc/skel/.config
+  cp /home/vibe/.config/starship.toml /etc/skel/.config/
+fi
+# .zshrc
+if [[ -f /home/vibe/.zshrc ]]; then
+  cp /home/vibe/.zshrc /etc/skel/
+fi
+# kitty
+if [[ -d /home/vibe/.config/kitty ]]; then
+  mkdir -p /etc/skel/.config/kitty
+  cp /home/vibe/.config/kitty/kitty.conf /etc/skel/.config/kitty/
+fi
+# gitconfig
+if [[ -f /home/vibe/.gitconfig ]]; then
+  cp /home/vibe/.gitconfig /etc/skel/
+fi
+# lazygit
+if [[ -f /home/vibe/.config/lazygit/config.yml ]]; then
+  mkdir -p /etc/skel/.config/lazygit
+  cp /home/vibe/.config/lazygit/config.yml /etc/skel/.config/lazygit/
+fi
+
 # Копируем nlsh model в /etc/skel для новых пользователей
 if [[ -d /home/vibe/.config/nlsh/models ]]; then
   mkdir -p /etc/skel/.config/nlsh/models
@@ -1254,6 +1637,76 @@ chown -R root:root /etc/skel
 # Убеждаемся что calamares можно запускать через sudo без пароля для пользователя vibe
 if ! grep -q 'calamares' /etc/sudoers.d/90_vibe 2>/dev/null; then
   echo "vibe ALL=(ALL) NOPASSWD: /usr/bin/calamares" >> /etc/sudoers.d/90_vibe
+fi
+
+# Скрипт настройки live-среды (обновление зеркал, проверка места)
+cat > /usr/local/bin/vibe-live-setup << 'LIVESETUP'
+#!/usr/bin/env bash
+echo "=== VibeLive — настройка live-среды ==="
+echo ""
+
+# 1. RAM / Space info
+echo "── Система ──"
+free -h | head -2
+echo ""
+echo "── Диски / overlay ──"
+df -h / /tmp /var/cache/pacman/pkg 2>/dev/null | column -t
+echo ""
+
+# 2. Обновление зеркал pacman
+echo "── Зеркала pacman ──"
+if command -v reflector &>/dev/null; then
+  echo "Обновление списка зеркал (reflector)..."
+  reflector --latest 10 --protocol https --sort rate --save /etc/pacman.d/mirrorlist 2>/dev/null && \
+    echo "OK: зеркала обновлены" || \
+    echo "Ошибка: reflector не смог обновить зеркала (проверьте соединение)"
+else
+  echo "reflector не установлен"
+fi
+echo ""
+
+# 3. Проверка pacman
+echo "── Pacman ──"
+if pacman -Sy &>/dev/null; then
+  echo "OK: pacman работает"
+else
+  echo "Проблема с pacman. Попробуйте вручную:"
+  echo "  sudo pacman -Syu"
+fi
+echo ""
+
+# 4. Советы
+echo "── Полезные команды ──"
+echo "  Установить пакет:          sudo pacman -S <package>"
+echo "  Обновить все пакеты:       sudo pacman -Syu"
+echo "  Discover (GUI магазин):    discover"
+echo "  Установить ISO:            На рабочем столе → Install VibeLinux"
+echo "  Очистить кэш pacman:       sudo pacman -Scc"
+echo ""
+echo "Live-сессия работает в оперативной памяти."
+echo "Для постоянного использования установите VibeLinux на диск."
+LIVESETUP
+chmod +x /usr/local/bin/vibe-live-setup
+
+# Ярлык для vibe-live-setup на рабочем столе
+cat > /home/vibe/Desktop/VibeLive-Setup.desktop << 'DESKTOPLIVE'
+[Desktop Entry]
+Type=Application
+Name=VibeLive Setup
+Name[ru]=Настройка VibeLive
+Comment=Setup live environment — mirrors, space check
+Comment[ru]=Настройка live-среды — зеркала, проверка места
+Exec=konsole --hold -e sudo /usr/local/bin/vibe-live-setup
+Icon=system-software-update
+Terminal=false
+Categories=System;
+DESKTOPLIVE
+chmod 755 /home/vibe/Desktop/VibeLive-Setup.desktop
+
+# Пакетный менеджер Discover для GUI
+if [[ -f /usr/bin/discover ]]; then
+  # Убеждаемся что PackageKit запущен
+  systemctl enable packagekit 2>/dev/null || true
 fi
 
 chown -R vibe:vibe /home/vibe

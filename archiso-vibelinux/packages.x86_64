@@ -10,6 +10,7 @@ pacman-mirrorlist
 
 # Boot
 plymouth
+grub
 syslinux
 memtest86+
 memtest86+-efi
@@ -28,6 +29,8 @@ konsole
 sddm
 xorg-server
 wayland
+plasma-discover
+packagekit-qt6
 
 # Audio
 pipewire
@@ -109,16 +112,26 @@ kate
 spectacle
 ark
 flameshot
+gparted
 sqlite3
 sqlitebrowser
 
 # Calamares installer (with Python support)
 calamares
+boost-libs
 extra-cmake-modules
 ninja
 qt6-tools
 qt6-translations
 libglvnd
+
+# Filesystem tools — для разметки дисков и форматирования (нужны Calamares partition module)
+parted
+btrfs-progs
+dosfstools
+e2fsprogs
+xfsprogs
+gptfdisk
 
 # Utilities
 fastfetch
@@ -128,6 +141,7 @@ p7zip
 mc
 xdg-user-dirs
 xdg-utils
+reflector
 
 # Image processing (branding — SVG→PNG)
 librsvg
