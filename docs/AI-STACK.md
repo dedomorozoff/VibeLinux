@@ -37,8 +37,7 @@
 - Мощный AI-инструмент для парного программирования в терминале.
 - Позволяет редактировать код, создавать коммиты и файлы, просто общаясь с AI.
 - Интегрируется с Git и локальными/облачными LLM.
-- Установка: `scripts/ai/install-aider.sh`.
-- Запуск: `aider`.
+- **Pre-installed** в образе (через `/opt/vibecode/ai-venv`), запуск: `aider`.
 
 **Современные agentic CLI (опционально)**
 - **Codex CLI** — `scripts/ai/install-codex-cli.sh`
@@ -49,6 +48,11 @@
 ---
 
 ### **AI в редакторах**
+
+**Continue.dev**
+- Open-source AI assistant для VS Code / VSCodium / Neovim
+- Работает с локальными моделями через Ollama (без API-ключей)
+- Установка расширения: `scripts/ai/install-continue.sh`
 
 **VSCodium**
 - Расширение Continue для локальных моделей через Ollama
@@ -76,23 +80,22 @@
 
 ### **AI‑фреймворки и библиотеки**
 
-Виртуальное окружение `~/.venv-ai` с предустановленными библиотеками:
+Системное виртуальное окружение `/opt/vibecode/ai-venv` с предустановленными библиотеками:
 
 - PyTorch (CPU, с инструкциями для GPU)
-- Transformers, Accelerate
-- LangChain, LangChain Community
+- Transformers, Accelerate (стабильные версии с PyPI)
+- LangChain Core
 - LlamaIndex
+- ChromaDB (векторная БД для RAG)
+- HuggingFace Hub (huggingface-cli для управления моделями)
+- Aider (AI pair programming)
 - Ollama Python SDK
-- NumPy, Pandas, Matplotlib, Jupyter
 
-Установка: `scripts/ai/setup-python-ai-stack.sh`
-
-Активация: `ai-env` (алиас в shell)
+Активация: `python-ai` (симлинк в `/usr/local/bin/python-ai` — это Python из venv)
 
 Для GPU PyTorch:
 ```bash
-source ~/.venv-ai/bin/activate
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+python-ai -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 ```
 
 ---
@@ -135,7 +138,8 @@ sudo ./scripts/ai/install-ollama-models.sh
 Использование:
 - Open WebUI: http://localhost:3000
 - Terminal AI: `ai-chat`
-- Python AI: `ai-env` → активация окружения
+- Python AI: `python-ai` (Python с AI-библиотеками из `/opt/vibecode/ai-venv`)
+- AI pair programming: `aider`
 - ComfyUI: `sudo bash scripts/ai/start-sd.sh` → http://localhost:8188
 
 ### **Требования по ресурсам**

@@ -16,11 +16,12 @@ if [[ -f /root/branding/logos/ascii-logo.txt ]]; then
   cp /root/branding/logos/ascii-logo.txt /etc/motd
 else
   cat > /etc/motd << 'EOF'
- __     ___  ____     ___  _     ____
- \ \   / / ||  _ \   / _ \| |   / ___|
-  \ \ / /| || |_) | | | | | |   \___ \
-   \ V / | ||  _ <  | |_| | |___ ___) |
-    \_/  |_||_| \_\  \__\_\_____|____/
+
+█   █ ███ ████  █████ █     ███ █   █ █   █ █   █
+█   █  █  █   █ █     █      █  ██  █ █   █  █ █
+█   █  █  ████  ████  █      █  █ █ █ █   █   █
+ █ █   █  █   █ █     █      █  █  ██ █   █  █ █
+  █   ███ ████  █████ █████ ███ █   █  ███  █   █
 
  VibeLinux — Linux для вайбкодинга и AI
 EOF
@@ -329,13 +330,34 @@ chown -R vibe:vibe /home/vibe/.npm
 npm install -g @qwen-code/qwen-code 2>&1 | tail -5 || echo "WARNING: qwen-code install failed"
 chown -R vibe:vibe /home/vibe/.npm
 
-# Python AI libs (transformers + accelerate из git для Python 3.14)
-# langchain — meta-package, ставится отдельно: pip install langchain-core
-pip install --break-system-packages --no-cache-dir \
+# ===== Python AI stack (system venv) =====
+VENV_AI="/opt/vibecode/ai-venv"
+echo "Creating Python AI venv at $VENV_AI..."
+python3 -m venv "$VENV_AI"
+
+echo "Installing Python AI packages..."
+"$VENV_AI/bin/pip" install --no-cache-dir \
   torch --index-url https://download.pytorch.org/whl/cpu \
-  git+https://github.com/huggingface/transformers.git \
-  git+https://github.com/huggingface/accelerate.git \
-  llama-index 2>&1 | tail -5 || true
+  langchain-core \
+  llama-index \
+  aider-chat \
+  chromadb \
+  huggingface-hub 2>&1 | tail -5 || true
+
+# transformers + accelerate: сначала PyPI, если нет колес под Python 3.14 — из git
+echo "Installing transformers and accelerate (PyPI or git fallback)..."
+"$VENV_AI/bin/pip" install --no-cache-dir transformers accelerate 2>&1 | tail -3 || {
+  echo "PyPI wheels not available for Python $(python3 --version), installing from git..."
+  "$VENV_AI/bin/pip" install --no-cache-dir \
+    git+https://github.com/huggingface/transformers.git \
+    git+https://github.com/huggingface/accelerate.git 2>&1 | tail -3 || true
+}
+
+# Симлинки для CLI-инструментов из venv
+ln -sf "$VENV_AI/bin/aider" /usr/local/bin/aider
+ln -sf "$VENV_AI/bin/python3" /usr/local/bin/python-ai
+
+echo "OK: Python AI venv created at $VENV_AI"
 
 cat > /usr/local/bin/ai-chat << 'AICHATEOF'
 #!/usr/bin/env bash
@@ -465,6 +487,60 @@ fi
 CLAUDEEOF
 chmod +x /usr/local/bin/install-claude-code
 
+# Continue.dev installer
+cat > /usr/local/bin/install-continue << 'CONTINUEEOF'
+#!/usr/bin/env bash
+echo "Installing Continue.dev..."
+EDITOR=""
+for cmd in code vscodium nvim; do
+  command -v "$cmd" &>/dev/null && { EDITOR="$cmd"; break; }
+done
+case "$EDITOR" in
+  code)    code --install-extension continue.continue 2>/dev/null || true ;;
+  vscodium) vscodium --install-extension continue.continue 2>/dev/null || true ;;
+  nvim)
+    mkdir -p "$HOME/.config/nvim/pack/plugins/opt"
+    git clone --depth=1 https://github.com/continuedev/continue.nvim.git \
+      "$HOME/.config/nvim/pack/plugins/opt/continue.nvim" 2>/dev/null || true
+    ;;
+  *) echo "No supported editor found. Manual install: https://docs.continue.dev/install" ;;
+esac
+CONFIG_DIR="$HOME/.continue"
+if [[ ! -d "$CONFIG_DIR" ]]; then
+  mkdir -p "$CONFIG_DIR"
+  cat > "$CONFIG_DIR/config.json" << 'CFGEOF'
+{
+  "models": [
+    { "title": "Qwen 2.5 Coder", "provider": "ollama", "model": "qwen2.5-coder:7b" },
+    { "title": "Llama 3.2", "provider": "ollama", "model": "llama3.2:3b" }
+  ],
+  "tabAutocompleteModel": { "title": "Qwen 2.5 Coder", "provider": "ollama", "model": "qwen2.5-coder:7b" }
+}
+CFGEOF
+  echo "Created $CONFIG_DIR/config.json (Ollama models)"
+fi
+echo "Continue.dev installed! Config: $CONFIG_DIR/config.json"
+CONTINUEEOF
+chmod +x /usr/local/bin/install-continue
+
+# MCP servers installer
+cat > /usr/local/bin/install-mcp-servers << 'MCPEOF'
+#!/usr/bin/env bash
+echo "Installing MCP servers..."
+if ! command -v npx &>/dev/null; then
+  echo "npx not found — install Node.js first"
+  exit 1
+fi
+for pkg in filesystem github brave-search; do
+  echo "  @modelcontextprotocol/server-$pkg"
+  npx -y "@modelcontextprotocol/server-$pkg" --help &>/dev/null || true
+done
+echo ""
+echo "MCP servers available via npx!"
+echo 'Add to opencode config: "mcpServers": { "filesystem": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path"] } }'
+MCPEOF
+chmod +x /usr/local/bin/install-mcp-servers
+
 # Unified AI installer script
 cat > /usr/local/bin/ai-install << 'INSTALLEOF'
 #!/usr/bin/env bash
@@ -473,23 +549,29 @@ echo "=============================="
 echo ""
 echo "Available tools:"
 echo ""
-echo "  [1] opencode   — Open source AI coding agent (pre-installed)"
-echo "  [2] qwen-code  — Qwen AI coding agent (pre-installed, run 'qwen')"
-echo "  [3] Cursor     — Proprietary AI IDE"
-echo "  [4] Kiro       — Amazon's AI coding assistant"
-echo "  [5] Claude Code — Anthropic's terminal AI"
-echo "  [6] ai-chat    — Local Ollama chat (pre-installed)"
-echo "  [7] ai-webui   — Open WebUI via Docker (pre-installed script)"
+echo "  [1] opencode      — Open source AI coding agent (pre-installed)"
+echo "  [2] qwen-code     — Qwen AI coding agent (pre-installed, run 'qwen')"
+echo "  [3] aider         — AI pair programming (pre-installed)"
+echo "  [4] Continue.dev  — AI assistant for VS Code/VSCodium (install-ext)"
+echo "  [5] MCP servers   — Model Context Protocol (filesystem, github)"
+echo "  [6] Cursor        — Proprietary AI IDE"
+echo "  [7] Kiro          — Amazon's AI coding assistant"
+echo "  [8] Claude Code   — Anthropic's terminal AI"
+echo "  [9] ai-chat       — Local Ollama chat (pre-installed)"
+echo "  [0] ai-webui      — Open WebUI via Docker (pre-installed script)"
 echo ""
-read -rp "Install [1-7]: " choice
+read -rp "Install [0-9]: " choice
 case "$choice" in
   1) echo "opencode is already installed. Run: opencode" ;;
   2) echo "qwen-code is already installed. Run: qwen" ;;
-  3) install-cursor ;;
-  4) install-kiro ;;
-  5) install-claude-code ;;
-  6) echo "ai-chat is pre-installed. Run: ai-chat" ;;
-  7) ai-webui ;;
+  3) echo "aider is pre-installed. Run: aider" ;;
+  4) install-continue ;;
+  5) install-mcp-servers ;;
+  6) install-cursor ;;
+  7) install-kiro ;;
+  8) install-claude-code ;;
+  9) echo "ai-chat is pre-installed. Run: ai-chat" ;;
+  0) ai-webui ;;
   *) echo "Nothing to install." ;;
 esac
 INSTALLEOF
@@ -534,6 +616,25 @@ if [[ ! -f /usr/share/wallpapers/VibeLinux/contents/images/2560x1440.png ]]; the
     echo "OK: wallpaper PNG copied (from build artifact)"
   fi
 fi
+
+# Wallpaper metadata — чтобы KDE 6 видел VibeLinux как тему обоев
+cat > /usr/share/wallpapers/VibeLinux/metadata.json << 'WPMETA'
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Email": "admin@vibecodeos",
+                "Name": "VibeCode OS"
+            }
+        ],
+        "Id": "VibeLinux",
+        "License": "GPLv3",
+        "Name": "VibeLinux",
+        "Description": "VibeCode OS branding wallpaper"
+    }
+}
+WPMETA
+echo "OK: wallpaper metadata.json created"
 
 # System logo — SVG в hicolor icons
 if [[ -f /root/branding/logos/vibecodeos-logo.svg ]]; then
@@ -590,6 +691,19 @@ if [[ -n "$WALLPAPER_PATH" ]] && command -v kwriteconfig6 &>/dev/null; then
     --group "Wallpaper" --group "org.kde.image" --group "General" \
     --key "Image" "${WALL_URI}" 2>/dev/null || true
   echo "OK: wallpaper set via kwriteconfig6"
+fi
+
+# 3b. Plasma 6 Look-and-Feel: заменяем стандартные обои Breeze Dark на VibeLinux
+# Используем имя темы (VibeLinux), а не file:// URI — так работает стабильнее
+BREEZE_DEFAULTS="/usr/share/plasma/look-and-feel/org.kde.breezedark.desktop/contents/defaults"
+if [[ -f "$BREEZE_DEFAULTS" ]]; then
+  WALL_THEME="VibeLinux"
+  if grep -q '^Image=' "$BREEZE_DEFAULTS"; then
+    sed -i "s|^Image=.*|Image=${WALL_THEME}|" "$BREEZE_DEFAULTS"
+  else
+    echo -e "\n[Wallpaper]\nImage=${WALL_THEME}" >> "$BREEZE_DEFAULTS"
+  fi
+  echo "OK: Breeze Dark defaults updated to use $WALL_THEME wallpaper theme"
 fi
 
 # 4. Dark Theme + VibeLinux акцентный цвет (Plasma 6)
@@ -997,18 +1111,24 @@ A Linux distro for **vibe coding** and **AI development** — everything works o
 ### AI Tools (open source)
 - **opencode** — open source AI coding agent (`opencode`)
 - **qwen-code** — Qwen's AI coding agent (`qwen`)
+- **aider** — AI pair programming in terminal (`aider`)
 - **Ollama** — local LLMs (auto-started)
 - **ai-chat** — terminal chat with local models (`ai-chat`)
 - **ai-webui** — Open WebUI via Docker (`ai-webui` → http://localhost:3000)
-- **torch, transformers, accelerate** — pre-installed via pip
-- **langchain** — install: `pip install langchain-core`
+- **Continue.dev** — AI assistant for editors (`install-continue`)
+- **MCP servers** — Model Context Protocol (`install-mcp-servers`)
+- **Python AI stack** — `python-ai` (venv at `/opt/vibecode/ai-venv`)
+  - torch, transformers, accelerate, langchain-core, llama-index
+  - chromadb, huggingface-hub (huggingface-cli)
 
-### AI Tools (proprietary, install on demand)
+### AI Tools (install on demand)
+- **Continue.dev** — `install-continue` (AI assistant for editors)
+- **MCP servers** — `install-mcp-servers` (filesystem, github, brave-search)
 - **Cursor** — `install-cursor` (AI IDE)
 - **Kiro** — `install-kiro` (Amazon's AI assistant)
 - **Claude Code** — `install-claude-code` (Anthropic terminal AI)
 
-Run `ai-install` for a menu to install proprietary tools.
+Run `ai-install` for a menu to install additional tools.
 
 ## Quick Commands
 ```
@@ -1021,17 +1141,23 @@ rg pattern    — fast text search
 lazygit       — git TUI
 opencode      — AI coding agent (TUI)
 qwen          — Qwen AI coding agent
+aider         — AI pair programming
 ai-chat       — local AI chat (Ollama)
 ai-install    — install AI tools menu
 ai-setup      — download AI models
+python-ai     — Python with AI libs (torch, transformers, etc.)
+install-continue — AI assistant for VS Code/VSCodium
+install-mcp-servers — MCP protocol servers
 ```
 
 ## First Steps
 1. Run `ai-setup` to download AI models
 2. Run `opencode` for AI coding in terminal
-3. Run `rustup default stable` for Rust
-4. Run `pyenv install 3.12` for Python
-5. Run `nvm install --lts` for Node.js
+3. Run `aider` for AI pair programming
+4. Run `install-continue` for AI assistant in VS Code/VSCodium
+5. Run `rustup default stable` for Rust
+6. Run `pyenv install 3.12` for Python
+7. Run `nvm install --lts` for Node.js
 EOF
 chmod 644 /home/vibe/Desktop/GET-STARTED.md
 
@@ -1212,66 +1338,36 @@ aur_build bruno-bin bruno
 aur_build pinta-appimage pinta
 # calamares installed from official repos (avoids Python ABI mismatch)
 
-# Fix: ensure libpython3.13.so.1.0 is available for calamares
-echo "Checking calamares Python library dependency..."
-PYTHON_LIB=$(find /usr/lib -name 'libpython3.*.so.1.0' 2>/dev/null | head -1)
-if [[ -z "$PYTHON_LIB" ]]; then
-  echo "WARNING: no libpython shared library found, reinstalling python..."
-  pacman -S --noconfirm --needed python 2>/dev/null || true
-  PYTHON_LIB=$(find /usr/lib -name 'libpython3.*.so.1.0' 2>/dev/null | head -1)
-fi
-if [[ -n "$PYTHON_LIB" ]]; then
-  LIB_BASENAME=$(basename "$PYTHON_LIB")
-  if [[ "$LIB_BASENAME" != "libpython3.13.so.1.0" ]]; then
-    echo "Creating symlink: $LIB_BASENAME -> libpython3.13.so.1.0"
-    ln -sf "$PYTHON_LIB" /usr/lib/libpython3.13.so.1.0
-  fi
+# Fix: resolve missing calamares library dependencies (boost/python/yaml-cpp version mismatch)
+echo "Checking calamares library dependencies..."
+CALAMARES_BIN="/usr/bin/calamares"
+if [[ -x "$CALAMARES_BIN" ]]; then
+  ldd "$CALAMARES_BIN" 2>/dev/null | grep "not found" | awk '{print $1}' > /tmp/calamares-missing-libs.txt
+  while IFS= read -r LIB_NAME; do
+    [[ -z "$LIB_NAME" ]] && continue
+    echo "  Need: $LIB_NAME"
+    LIB_PREFIX=$(echo "$LIB_NAME" | sed -E 's/\.so.*//; s/[0-9.]+$//')
+    FOUND_LIB=$(find /usr/lib /usr/lib64 -name "${LIB_PREFIX}*" ! -name '*.a' -type f,l 2>/dev/null | head -1)
+    if [[ -n "$FOUND_LIB" ]]; then
+      FOUND_BASENAME=$(basename "$FOUND_LIB")
+      echo "  Found: $FOUND_BASENAME -> symlink as $LIB_NAME"
+      ln -sf "$FOUND_LIB" "/usr/lib/$LIB_NAME"
+    else
+      echo "  WARNING: no replacement found for $LIB_NAME — calamares may fail"
+    fi
+  done < /tmp/calamares-missing-libs.txt
+  rm -f /tmp/calamares-missing-libs.txt
   ldconfig
-  echo "OK: Python library linked for calamares"
+  echo "OK: calamares library symlinks updated"
 else
-  echo "WARNING: libpython not found — calamares may fail"
-fi
-
-# Fix: ensure libyaml-cpp.so.0.8 is available for calamares
-echo "Checking calamares yaml-cpp library dependency..."
-YAML_CPP_LIB=$(find /usr/lib -name 'libyaml-cpp.so.*' 2>/dev/null | head -1)
-if [[ -n "$YAML_CPP_LIB" ]]; then
-  YAML_BASENAME=$(basename "$YAML_CPP_LIB")
-  if [[ "$YAML_BASENAME" != "libyaml-cpp.so.0.8" ]]; then
-    echo "Creating symlink: $YAML_BASENAME -> libyaml-cpp.so.0.8"
-    ln -sf "$YAML_CPP_LIB" /usr/lib/libyaml-cpp.so.0.8
-  fi
-  ldconfig
-  echo "OK: yaml-cpp library linked for calamares"
-else
-  echo "WARNING: libyaml-cpp not found, installing..."
-  pacman -S --noconfirm --needed yaml-cpp 2>/dev/null || true
-  YAML_CPP_LIB=$(find /usr/lib -name 'libyaml-cpp.so.*' 2>/dev/null | head -1)
-  if [[ -n "$YAML_CPP_LIB" ]]; then
-    ln -sf "$YAML_CPP_LIB" /usr/lib/libyaml-cpp.so.0.8
-    ldconfig
-    echo "OK: yaml-cpp installed and linked"
-  fi
-fi
-
-# Fix: ensure libboost_python is available for calamares (version mismatch workaround)
-echo "Checking calamares Boost.Python library dependency..."
-BOOST_PYTHON_LIB=$(find /usr/lib -name 'libboost_python*.so.*' 2>/dev/null | head -1)
-if [[ -n "$BOOST_PYTHON_LIB" ]]; then
-  BOOST_PYTHON_NAME="libboost_python314.so.1.89.0"
-  if [[ "$(basename "$BOOST_PYTHON_LIB")" != "$BOOST_PYTHON_NAME" ]]; then
-    echo "Creating symlink: $(basename "$BOOST_PYTHON_LIB") -> $BOOST_PYTHON_NAME"
-    ln -sf "$BOOST_PYTHON_LIB" "/usr/lib/$BOOST_PYTHON_NAME"
-    ldconfig
-  fi
-  echo "OK: Boost.Python library linked for calamares"
-else
-  echo "WARNING: libboost_python not found — calamares may fail"
+  echo "WARNING: calamares binary not found — skipping library fixes"
 fi
 
 rm -f /etc/sudoers.d/90-builder
 userdel builder 2>/dev/null || true
 rm -rf /tmp/aur-build
+
+
 
 # Calamares — конфигурация для VibeLinux
 mkdir -p /etc/calamares /etc/calamares/modules /usr/share/calamares/modules
@@ -1370,7 +1466,19 @@ availableFileSystemTypes: ["btrfs", "ext4", "xfs", "f2fs"]
 EOF
 
 # users — создание пользователя
-cat > /etc/calamares/modules/users.conf << 'EOF'
+# users — дополняем CachyOS-дефолт (добавляем docker, autologin)
+USERS_CONF="/etc/calamares/modules/users.conf"
+if [[ -f "$USERS_CONF" ]]; then
+  sed -i 's/doAutologin: *false/doAutologin: true/' "$USERS_CONF"
+  if ! grep -q 'autologinGroup' "$USERS_CONF"; then
+    sed -i '/^doAutologin:/a\autologinGroup: wheel' "$USERS_CONF"
+  fi
+  if ! grep -q '\- docker' "$USERS_CONF"; then
+    sed -i '/^defaultGroups:/,/^[a-zA-Z]/ { /^[a-zA-Z]/ i\    - docker' -e '}' "$USERS_CONF"
+  fi
+else
+  # fallback — создаём минимальный, если CachyOS конфига нет
+  cat > "$USERS_CONF" << 'EOF'
 ---
 defaultGroups:
   - wheel
@@ -1383,6 +1491,7 @@ defaultGroups:
 autologinGroup: wheel
 doAutologin: true
 EOF
+fi
 
 # mount — монтирование разделов
 cat > /etc/calamares/modules/mount.conf << 'EOF'

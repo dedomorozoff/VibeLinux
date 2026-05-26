@@ -115,8 +115,11 @@
 |-----------|----------|
 | **Ollama** | Запуск локальных LLM |
 | **Open WebUI** | Веб-интерфейс для Ollama (порт 3000) |
-| **ai-chat** | Терминальный AI-чат |
-| **Aider** | AI-парное программирование в терминале |
+| **ai-chat** | Терминальный AI-чат (Ollama) |
+| **aider** | AI-парное программирование (pre-installed) |
+| **opencode** | Open-source AI coding agent (TUI) |
+| **qwen-code** | Qwen AI coding agent (npm global) |
+| **nlsh** | Natural Language Shell (offline AI assistant) |
 
 #### Модели Ollama (по умолчанию)
 
@@ -128,19 +131,16 @@
 
 #### Python AI-библиотеки
 
-Виртуальное окружение `~/.venv-ai`:
+Системное виртуальное окружение `/opt/vibecode/ai-venv` (запуск: `python-ai`):
 
 - PyTorch (CPU-версия)
-- Transformers
-- Accelerate
-- LangChain
-- LangChain Community
+- Transformers, Accelerate
+- LangChain Core
 - LlamaIndex
+- ChromaDB (векторная БД)
+- HuggingFace Hub (huggingface-cli)
 - Ollama Python SDK
-- NumPy
-- Pandas
-- Matplotlib
-- Jupyter
+- Aider
 
 #### Генерация изображений
 
@@ -327,7 +327,7 @@
 | **Терминал и оболочка** | Kitty, Zsh, Oh My Zsh, Starship, eza, bat, fd, ripgrep, fzf, zoxide, btop |
 | **Языки** | Python, Node.js/npm/nvm, Rust/rustup, Go, Java (SDKMAN!), PHP, pyenv |
 | **Редакторы** | VS Code, Zed, Neovim + AstroNvim, Kate |
-| **AI-стек** | Ollama, opencode, qwen-code, Python AI-библиотеки (torch, transformers, accelerate, llama-index) |
+| **AI-стек** | Ollama, opencode, qwen-code, aider, Python AI-библиотеки (/opt/vibecode/ai-venv: torch, transformers, accelerate, langchain-core, llama-index, chromadb) |
 | **Графические приложения** | Pinta, Bruno, Spectacle, Ark, Flameshot |
 | **Базы данных** | sqlite3, sqliteman (GUI) |
 | **Контейнеры** | Docker, docker-compose |
@@ -380,6 +380,6 @@
 1. **AI-модели** загружаются отдельно после установки через `scripts/ai/install-ollama-models.sh`
 2. **Проприетарные драйверы NVIDIA** устанавливаются через `scripts/drivers/install-nvidia.sh`
 3. **Расширения VSCodium** устанавливаются автоматически при первом запуске
-4. **Python AI-библиотеки** устанавливаются в виртуальное окружение `~/.venv-ai`
+4. **Python AI-библиотеки** предустановлены в `/opt/vibecode/ai-venv`, запуск: `python-ai`
 5. **ComfyUI** требует дополнительной загрузки моделей Stable Diffusion
 6. **Minimal → Full:** Используйте мастер доустановки `sudo make upgrade` для доустановки компонентов
