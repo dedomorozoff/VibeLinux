@@ -30,9 +30,7 @@ sddm
 xorg-server
 wayland
 discover
-# packagekit-qt6 намеренно не включён — Discover использует тот же бэкенд,
-# но packagekit не знает ID=vibelinux и выдаёт предупреждение.
-# Управление пакетами через pacman, Discover — только для Flatpak/дополнений.
+packagekit-qt6
 
 # Audio
 pipewire

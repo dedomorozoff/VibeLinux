@@ -42,6 +42,13 @@ BUG_REPORT_URL="https://github.com/vibelinux/issues"
 LOGO=/usr/share/pixmaps/vibelinux.svg
 EOF
 
+# PackageKit: принудительно используем alpm бэкенд (обходит проверку ID=vibelinux)
+mkdir -p /etc/PackageKit
+cat > /etc/PackageKit/PackageKit.conf << 'PKCONF'
+[Daemon]
+DefaultBackend=alpm
+PKCONF
+
 # Fastfetch config
 mkdir -p /home/vibe/.config/fastfetch
 cat > /home/vibe/.config/fastfetch/config.jsonc << 'EOF'
