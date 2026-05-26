@@ -114,6 +114,9 @@ cat > /home/vibe/.config/fastfetch/config.jsonc << 'EOF'
 }
 EOF
 
+# Timezone (по умолчанию UTC — systemd не будет запрашивать при загрузке)
+ln -sf /usr/share/zoneinfo/UTC /etc/localtime
+
 # Locale
 sed -i 's/#en_US.UTF-8/en_US.UTF-8/' /etc/locale.gen
 sed -i 's/#ru_RU.UTF-8/ru_RU.UTF-8/' /etc/locale.gen
@@ -173,12 +176,12 @@ if command -v mkinitcpio &>/dev/null; then
   mkinitcpio -P
 fi
 
-# SDDM autologin (X11 — для совместимости с NVIDIA)
+# SDDM autologin (Wayland — KDE 6 дефолт)
 mkdir -p /etc/sddm.conf.d
 cat > /etc/sddm.conf.d/autologin.conf << EOF
 [Autologin]
 User=vibe
-Session=plasma-x11.desktop
+Session=plasma.desktop
 EOF
 
 # Getty autologin на tty1 для vibe (на случай если SDDM не стартует в live-сессии)
@@ -387,31 +390,7 @@ echo "Done! Run: ai-chat"
 AISETUPEOF
 chmod +x /usr/local/bin/ai-setup
 
-cat > /usr/local/bin/ai-webui << 'WEBUIEOF'
-#!/usr/bin/env bash
-CONTAINER="open-webui"
-PORT="${AI_WEBUI_PORT:-3000}"
-if ! command -v docker &>/dev/null; then
-  echo "Docker not installed."
-  exit 1
-fi
-if docker ps --format '{{.Names}}' | grep -q "$CONTAINER"; then
-  echo "Open WebUI running: http://localhost:$PORT"
-  exit 0
-fi
-if docker ps -a --format '{{.Names}}' | grep -q "$CONTAINER"; then
-  docker start "$CONTAINER"
-else
-  docker run -d -p "$PORT":8080 \
-    --add-host=host.docker.internal:host-gateway \
-    -v open-webui:/app/backend/data \
-    --name "$CONTAINER" \
-    --restart always \
-    ghcr.io/open-webui/open-webui:main
-fi
-echo "Open WebUI: http://localhost:$PORT"
-WEBUIEOF
-chmod +x /usr/local/bin/ai-webui
+
 
 # Proprietary AI tool installers
 
@@ -530,10 +509,9 @@ echo "  [5] MCP servers   — Model Context Protocol (filesystem, github)"
 echo "  [6] Cursor        — Proprietary AI IDE"
 echo "  [7] Kiro          — Amazon's AI coding assistant"
 echo "  [8] Claude Code   — Anthropic's terminal AI"
-echo "  [9] ai-chat       — Local Ollama chat (pre-installed)"
-echo "  [0] ai-webui      — Open WebUI via Docker (pre-installed script)"
-echo ""
-read -rp "Install [0-9]: " choice
+  echo "  [9] ai-chat       — Local Ollama chat (pre-installed)"
+  echo ""
+  read -rp "Install [1-9]: " choice
 case "$choice" in
   1) echo "opencode is already installed. Run: opencode" ;;
   2) echo "qwen-code is already installed. Run: qwen" ;;
@@ -544,7 +522,6 @@ case "$choice" in
   7) install-kiro ;;
   8) install-claude-code ;;
   9) echo "ai-chat is pre-installed. Run: ai-chat" ;;
-  0) ai-webui ;;
   *) echo "Nothing to install." ;;
 esac
 INSTALLEOF
@@ -646,7 +623,7 @@ wallpaperplugin=org.kde.image
 wallpaperpluginmode=SingleImage
 [Containments][1][Wallpaper][org.kde.image][General]
 FillMode=2
-Image=${WALL_URI}
+Image=${WALLPAPER_PATH}
 PLASMACONF
 chown vibe:vibe /home/vibe/.config/plasma-org.kde.plasma.desktop-appletsrc
 
@@ -656,7 +633,7 @@ cat > /home/vibe/.config/autostart/set-wallpaper.desktop << AUTOSTART
 [Desktop Entry]
 Type=Application
 Name=Set VibeLinux Wallpaper
-Exec=plasma-apply-wallpaperimage ${WALL_URI}
+Exec=plasma-apply-wallpaperimage ${WALLPAPER_PATH}
 OnlyShowIn=KDE
 X-KDE-autostart-phase=2
 X-KDE-autostart-after=plasma-desktop
@@ -677,6 +654,9 @@ fi
 
 # 4. Dark Theme + VibeLinux акцентный цвет (Plasma 6)
 cat > /home/vibe/.config/kdeglobals << 'KDEGLOBALS'
+[KDE Initial Setup]
+First Run = false
+
 [KDE]
 widgetStyle=Breeze
 AnimationDurationFactor=0.75
@@ -978,17 +958,15 @@ echo "  Linux for vibe coding and AI development"
 echo "  ========================================="
 echo ""
 echo "  [1] Download AI models (ollama pull)"
-echo "  [2] Start Open WebUI (Docker)"
-echo "  [3] Setup Rust (rustup default)"
-echo "  [4] System info (fastfetch)"
-echo "  [5] Skip"
+echo "  [2] Setup Rust (rustup default)"
+echo "  [3] System info (fastfetch)"
+echo "  [4] Skip"
 echo ""
-read -rp "  Choose [1-5]: " choice
+read -rp "  Choose [1-4]: " choice
 case "$choice" in
   1) ai-setup ;;
-  2) ai-webui ;;
-  3) runuser -u vibe -- bash -c 'rustup default stable' || true ;;
-  4) fastfetch ;;
+  2) runuser -u vibe -- bash -c 'rustup default stable' || true ;;
+  3) fastfetch ;;
   *) echo "  Happy coding!"; exit 0 ;;
 esac
 WELCOMEEOF
@@ -1029,98 +1007,90 @@ EOF
 chown -R vibe:vibe /home/vibe
 
 # Quick Start Guide
-cat > /home/vibe/Desktop/GET-STARTED.md << 'EOF'
-# Welcome to VibeLinux
+cat > /home/vibe/Desktop/GET-STARTED.html << 'EOF'
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>VibeLinux — Get Started</title>
+<style>
+  body {
+    background: #0B1020;
+    color: #C0C8E0;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    max-width: 780px; margin: 2em auto; padding: 0 1.5em 3em;
+    line-height: 1.7;
+  }
+  h1 { color: #4CC9F0; font-size: 1.6em; border-bottom: 1px solid #1E2A4A; padding-bottom: .3em; }
+  h2 { color: #7C9FFF; font-size: 1.15em; margin-top: 1.6em; }
+  a { color: #4CC9F0; }
+  code { background: #151D35; padding: .1em .5em; border-radius: 4px; font-size: .9em; }
+  pre { background: #0D1525; padding: 1em; border-radius: 6px; border: 1px solid #1E2A4A; }
+  .cmd { color: #A8E6CF; }
+  .sep { color: #3A4A6A; }
+  ul { padding-left: 1.2em; }
+  li { margin: .3em 0; }
+</style>
+</head>
+<body>
 
-A Linux distro for **vibe coding** and **AI development** — everything works out of the box.
+<h1>Welcome to VibeLinux</h1>
+<p>A Linux distro for <strong>vibe coding</strong> and <strong>AI development</strong> — everything works out of the box.</p>
 
-## What is here
+<h2>Terminal &amp; Shell</h2>
+<ul>
+  <li><strong>Konsole</strong> — default terminal (Zsh + Starship)</li>
+  <li><strong>Kitty</strong> — GPU-accelerated terminal</li>
+  <li>CLI: <code>eza</code>, <code>bat</code>, <code>fd</code>, <code>rg</code>, <code>fzf</code>, <code>zoxide</code>, <code>btop</code></li>
+</ul>
 
-### Terminal & Shell
-- **Konsole** — default terminal (Zsh + Starship prompt)
-- **Kitty** — GPU-accelerated terminal (run `kitty`)
-- **CLI tools:** `eza`, `bat`, `fd`, `rg`, `fzf`, `zoxide`, `btop`
+<h2>Languages &amp; Version Managers</h2>
+<ul>
+  <li><strong>Python</strong> — <code>pyenv install 3.12</code></li>
+  <li><strong>Node.js</strong> — <code>nvm install --lts</code></li>
+  <li><strong>Rust</strong> — <code>rustup default stable</code></li>
+  <li><strong>Go</strong> — pre-installed</li>
+  <li><strong>PHP</strong> — pre-installed</li>
+</ul>
 
-### Languages & Version Managers
-- **Python** — `pyenv` for version management (`pyenv install 3.12`)
-- **Node.js** — `nvm` (`nvm install --lts`)
-- **Rust** — `rustup default stable`
-- **Go** — pre-installed (`go version`)
+<h2>Editors</h2>
+<ul>
+  <li><strong>Zed</strong> — ultra-fast editor</li>
+  <li><strong>Kate</strong> — KDE text editor</li>
+</ul>
 
-### Editors
-- **Zed** — ultra-fast editor (`zed`)
-- **Kate** — KDE text editor (`kate`)
+<h2>AI Tools</h2>
+<ul>
+  <li><strong>opencode</strong> — <code>opencode</code> (AI coding agent)</li>
+  <li><strong>qwen-code</strong> — <code>qwen</code> (Alibaba coding agent)</li>
+  <li><strong>Ollama</strong> — auto-started on boot</li>
+  <li><strong>nlsh</strong> — offline AI shell (model included)</li>
+  <li><strong>ai-chat</strong> — terminal chat with local LLMs</li>
+</ul>
 
-### Git
-- `git` + `lazygit` (TUI, run `lazygit`)
+<h2>Quick Commands</h2>
+<pre><span class="cmd">fastfetch</span> <span class="sep">—</span> system info
+<span class="cmd">btop</span>      <span class="sep">—</span> resource monitor
+<span class="cmd">eza -la</span>  <span class="sep">—</span> list files
+<span class="cmd">bat</span> file  <span class="sep">—</span> cat with syntax highlighting
+<span class="cmd">lazygit</span>  <span class="sep">—</span> git TUI
+<span class="cmd">opencode</span> <span class="sep">—</span> AI coding agent
+<span class="cmd">ai-chat</span>  <span class="sep">—</span> local AI chat
+<span class="cmd">ai-setup</span> <span class="sep">—</span> download AI models</pre>
 
-### Languages
-- **Python** — `pyenv` for version management (`pyenv install 3.12`)
-- **Node.js** — `nvm` (`nvm install --lts`)
-- **Rust** — `rustup default stable`
-- **Go** — pre-installed (`go version`)
-- **PHP** — pre-installed (`php --version`)
+<h2>First Steps</h2>
+<ol>
+  <li>Open <strong>Konsole</strong> (or Kitty)</li>
+  <li>Run <code>ai-chat</code> to chat with local AI</li>
+  <li>Run <code>opencode</code> for AI pair programming</li>
+  <li>Run <code>ai-setup</code> to download more models</li>
+  <li>Open <strong>Zed</strong> and start coding</li>
+</ol>
 
-### GUI Apps
-- **Pinta** — lightweight image editor (`pinta`)
-- **Bruno** — API client for REST/GraphQL (`bruno`)
-
-### Containers
-- **Docker** — already running (`docker ps`)
-
-## nlsh — Natural Language Shell
-- **nlsh** — локальный AI Shell Assistant (~200MB модель Q2_K)
-- Запускается: `nlsh repl` или через ярлык на рабочем столе
-- Работает оффлайн, без интернета
-
-### AI Tools (open source)
-- **opencode** — open source AI coding agent (`opencode`)
-- **qwen-code** — Qwen's AI coding agent (`qwen`)
-- **Ollama** — local LLMs (auto-started)
-- **ai-chat** — terminal chat with local models (`ai-chat`)
-- **ai-webui** — Open WebUI via Docker (`ai-webui` → http://localhost:3000)
-- **Continue.dev** — AI assistant for editors (`install-continue`)
-- **MCP servers** — Model Context Protocol (`install-mcp-servers`)
-- **Python AI stack** — install with `setup-python-ai-stack.sh` (post-install)
-  - torch, transformers, langchain, llama-index, chromadb
-
-### AI Tools (install on demand)
-- **Continue.dev** — `install-continue` (AI assistant for editors)
-- **MCP servers** — `install-mcp-servers` (filesystem, github, brave-search)
-- **Cursor** — `install-cursor` (AI IDE)
-- **Kiro** — `install-kiro` (Amazon's AI assistant)
-- **Claude Code** — `install-claude-code` (Anthropic terminal AI)
-
-Run `ai-install` for a menu to install additional tools.
-
-## Quick Commands
-```
-fastfetch     — system info
-btop          — resource monitor
-eza -la       — list files (replaces ls)
-bat file      — cat with syntax highlighting
-fd pattern    — fast file search
-rg pattern    — fast text search
-lazygit       — git TUI
-opencode      — AI coding agent (TUI)
-qwen          — Qwen AI coding agent
-ai-chat       — local AI chat (Ollama)
-ai-install    — install AI tools menu
-ai-setup      — download AI models
-install-continue — AI assistant for editors
-install-mcp-servers — MCP protocol servers
-```
-
-## First Steps
-1. Run `ai-setup` to download AI models
-2. Run `opencode` for AI coding in terminal
-3. Run `install-continue` for AI assistant in editor
-4. Run `setup-python-ai-stack` for Python AI libs (PyTorch, transformers, langchain)
-5. Run `rustup default stable` for Rust
-6. Run `pyenv install 3.12` for Python
-7. Run `nvm install --lts` for Node.js
+</body>
+</html>
 EOF
-chmod 644 /home/vibe/Desktop/GET-STARTED.md
+chmod 644 /home/vibe/Desktop/GET-STARTED.html
 
 # Desktop shortcuts for key apps
 cat > /home/vibe/Desktop/AI-Chat.desktop << EOF
@@ -1155,17 +1125,6 @@ Terminal=false
 Categories=Development;
 EOF
 chmod 755 /home/vibe/Desktop/Qwen-Code.desktop
-
-cat > /home/vibe/Desktop/Open-WebUI.desktop << EOF
-[Desktop Entry]
-Type=Application
-Name=Open WebUI
-Icon=firefox
-Exec=ai-webui
-Terminal=false
-Categories=Development;
-EOF
-chmod 755 /home/vibe/Desktop/Open-WebUI.desktop
 
 cat > /home/vibe/Desktop/Install-AI-Tools.desktop << EOF
 [Desktop Entry]
@@ -1256,7 +1215,7 @@ done
 mkdir -p /home/vibe/.config
 cat > /home/vibe/.config/kickoffrc << 'EOF'
 [General]
-favorites=preferred://browser,org.kde.dolphin.desktop,org.kde.konsole.desktop,nlsh.desktop,AI-Chat.desktop,OpenCode.desktop,Qwen-Code.desktop,Open-WebUI.desktop,Install-AI-Tools.desktop,VibeLinux-Welcome.desktop
+favorites=preferred://browser,org.kde.dolphin.desktop,org.kde.konsole.desktop,nlsh.desktop,AI-Chat.desktop,OpenCode.desktop,Qwen-Code.desktop,Install-AI-Tools.desktop,VibeLinux-Welcome.desktop
 EOF
 chown vibe:vibe /home/vibe/.config/kickoffrc
 
@@ -1319,24 +1278,56 @@ PINTADESK
 fi
 # calamares installed from official repos (avoids Python ABI mismatch)
 
-# Fix: resolve missing calamares library dependencies (boost/python/yaml-cpp version mismatch)
+# Fix: resolve missing calamares library dependencies (boost/python/yaml-cpp/icu version mismatch)
+# Проверяем и calamares бинарник, и все модули .so
 echo "Checking calamares library dependencies..."
 CALAMARES_BIN="/usr/bin/calamares"
+CALAMARES_MODULES="/usr/lib/calamares/modules"
+ALL_CHECKS=$(find "$CALAMARES_MODULES" -name '*.so' -type f 2>/dev/null)
 if [[ -x "$CALAMARES_BIN" ]]; then
-  ldd "$CALAMARES_BIN" 2>/dev/null | grep "not found" | awk '{print $1}' > /tmp/calamares-missing-libs.txt
-  while IFS= read -r LIB_NAME; do
+  ALL_CHECKS="$CALAMARES_BIN $ALL_CHECKS"
+fi
+if [[ -n "$ALL_CHECKS" ]]; then
+  > /tmp/calamares-missing-libs.txt
+  for CHECK_PATH in $ALL_CHECKS; do
+    ldd "$CHECK_PATH" 2>/dev/null | grep "not found" | awk '{print $1}' >> /tmp/calamares-missing-libs.txt
+  done
+  try_find_lib() {
+    local PREFIX="$1"
+    local FOUND
+    FOUND=$(find /usr/lib /usr/lib64 -name "${PREFIX}.so*" ! -name '*.a' -type f,l 2>/dev/null | head -1)
+    if [[ -z "$FOUND" ]]; then
+      FOUND=$(find /usr/lib /usr/lib64 -name "${PREFIX}*.so*" ! -name '*.a' -type f,l 2>/dev/null | head -1)
+    fi
+    echo "$FOUND"
+  }
+
+  sort -u /tmp/calamares-missing-libs.txt | while IFS= read -r LIB_NAME; do
     [[ -z "$LIB_NAME" ]] && continue
     echo "  Need: $LIB_NAME"
-    LIB_PREFIX=$(echo "$LIB_NAME" | sed -E 's/\.so.*//; s/[0-9.]+$//')
-    FOUND_LIB=$(find /usr/lib /usr/lib64 -name "${LIB_PREFIX}*" ! -name '*.a' -type f,l 2>/dev/null | head -1)
+    LIB_PREFIX=$(echo "$LIB_NAME" | sed -E 's/\.so(\.[0-9]+)*$//')
+    FOUND_LIB=$(try_find_lib "$LIB_PREFIX")
+
+    if [[ -z "$FOUND_LIB" ]]; then
+      CURRENT="$LIB_PREFIX"
+      while [[ -z "$FOUND_LIB" && -n "$CURRENT" ]]; do
+        PREV="$CURRENT"
+        CURRENT=$(echo "$CURRENT" | sed -E 's/\.[0-9]+$//')
+        if [[ "$CURRENT" == "$PREV" ]]; then
+          CURRENT=$(echo "$CURRENT" | sed -E 's/[0-9]+$//')
+        fi
+        [[ "$CURRENT" == "$PREV" ]] && break
+        FOUND_LIB=$(try_find_lib "$CURRENT")
+      done
+    fi
+
     if [[ -n "$FOUND_LIB" ]]; then
-      FOUND_BASENAME=$(basename "$FOUND_LIB")
-      echo "  Found: $FOUND_BASENAME -> symlink as $LIB_NAME"
+      echo "  Found: $(basename "$FOUND_LIB") -> symlink as $LIB_NAME"
       ln -sf "$FOUND_LIB" "/usr/lib/$LIB_NAME"
     else
       echo "  WARNING: no replacement found for $LIB_NAME — calamares may fail"
     fi
-  done < /tmp/calamares-missing-libs.txt
+  done
   rm -f /tmp/calamares-missing-libs.txt
   ldconfig
   echo "OK: calamares library symlinks updated"
@@ -1516,20 +1507,12 @@ EOF
 # initcpiocfg — конфигурация mkinitcpio (initramfs)
 cat > /etc/calamares/modules/initcpiocfg.conf << 'EOF'
 ---
-kernel: linux
+useSystemdHook: false
 hooks:
-  - base
-  - udev
-  - autodetect
-  - modconf
-  - kms
-  - keyboard
-  - keymap
-  - consolefont
-  - block
-  - plymouth
-  - filesystems
-  - fsck
+  prepend: [  ]
+  append: [  ]
+  remove: [  ]
+source: "/etc/mkinitcpio.conf"
 EOF
 
 # initcpio — генерация initramfs
@@ -1542,7 +1525,14 @@ cat > /etc/calamares/modules/displaymanager.conf << 'EOF'
 ---
 displaymanagers:
   - sddm
+  - lightdm
+  - gdm
+  - lxdm
 sysconfigSetup: false
+sddm:
+  configuration_file: "/etc/sddm.conf"
+lightdm:
+  preferred_greeters: ["lightdm-greeter.desktop", "slick-greeter.desktop"]
 EOF
 
 # networkcfg — копирование настроек сети
@@ -1575,11 +1565,15 @@ EOF
 cat > /etc/calamares/modules/bootloader.conf << 'EOF'
 ---
 efiBootLoader: "grub"
+efiBootloaderId: "vibelinux"
 grubInstall: "grub-install"
 grubMkconfig: "grub-mkconfig"
 grubCfg: "/boot/grub/grub.cfg"
 grubProbe: "grub-probe"
 efiBootMgr: "efibootmgr"
+kernelSearchPath: "/usr/lib/modules"
+kernelPattern: "^vmlinuz.*"
+kernelParams: [ "quiet", "nowatchdog" ]
 installEFIFallback: true
 EOF
 

@@ -1,0 +1,4 @@
+## CachyOS Repository Mirrorlist
+## Generated for VibeLinux build
+Server = https://mirror.cachyos.org/repo/$repo/os/$arch
+Server = https://cachyos.manjaro.org/repo/$repo/os/$arch

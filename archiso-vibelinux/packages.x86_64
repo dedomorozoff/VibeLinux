@@ -31,15 +31,18 @@ xorg-server
 wayland
 discover
 packagekit-qt6
+qt6-multimedia-ffmpeg
 
 # Audio
 pipewire
 pipewire-pulse
+pipewire-jack
 wireplumber
 
 # Network
 networkmanager
 iwd
+iptables
 
 # Fonts
 noto-fonts
@@ -113,8 +116,8 @@ gparted
 sqlite3
 sqlitebrowser
 
-# Calamares installer (official Arch repo)
-calamares
+# Calamares installer (from CachyOS repo)
+cachyos-calamares-qt6-grub
 boost-libs
 extra-cmake-modules
 ninja
