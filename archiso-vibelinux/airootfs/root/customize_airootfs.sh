@@ -1342,7 +1342,33 @@ aur_build() {
 
 aur_build yay-bin yay
 aur_build bruno-bin bruno
-aur_build pinta-appimage pinta
+# Pinta — lightweight image editor (AppImage, прямой download вместо AUR)
+PINTA_URL="https://github.com/pkgforge-dev/Pinta-AppImage/releases/latest/download/Pinta-3.1.2-1-anylinux-x86_64.AppImage"
+if [[ ! -f /opt/pinta/pinta.AppImage ]]; then
+  mkdir -p /opt/pinta
+  echo "Downloading Pinta AppImage..."
+  curl -sL "$PINTA_URL" -o /opt/pinta/pinta.AppImage 2>/dev/null || true
+  if [[ -s /opt/pinta/pinta.AppImage ]]; then
+    chmod +x /opt/pinta/pinta.AppImage
+    ln -sf /opt/pinta/pinta.AppImage /usr/local/bin/pinta
+    cat > /usr/share/applications/pinta.desktop << 'PINTADESK'
+[Desktop Entry]
+Name=Pinta
+Comment=Simple GTK Paint Program
+Exec=/opt/pinta/pinta.AppImage
+Icon=pinta
+Type=Application
+Categories=Graphics;2DGraphics;RasterGraphics;GTK;
+StartupNotify=false
+MimeType=image/bmp;image/gif;image/jpeg;image/jpg;image/png;image/tiff;image/x-xcf;
+X-AppImage-Version=3.1.2
+PINTADESK
+    echo "OK: Pinta installed from AppImage"
+  else
+    echo "WARNING: Pinta download failed, skipping"
+    rm -f /opt/pinta/pinta.AppImage
+  fi
+fi
 # calamares installed from official repos (avoids Python ABI mismatch)
 
 # Fix: resolve missing calamares library dependencies (boost/python/yaml-cpp version mismatch)
