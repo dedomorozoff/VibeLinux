@@ -1,265 +1,113 @@
-### VibeCode OS
+### VibeLinux
 
-**VibeCode OS** — дистрибутив Linux для «вайбкодинга» и AI‑разработки из коробки.
-
-[![Build ISO](https://github.com/yourusername/vibecodeos/actions/workflows/build-iso.yml/badge.svg)](https://github.com/yourusername/vibecodeos/actions/workflows/build-iso.yml)
-[![Release](https://github.com/yourusername/vibecodeos/actions/workflows/release.yml/badge.svg)](https://github.com/yourusername/vibecodeos/actions/workflows/release.yml)
+**VibeLinux** — Linux-дистрибутив для вайбкодинга и AI-разработки из коробки.
 
 ---
 
 ### 📥 Скачать
 
-**Последний релиз:** [Releases](https://github.com/yourusername/vibecodeos/releases)
+**Последний релиз:** [GitHub Releases](https://github.com/anomalyco/VibeLinux/releases)
 
 Или собрать самостоятельно:
+
 ```bash
-# Полная версия (с GUI)
-make full
-
-# Минимальная версия (только CLI)
-make mini
-
-# Проверка зависимостей
-make check
+make arch         # Arch Linux (KDE Plasma + полный стек)
+make full         # Ubuntu 24.04 Full (KDE Plasma + dev)
+make lite         # Ubuntu 24.04 Lite (CLI-only)
 ```
 
 ---
 
 ### 📦 Редакции
 
-| Параметр | **Full (Ubuntu)** | **Minimal (Ubuntu)** | **Arch** |
-|----------|----------|-------------|----------|
-| **Размер** | ~3-4 ГБ | ~500 МБ - 1 ГБ | ~3-4 ГБ |
-| **GUI** | ✅ MATE Desktop | ❌ Только CLI | ✅ KDE Plasma |
-| **Установщик** | ✅ Ubiquity | Текстовый скрипт | ✅ Calamares |
-| **Dev-стек** | ✅ Полный | ❌ Базовый | ✅ Полный |
-| **AI-стек** | ✅ Ollama, Open WebUI | ❌ Нет | ✅ Ollama, opencode, qwen-code |
-| **Назначение** | Desktop для разработки | Сервер, контейнеры, база | Desktop для vibe coding |
-
-**Подробнее:** [EDITIONS.md](EDITIONS.md) — подробное сравнение редакций
+| Параметр | **Arch** | **Full (Ubuntu)** | **Lite (Ubuntu)** |
+|----------|----------|-------------------|-------------------|
+| **Размер** | ~3 ГБ | ~3 ГБ | ~1 ГБ |
+| **GUI** | ✅ KDE Plasma 6 | ✅ KDE Plasma | ❌ Только CLI |
+| **Установщик** | ✅ Calamares | ✅ Ubiquity | Текстовый скрипт |
+| **Dev-стек** | ✅ Полный | ✅ Полный | ❌ Базовый |
+| **AI-стек** | ✅ Ollama, opencode, qwen-code | ✅ Ollama, Open WebUI | ❌ |
+| **Назначение** | Desktop для vibe coding | Desktop для разработки | Сервер, контейнеры |
 
 ---
 
 ### ✨ Что включено
 
-#### Полная версия (Full)
+#### Arch Linux / Full (Ubuntu)
 
 **Базовая система:**
-- Ubuntu 24.04 LTS — стабильная база
+- Arch Linux (rolling) или Ubuntu 24.04 LTS
 - KDE Plasma Desktop — современное окружение
-- Брендинг VibeCode OS — темы, обои, шрифты, KDE-тема
-- Установщик Ubiquity
-- SDDM — дисплей-менеджер
+- SDDM — дисплей-менеджер с autologin
+- Брендинг VibeLinux — темы, обои, шрифты
 
 **Терминал и оболочка:**
-- **Kitty** — GPU-ускоренный терминал
-- **Zsh** + **Oh My Zsh** — оболочка с плагинами
-- **Starship** — кроссплатформенный промпт
-- **CLI-утилиты:**
-  - `eza` — современная замена `ls`
-  - `bat` — замена `cat` с подсветкой
-  - `fd` — быстрая замена `find`
-  - `ripgrep (rg)` — быстрый поиск текста
-  - `fzf` — нечёткий поиск
-  - `zoxide` — умные переходы по каталогам
-  - `btop` — монитор ресурсов
+- **Kitty** / **Konsole** — GPU-ускоренный терминал
+- **Zsh** + **Oh My Zsh** + **Starship** — кастомный промпт
+- CLI-утилиты: `eza`, `bat`, `fd`, `ripgrep`, `fzf`, `zoxide`, `btop`
 
 **Языки программирования:**
-- **Python** (3.11, 3.12) через `pyenv`
-- **Node.js** (LTS + latest) через `nvm`
-- **Rust** через `rustup`
-- **Go** (свежая версия)
-- **Java 21 LTS** через `SDKMAN!`
+- **Python** (pyenv), **Node.js** (nvm), **Rust** (rustup)
+- **Go**, **PHP** — системные пакеты
 
-**Редакторы и IDE:**
-- **VSCodium** с расширениями:
-  - GitLens, Docker, Python, Pylance
-  - ESLint, Prettier
-  - Rust Analyzer, Go, Java
-  - C/C++, YAML, JSON, XML
-  - GitHub Actions, REST Client
-  - Темы: Tokyo Night, Catppuccin
-  - AI: Kilo Code, Continue, Aider, GitHub Copilot
-- **Neovim** + **AstroNvim** — готовая конфигурация
-- **Zed** — быстрый современный редактор
+**Редактор:**
+- **Zed** — ультрабыстрый современный редактор
 
 **Инструменты разработки:**
-- **Git** — контроль версий
-- **lazygit** — TUI для Git
+- **Git** + **lazygit** — TUI для Git
 - **Docker** + **Docker Compose** — контейнеризация
 
-**AI-стек:**
-- **Ollama** — локальные LLM (llama3.2, codellama, qwen2.5-coder)
-- **Open WebUI** — веб-интерфейс для моделей
-- **nlsh** — Natural Language Shell, AI-ассистент для управления системой (ярлык на рабочем столе)
-- **ai-chat** — терминальный AI-чат
-- **Aider** — AI-парное программирование
-- **Python AI-библиотеки:**
-  - PyTorch (CPU), Transformers, Accelerate
-  - LangChain, LlamaIndex
-  - NumPy, Pandas, Matplotlib, Jupyter
-- **ComfyUI** — генерация изображений (Stable Diffusion)
-
-**Шрифты:**
-- JetBrains Mono
-- Fira Code
-- Cascadia Code
-- Hack
-- Noto CJK (поддержка азиатских языков)
-- Noto Color Emoji
-
-**Локализация:**
-- 🇷🇺 Русский язык по умолчанию
-- Раскладка клавиатуры: RU/US (переключение по Alt+Shift)
-- Полная поддержка кириллицы во всех приложениях
-
----
-
-#### Минимальная версия (Minimal)
-
-**Базовая система:**
-- Ubuntu 24.04 LTS — стабильная база
-- Ядро: linux-image-generic, linux-headers-generic
-- Live-поддержка: casper, squashfs-tools
-
-**Консольные утилиты:**
-- **Оболочка:** Zsh
-- **Мультиплексор:** Tmux
-- **Файловые менеджеры:** MC (Midnight Commander)
-- **Текстовые редакторы:** Vim-tiny, Nano
-- **Мониторинг:** htop, neofetch
-- **Сеть:** curl, wget, NetworkManager, ping, traceroute
-- **Архиваторы:** unzip, zip, p7zip-full
-- **Разработка:** git, build-essential
-- **Навигация:** tree, net-tools
-- **Дополнительно:** sudo, ca-certificates, software-properties-common
-
-**VirtualBox Guest Utils** — поддержка гостевой ОС
-
-**Локализация:**
-- 🇷🇺 Русский язык по умолчанию
-- Раскладка клавиатуры: RU/US (переключение по Alt+Shift)
-
----
-
-#### Arch Linux
-
-**Базовая система:**
-- Arch Linux (rolling release) — всегда свежие пакеты
-- KDE Plasma — современное окружение
-- SDDM — дисплей-менеджер с autologin
-- **Calamares** — графический установщик (ярлык на рабочем столе)
-
-**Терминал и оболочка:**
-- **Kitty** — GPU-ускоренный терминал
-- **Konsole** — терминал KDE
-- **Zsh** + **Oh My Zsh** + **Starship** — кастомный промпт VibeLinux
-
-**Языки программирования:**
-- **Python** через `pyenv`
-- **Node.js** через `nvm`
-- **Rust** через `rustup`
-- **Go** — системный пакет
-- **Java** через `SDKMAN!`
-- **PHP** — системный пакет
-
-**Редакторы и IDE:**
-- **VS Code** (из AUR)
-- **Zed** (из AUR)
-- **Neovim** + AstroNvim
-- **Kate** — редактор KDE
-
-**AI-стек:**
-- **Ollama** — локальные LLM
+**AI-стек (в ISO):**
+- **Ollama** — локальные LLM (автозапуск)
 - **opencode** — AI-агент для кодинга
 - **qwen-code** — Qwen AI-агент
-- **Python AI-библиотеки** — torch, transformers, accelerate, llama-index
+- **nlsh** — Natural Language Shell (AI-ассистент в терминале)
+
+**AI-стек (post-install):**
+- `setup-python-ai-stack.sh` — PyTorch, Transformers, LangChain, LlamaIndex
+- `install-open-webui.sh` — веб-интерфейс для моделей
+- `setup-comfyui.sh` — генерация изображений (Stable Diffusion)
+- `install-aider.sh` — AI-парное программирование
+- `install-claude-code.sh`, `install-cursor.sh` — проприетарные AI-агенты
 
 **Графические приложения:**
 - **Pinta** — графический редактор
 - **Bruno** — API-клиент (REST/GraphQL)
-- **Spectacle** — скриншоты
-- **Flameshot** — продвинутые скриншоты
+- **Spectacle**, **Flameshot** — скриншоты
 - **DB Browser for SQLite** — GUI для баз данных
 
-**Установка:**
-1. Загрузиться с ISO → рабочий стол KDE Plasma
-2. Ярлык **Install VibeLinux** на рабочем столе
-3. Calamares: язык → раскладка → разметка диска → пользователь → установка
+**Шрифты:**
+- JetBrains Mono (Nerd Font), Fira Code, Cascadia Code, Hack, Noto CJK
 
 **Локализация:**
-- 🇷🇺 Русский язык по умолчанию
-- Раскладка клавиатуры: RU/US (переключение по Alt+Shift)
-- Полная поддержка кириллицы в KDE Plasma
+- Русский язык по умолчанию
+- Раскладка RU/US (переключение Alt+Shift)
+
+---
+
+#### Lite (Ubuntu)
+
+- Ubuntu 24.04 LTS, CLI-only
+- Zsh + Starship
+- Git, build-essential
+- htop, tmux, mc, curl, wget
 
 ---
 
 ### 🚀 Быстрый старт
 
-#### Сборка ISO (через Makefile)
+#### Сборка ISO
 
 ```bash
-# Проверка зависимостей
-make check        # Для полной версии
-make check-mini   # Для минимальной версии
+# Arch Linux
+make arch
 
-# Сборка
-make full         # Полная версия (Ubuntu, GUI + dev + AI)
-make mini         # Минимальная версия (Ubuntu, только CLI)
-make arch         # Arch Linux (KDE Plasma + полный стек)
+# Ubuntu
+make full
+make lite
 
-# Быстрая пересборка (сохраняет chroot)
+# С сохранением chroot (для ускорения повторной сборки)
 make full-keep
-make mini-keep
-
-# Очистка
-make clean
-```
-
-#### Мастер доустановки (Minimal → Full)
-
-Если у вас установлена Minimal версия, вы можете доустановить компоненты:
-
-```bash
-# Из установленной системы (после установки ISO)
-sudo vibecode-upgrade
-
-# Или из репозитория
-make upgrade
-```
-
-Запустится интерактивный мастер с псевдографическим меню, который предложит:
-- Терминал и оболочку (Kitty, Zsh, Starship, CLI-утилиты)
-- Языки программирования (Python, Node.js, Rust, Go, Java)
-- Редакторы и IDE (VSCodium, Neovim, Zed)
-- Инструменты разработчика (Git, Docker, lazygit)
-- AI-стек (Ollama, Open WebUI, ai-chat, ComfyUI)
-- Драйверы NVIDIA
-
-Также можно установить всё сразу одной командой.
-
-**Подробнее:** [docs/MINIMAL-UPGRADE.md](docs/MINIMAL-UPGRADE.md)
-
-#### Сборка ISO (вручную)
-
-```bash
-# Полная версия
-sudo BUILD_MODE=full ./scripts/build-iso.sh
-sudo KEEP_CHROOT=1 BUILD_MODE=full ./scripts/build-iso.sh  # Быстрая пересборка
-
-# Минимальная версия
-sudo BUILD_MODE=full ./scripts/build-minimal-iso.sh
-sudo KEEP_CHROOT=1 BUILD_MODE=full ./scripts/build-minimal-iso.sh
-```
-
-#### Тестирование
-
-```bash
-# В QEMU
-qemu-system-x86_64 -cdrom build/VibeCodeOS-alpha.iso -m 2048 -enable-kvm
-qemu-system-x86_64 -cdrom build-minimal/VibeCodeOS-minimal.iso -m 1024
-
-# В VirtualBox (см. docs/TESTING.md)
 ```
 
 #### Установка на хост-систему
@@ -268,116 +116,56 @@ qemu-system-x86_64 -cdrom build-minimal/VibeCodeOS-minimal.iso -m 1024
 # Dev-стек
 sudo ./scripts/dev/setup-dev-env.sh
 
-# AI-стек
+# AI-стек (post-install)
 sudo ./scripts/ai/setup-ai-stack.sh
 sudo ./scripts/ai/install-ollama-models.sh
 ```
 
 #### Использование AI
 
+- **Ollama:** `ollama run qwen2.5-coder`
+- **opencode:** `opencode`
+- **qwen-code:** `qwen`
+- **nlsh:** `nlsh repl`
+- **ai-chat:** `ai-chat`
 - **Open WebUI:** http://localhost:3000
-- **Terminal:** `ai-chat`
-- **Python:** `ai-env` (активация окружения)
-- **ComfyUI:** `sudo bash scripts/ai/start-sd.sh` → http://localhost:8188
-- **Aider:** `aider` (AI-парное программирование)
-
-#### Создание релиза
-
-```bash
-# Через Git тег
-git tag v0.1.0-alpha
-git push origin v0.1.0-alpha
-
-# Или через GitHub UI: Actions → Release VibeCode OS → Run workflow
-```
-
-Подробнее: [docs/RELEASE.md](docs/RELEASE.md)
 
 ---
 
 ### 📚 Документация
 
-**Основная:**
-- [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md) — миссия, ЦА и ключевые решения
-- [roadmap.md](roadmap.md) — стратегический план развития
-- [BRANDING.md](BRANDING.md) — брендинг, цвета, шрифты, UX‑принципы
-- [AGENTS.md](AGENTS.md) — ожидания от AI‑агента при работе над проектом
-- [PACKAGES.md](PACKAGES.md) — **полный список пакетов и программ**
-- [EDITIONS.md](EDITIONS.md) — **сравнение редакций (Minimal vs Full)**
-
-**Технические документы:**
+- [roadmap.md](roadmap.md) — стратегический план
+- [BRANDING.md](BRANDING.md) — брендинг и UX-принципы
+- [AGENTS.md](AGENTS.md) — ожидания от AI-агента
 - [docs/BUILD-ISO.md](docs/BUILD-ISO.md) — процесс сборки ISO
-- [docs/TESTING.md](docs/TESTING.md) — руководство по тестированию
-- [docs/RELEASE.md](docs/RELEASE.md) — процесс создания релизов
-- [docs/ALPHA-STATUS.md](docs/ALPHA-STATUS.md) — текущий статус разработки
-- [docs/DEVSTACK.md](docs/DEVSTACK.md) — dev‑стек (языки, IDE, терминал)
-- [docs/AI-STACK.md](docs/AI-STACK.md) — AI‑стек (Ollama, GUI, SD)
-- [docs/DRIVERS-NVIDIA.md](docs/DRIVERS-NVIDIA.md) — установка драйверов NVIDIA
-- [docs/CORE-OS-PACKAGES.md](docs/CORE-OS-PACKAGES.md) — базовые пакеты системы
-- [docs/CORE-OS-SCRIPTS.md](docs/CORE-OS-SCRIPTS.md) — скрипты базовой системы
-- [docs/UPGRADE-MINIMAL.md](docs/UPGRADE-MINIMAL.md) — мастер доустановки (из репозитория)
-- [docs/MINIMAL-UPGRADE.md](docs/MINIMAL-UPGRADE.md) — **мастер доустановки (из установленной системы)**
-- [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) — решение проблем
-- [docs/VIRTUALBOX-SETUP.md](docs/VIRTUALBOX-SETUP.md) — **настройка VirtualBox**
+- [docs/DEVSTACK.md](docs/DEVSTACK.md) — dev-стек
+- [docs/AI-STACK.md](docs/AI-STACK.md) — AI-стек
 
 ---
 
 ### 📦 Скрипты
 
 **Сборка ISO:**
-- `Makefile` — удобный интерфейс для сборки (рекомендуется)
-- `scripts/build-iso.sh` — сборка полной версии (с GUI)
-- `scripts/build-minimal-iso.sh` — сборка минимальной версии (CLI)
-
-**База:**
-- `scripts/base/base-packages.sh` — базовые утилиты (htop, curl, wget, git, build-essential)
-- `scripts/base/minimal-packages.sh` — минимальный набор для CLI-версии
-- `scripts/base/setup-distro-info.sh` — брендинг системы
-- `scripts/base/setup-bootloader.sh` — GRUB и Plymouth
-- `scripts/base/cleanup.sh` — очистка системы
-
-**Desktop:**
-- `scripts/desktop/install-kde.sh` — установка KDE Plasma Desktop
-- `scripts/desktop/configure-kde.sh` — настройка KDE Plasma
-- `scripts/desktop/setup-installer.sh` — установка Ubiquity (установщик)
-- `scripts/desktop/apply-branding.sh` — применение брендинга
+- `scripts/build/build-vibe-arch.sh` — Arch Linux
+- `scripts/build/build-vibe-full-ubuntu.sh` — Ubuntu Full
+- `scripts/build/build-vibe-lite-ubuntu.sh` — Ubuntu Lite
+- `scripts/build-iso.sh` — основной оркестратор (Ubuntu)
 
 **Dev-стек:**
-- `scripts/dev/setup-dev-env.sh` — полная установка dev-окружения
-- `scripts/dev/setup-shell.sh` — Zsh + Oh My Zsh + Starship + CLI-утилиты
-- `scripts/dev/setup-terminal.sh` — Kitty + шрифты
-- `scripts/dev/setup-langs.sh` — Python, Node.js, Rust, Go, Java
-- `scripts/dev/setup-editors.sh` — VSCodium, Neovim, Zed
-- `scripts/dev/setup-devtools.sh` — Git, Docker, lazygit
+- `scripts/dev/setup-dev-env.sh` — полная установка
+- `scripts/dev/setup-editors.sh` — Zed
+- `scripts/dev/setup-langs.sh` — языки
+- `scripts/dev/setup-shell.sh` — Zsh + Starship
+- `scripts/dev/setup-terminal.sh` — Kitty
 
-**AI-стек:**
-- `scripts/ai/setup-ai-stack.sh` — полная установка AI-стека
-- `scripts/ai/install-ollama.sh` — Ollama (локальные LLM)
-- `scripts/ai/install-ollama-models.sh` — загрузка моделей (llama3.2, codellama, qwen2.5-coder)
-- `scripts/ai/install-open-webui.sh` — Open WebUI (веб-интерфейс)
-- `scripts/ai/setup-python-ai-stack.sh` — Python AI-библиотеки (PyTorch, Transformers, LangChain)
-- `scripts/ai/setup-comfyui.sh` — ComfyUI (генерация изображений)
-- `scripts/ai/start-sd.sh` — запуск ComfyUI
-- `scripts/ai/ai-chat` — терминальный AI-чат
-- `scripts/ai/install-aider.sh` — Aider (AI-парное программирование)
-- `scripts/ai/install-openai-cli.sh` — OpenAI CLI (опционально)
-- `scripts/ai/install-github-copilot-cli.sh` — GitHub Copilot CLI (опционально)
+**AI-стек (post-install):**
+- `scripts/ai/setup-ai-stack.sh` — агрегатор
+- `scripts/ai/install-ollama.sh`
+- `scripts/ai/install-ollama-models.sh`
+- `scripts/ai/setup-python-ai-stack.sh` — Python AI libs
+- `scripts/ai/setup-comfyui.sh` — ComfyUI
+- `scripts/ai/install-open-webui.sh`
+- `scripts/ai/install-aider.sh`
 
 **Драйверы:**
-- `scripts/drivers/install-nvidia.sh` — установка проприетарных драйверов NVIDIA
-
----
-
-### Git / GitHub
-
-Репозиторий подготовлен к инициализации в Git:
-
-- `.gitignore` настроен под типичные артефакты (venv, node_modules, образы ISO и т.п.).
-- Workflow `build-iso` собирает ISO в черновом виде, вызывая `scripts/build-iso.sh`.
-
-Следующие шаги:
-
-1. Выполнить `git init` в корне проекта.
-2. Добавить удалённый репозиторий на GitHub (`git remote add origin ...`).
-3. Создать первый коммит с текущей структурой.
-
+- `scripts/drivers/install-nvidia.sh`

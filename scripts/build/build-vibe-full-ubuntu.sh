@@ -191,35 +191,9 @@ elif command -v dnf >/dev/null 2>&1; then
   dnf -y install php php-cli php-common php-curl php-mbstring php-xml php-zip php-intl || echo "WARNING: PHP install failed"
 fi
 
-# === Редакторы ===
-if [[ "__HAS_NEOVIM__" == "1" ]]; then
-  if command -v apt >/dev/null 2>&1; then
-    sed -i 's/main$/main universe multiverse restricted/' /etc/apt/sources.list || true
-    apt update
-    apt install -y neovim || apt install -y vim
-  fi
-  if command -v pacman >/dev/null 2>&1; then pacman -Sy --noconfirm neovim; fi
-  if command -v dnf >/dev/null 2>&1; then dnf -y install neovim; fi
-fi
+# Редактор Zed устанавливается ниже
 
-# VSCodium — open-source форк VS Code (без телеметрии)
-if command -v apt >/dev/null 2>&1; then
-  curl -fsSL https://gitlab.com/paulcarroty/vscodium-deb-rpm-repo/raw/master/pub.gpg | gpg --dearmor -o /etc/apt/trusted.gpg.d/vscodium.gpg
-  echo 'deb [signed-by=/etc/apt/trusted.gpg.d/vscodium.gpg] https://download.vscodium.com/debs vscodium main' > /etc/apt/sources.list.d/vscodium.list
-  apt update
-  apt install -y codium || echo "WARNING: VSCodium install failed"
-fi
-
-# VS Code — проприетарный редактор Microsoft
-if command -v apt >/dev/null 2>&1; then
-  rm -f /etc/apt/trusted.gpg.d/microsoft.gpg
-  curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /etc/apt/trusted.gpg.d/microsoft.gpg
-  echo "deb [arch=amd64 signed-by=/etc/apt/trusted.gpg.d/microsoft.gpg] https://packages.microsoft.com/repos/code stable main" > /etc/apt/sources.list.d/vscode.list
-  apt update
-  apt install -y code || echo "WARNING: VS Code install failed"
-fi
-
-# Zed — быстрый современный редактор
+# Zed — редактор
 if [[ "__HAS_ZED__" == "1" ]]; then
   runuser -u "$USERNAME" -- bash -lc 'curl -f https://zed.dev/install.sh 2>/dev/null | sh' || echo "WARNING: Zed install failed"
 fi
@@ -227,8 +201,6 @@ fi
 if [[ "__HAS_HELIX__" == "1" ]]; then
   if command -v cargo >/dev/null 2>&1; then runuser -u "$USERNAME" -- bash -lc 'cargo install --locked helix'; fi
 fi
-
-# === AI-агенты ===
 
 # === Графические приложения ===
 if command -v apt >/dev/null 2>&1; then
@@ -250,15 +222,6 @@ if command -v apt >/dev/null 2>&1; then
 elif command -v pacman >/dev/null 2>&1; then
   # Bruno на Arch устанавливается через AUR (см. customize_airootfs.sh)
   echo "Bruno on Arch: install via yay -S bruno-bin after boot"
-fi
-
-# === AI-агенты (оригинальная секция) ===
-if [[ "__HAS_AIDER__" == "1" ]]; then
-  pip3 install --break-system-packages aider-chat || true
-fi
-if [[ "__HAS_OLLAMA__" == "1" ]]; then
-  curl -fsSL https://ollama.com/install.sh | sh
-  systemctl enable ollama || true
 fi
 
 # === NVIDIA драйверы ===
@@ -414,19 +377,19 @@ sed -i "s/__HAS_DENO__/1/g" "$ROOTFS/tmp/customize.sh"
 sed -i "s/__HAS_PY__/1/g" "$ROOTFS/tmp/customize.sh"
 sed -i "s/__HAS_RUST__/1/g" "$ROOTFS/tmp/customize.sh"
 sed -i "s/__HAS_GO__/1/g" "$ROOTFS/tmp/customize.sh"
-sed -i "s/__HAS_NEOVIM__/1/g" "$ROOTFS/tmp/customize.sh"
-sed -i "s/__HAS_HELIX__/1/g" "$ROOTFS/tmp/customize.sh"
-sed -i "s/__HAS_AIDER__/1/g" "$ROOTFS/tmp/customize.sh"
-sed -i "s/__HAS_OLLAMA__/1/g" "$ROOTFS/tmp/customize.sh"
+sed -i "s/__HAS_NEOVIM__/0/g" "$ROOTFS/tmp/customize.sh"
+sed -i "s/__HAS_HELIX__/0/g" "$ROOTFS/tmp/customize.sh"
+sed -i "s/__HAS_AIDER__/0/g" "$ROOTFS/tmp/customize.sh"
+sed -i "s/__HAS_OLLAMA__/0/g" "$ROOTFS/tmp/customize.sh"
 
 mkdir -p "$ROOTFS/etc/vibe"
 cat > "$ROOTFS/etc/vibe/config.json" << JSON
 {
   "distro": "ubuntu-24.04",
   "build_type": "full",
-  "editors": ["zed", "cursor", "vscode", "neovim", "helix"],
-  "agents": ["continue", "aider", "cline", "opencode", "gpt-engineer"],
-  "runtimes": ["node-lts", "python", "rust-stable", "bun", "go", "deno", "php"],
+  "editors": ["zed"],
+  "agents": [],
+  "runtimes": ["python", "node-lts", "rust-stable"],
   "tools": ["git", "gh", "tmux", "fzf", "ripgrep", "jq", "docker", "podman", "pinta", "bruno"],
   "nvidia": false,
   "ollama": false,

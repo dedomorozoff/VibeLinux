@@ -240,16 +240,9 @@ if [[ "__HAS_GO__" == "1" ]]; then
   echo 'export PATH=\$PATH:/usr/local/go/bin:\$HOME/go/bin' >> /home/\$USERNAME/.zshrc
 fi
 
-# === Редакторы ===
-if [[ "__HAS_NEOVIM__" == "1" ]]; then
-  if command -v apt >/dev/null 2>&1; then
-    apt update && apt install -y neovim || true
-  fi
-  if command -v pacman >/dev/null 2>&1; then pacman -Sy --noconfirm neovim; fi
-  if command -v dnf >/dev/null 2>&1; then dnf -y install neovim; fi
-fi
-if [[ "__HAS_HELIX__" == "1" ]]; then
-  if command -v cargo >/dev/null 2>&1; then runuser -u "\$USERNAME" -- bash -lc 'cargo install --locked helix'; fi
+# === Редактор ===
+if [[ "__HAS_ZED__" == "1" ]]; then
+  runuser -u "\$USERNAME" -- bash -lc 'curl -f https://zed.dev/install.sh 2>/dev/null | sh' || echo "WARNING: Zed install failed"
 fi
 
 # === AI-агенты ===

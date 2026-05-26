@@ -181,6 +181,14 @@ User=vibe
 Session=plasma-x11.desktop
 EOF
 
+# Getty autologin на tty1 для vibe (на случай если SDDM не стартует в live-сессии)
+mkdir -p /etc/systemd/system/getty@tty1.service.d
+cat > /etc/systemd/system/getty@tty1.service.d/autologin.conf << EOF
+[Service]
+ExecStart=
+ExecStart=-/usr/bin/agetty --autologin vibe --noclear %I \$TERM
+EOF
+
 # Oh My Zsh (install via script)
 if [[ ! -d /home/vibe/.oh-my-zsh ]]; then
   runuser -u vibe -- bash -c 'CI=true sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended' 2>/dev/null || true
@@ -282,18 +290,13 @@ export SDKMAN_DIR="$HOME/.sdkman"
 [[ -s "$SDKMAN_DIR/bin/sdkman-init.sh" ]] && source "$SDKMAN_DIR/bin/sdkman-init.sh"
 EOF
 
-# Neovim — install AstroNvim
-if [[ ! -d /home/vibe/.config/nvim ]]; then
-  runuser -u vibe -- bash -c 'git clone --depth 1 https://github.com/AstroNvim/AstroNvim ~/.config/nvim' 2>/dev/null || true
-fi
-
 # Git config
 cat > /home/vibe/.gitconfig << 'EOF'
 [user]
     name = VibeLinux User
     email = user@vibelinux.local
 [core]
-    editor = nvim
+    editor = zed
 [init]
     defaultBranch = main
 [push]
@@ -337,34 +340,8 @@ chown -R vibe:vibe /home/vibe/.npm
 npm install -g @qwen-code/qwen-code 2>&1 | tail -5 || echo "WARNING: qwen-code install failed"
 chown -R vibe:vibe /home/vibe/.npm
 
-# ===== Python AI stack (system venv) =====
-VENV_AI="/opt/vibecode/ai-venv"
-echo "Creating Python AI venv at $VENV_AI..."
-python3 -m venv "$VENV_AI"
-
-echo "Installing Python AI packages..."
-"$VENV_AI/bin/pip" install --no-cache-dir \
-  torch --index-url https://download.pytorch.org/whl/cpu \
-  langchain-core \
-  llama-index \
-  aider-chat \
-  chromadb \
-  huggingface-hub 2>&1 | tail -5 || true
-
-# transformers + accelerate: сначала PyPI, если нет колес под Python 3.14 — из git
-echo "Installing transformers and accelerate (PyPI or git fallback)..."
-"$VENV_AI/bin/pip" install --no-cache-dir transformers accelerate 2>&1 | tail -3 || {
-  echo "PyPI wheels not available for Python $(python3 --version), installing from git..."
-  "$VENV_AI/bin/pip" install --no-cache-dir \
-    git+https://github.com/huggingface/transformers.git \
-    git+https://github.com/huggingface/accelerate.git 2>&1 | tail -3 || true
-}
-
-# Симлинки для CLI-инструментов из venv
-ln -sf "$VENV_AI/bin/aider" /usr/local/bin/aider
-ln -sf "$VENV_AI/bin/python3" /usr/local/bin/python-ai
-
-echo "OK: Python AI venv created at $VENV_AI"
+# Python AI venv устанавливается post-install через:
+#   sudo /opt/vibecode/scripts/ai/setup-python-ai-stack.sh
 
 cat > /usr/local/bin/ai-chat << 'AICHATEOF'
 #!/usr/bin/env bash
@@ -497,21 +474,10 @@ chmod +x /usr/local/bin/install-claude-code
 # Continue.dev installer
 cat > /usr/local/bin/install-continue << 'CONTINUEEOF'
 #!/usr/bin/env bash
-echo "Installing Continue.dev..."
-EDITOR=""
-for cmd in code vscodium nvim; do
-  command -v "$cmd" &>/dev/null && { EDITOR="$cmd"; break; }
-done
-case "$EDITOR" in
-  code)    code --install-extension continue.continue 2>/dev/null || true ;;
-  vscodium) vscodium --install-extension continue.continue 2>/dev/null || true ;;
-  nvim)
-    mkdir -p "$HOME/.config/nvim/pack/plugins/opt"
-    git clone --depth=1 https://github.com/continuedev/continue.nvim.git \
-      "$HOME/.config/nvim/pack/plugins/opt/continue.nvim" 2>/dev/null || true
-    ;;
-  *) echo "No supported editor found. Manual install: https://docs.continue.dev/install" ;;
-esac
+echo "Installing Continue.dev for Zed..."
+echo "Open Zed → Extensions → Search 'Continue' → Install"
+echo "Or run: zed: extensions continue.continue"
+echo "Manual install: https://docs.continue.dev/install"
 CONFIG_DIR="$HOME/.continue"
 if [[ ! -d "$CONFIG_DIR" ]]; then
   mkdir -p "$CONFIG_DIR"
@@ -558,8 +524,8 @@ echo "Available tools:"
 echo ""
 echo "  [1] opencode      — Open source AI coding agent (pre-installed)"
 echo "  [2] qwen-code     — Qwen AI coding agent (pre-installed, run 'qwen')"
-echo "  [3] aider         — AI pair programming (pre-installed)"
-echo "  [4] Continue.dev  — AI assistant for VS Code/VSCodium (install-ext)"
+echo "  [3] aider         — AI pair programming (install via setup-python-ai-stack)"
+echo "  [4] Continue.dev  — AI assistant for editors (install-ext)"
 echo "  [5] MCP servers   — Model Context Protocol (filesystem, github)"
 echo "  [6] Cursor        — Proprietary AI IDE"
 echo "  [7] Kiro          — Amazon's AI coding assistant"
@@ -684,31 +650,27 @@ Image=${WALL_URI}
 PLASMACONF
 chown vibe:vibe /home/vibe/.config/plasma-org.kde.plasma.desktop-appletsrc
 
-# 2. Wallpaper через plasma-apply-wallpaperimage (Plasma 6 API, поверх конфига)
-if [[ -n "$WALLPAPER_PATH" ]] && command -v plasma-apply-wallpaperimage &>/dev/null; then
-  runuser -u vibe -- plasma-apply-wallpaperimage "$WALLPAPER_PATH" 2>/dev/null || true
-  echo "OK: wallpaper set via plasma-apply-wallpaperimage"
-fi
+# 2. Автозапуск: применяем обои при первом входе (plasma-apply-wallpaperimage не работает в chroot)
+mkdir -p /home/vibe/.config/autostart
+cat > /home/vibe/.config/autostart/set-wallpaper.desktop << AUTOSTART
+[Desktop Entry]
+Type=Application
+Name=Set VibeLinux Wallpaper
+Exec=plasma-apply-wallpaperimage ${WALL_URI}
+OnlyShowIn=KDE
+X-KDE-autostart-phase=2
+X-KDE-autostart-after=plasma-desktop
+AUTOSTART
+chown -R vibe:vibe /home/vibe/.config/autostart
 
-# 3. Wallpaper через kwriteconfig6 (дублирование на случай plasma-apply сбоя)
-if [[ -n "$WALLPAPER_PATH" ]] && command -v kwriteconfig6 &>/dev/null; then
-  runuser -u vibe -- kwriteconfig6 \
-    --file plasma-org.kde.plasma.desktop-appletsrc \
-    --group "Containments" --group "1" \
-    --group "Wallpaper" --group "org.kde.image" --group "General" \
-    --key "Image" "${WALL_URI}" 2>/dev/null || true
-  echo "OK: wallpaper set via kwriteconfig6"
-fi
-
-# 3b. Plasma 6 Look-and-Feel: заменяем стандартные обои Breeze Dark на VibeLinux
-# Используем имя темы (VibeLinux), а не file:// URI — так работает стабильнее
+# 3. Plasma 6 Look-and-Feel: заменяем стандартные обои Breeze Dark на VibeLinux
 BREEZE_DEFAULTS="/usr/share/plasma/look-and-feel/org.kde.breezedark.desktop/contents/defaults"
 if [[ -f "$BREEZE_DEFAULTS" ]]; then
   WALL_THEME="VibeLinux"
   if grep -q '^Image=' "$BREEZE_DEFAULTS"; then
     sed -i "s|^Image=.*|Image=${WALL_THEME}|" "$BREEZE_DEFAULTS"
   else
-    echo -e "\n[Wallpaper]\nImage=${WALL_THEME}" >> "$BREEZE_DEFAULTS"
+    printf '\n[Wallpaper]\nImage=%s\n' "$WALL_THEME" >> "$BREEZE_DEFAULTS"
   fi
   echo "OK: Breeze Dark defaults updated to use $WALL_THEME wallpaper theme"
 fi
@@ -763,17 +725,7 @@ ForegroundNormal=255,255,255
 KDEGLOBALS
 chown vibe:vibe /home/vibe/.config/kdeglobals
 
-# 5. Применить ColorScheme через plasma-apply-colorscheme (Plasma 6)
-if command -v plasma-apply-colorscheme &>/dev/null; then
-  runuser -u vibe -- plasma-apply-colorscheme BreezeDark 2>/dev/null || true
-  echo "OK: colorscheme set via plasma-apply-colorscheme"
-fi
-
-# 6. Акцентный цвет через kwriteconfig6
-if command -v kwriteconfig6 &>/dev/null; then
-  runuser -u vibe -- kwriteconfig6 --file kdeglobals --group "General" --key "AccentColor" "76,201,240" 2>/dev/null || true
-  runuser -u vibe -- kwriteconfig6 --file kdeglobals --group "General" --key "AccentColorFromWallpaper" "false" 2>/dev/null || true
-fi
+# 5. ColorScheme и акцентный цвет — конфиг уже в kdeglobals, применится при входе
 
 # Konsole theme — VibeLinux dark
 mkdir -p /home/vibe/.local/share/konsole
@@ -878,9 +830,17 @@ EOF
 
 # SDDM wallpaper + theme + logo
 mkdir -p /usr/share/sddm/themes/breeze
+
+# Определяем формат обоев (PNG предпочтительнее)
+SDDM_WALL=""
+for ext in png jpg svg; do
+  fp="/usr/share/wallpapers/VibeLinux/contents/images/2560x1440.${ext}"
+  [[ -f "$fp" ]] && { SDDM_WALL="$fp"; break; }
+done
+
 cat > /usr/share/sddm/themes/breeze/theme.conf.user << EOF
 [General]
-background=/usr/share/wallpapers/VibeLinux/contents/images/2560x1440.svg
+background=${SDDM_WALL:-/usr/share/wallpapers/VibeLinux/contents/images/2560x1440.svg}
 type=image
 EOF
 
@@ -1088,9 +1048,7 @@ A Linux distro for **vibe coding** and **AI development** — everything works o
 - **Go** — pre-installed (`go version`)
 
 ### Editors
-- **VS Code** — pre-installed (`code`)
 - **Zed** — ultra-fast editor (`zed`)
-- **Neovim** — with AstroNvim config (`nvim`)
 - **Kate** — KDE text editor (`kate`)
 
 ### Git
@@ -1118,15 +1076,13 @@ A Linux distro for **vibe coding** and **AI development** — everything works o
 ### AI Tools (open source)
 - **opencode** — open source AI coding agent (`opencode`)
 - **qwen-code** — Qwen's AI coding agent (`qwen`)
-- **aider** — AI pair programming in terminal (`aider`)
 - **Ollama** — local LLMs (auto-started)
 - **ai-chat** — terminal chat with local models (`ai-chat`)
 - **ai-webui** — Open WebUI via Docker (`ai-webui` → http://localhost:3000)
 - **Continue.dev** — AI assistant for editors (`install-continue`)
 - **MCP servers** — Model Context Protocol (`install-mcp-servers`)
-- **Python AI stack** — `python-ai` (venv at `/opt/vibecode/ai-venv`)
-  - torch, transformers, accelerate, langchain-core, llama-index
-  - chromadb, huggingface-hub (huggingface-cli)
+- **Python AI stack** — install with `setup-python-ai-stack.sh` (post-install)
+  - torch, transformers, langchain, llama-index, chromadb
 
 ### AI Tools (install on demand)
 - **Continue.dev** — `install-continue` (AI assistant for editors)
@@ -1148,20 +1104,18 @@ rg pattern    — fast text search
 lazygit       — git TUI
 opencode      — AI coding agent (TUI)
 qwen          — Qwen AI coding agent
-aider         — AI pair programming
 ai-chat       — local AI chat (Ollama)
 ai-install    — install AI tools menu
 ai-setup      — download AI models
-python-ai     — Python with AI libs (torch, transformers, etc.)
-install-continue — AI assistant for VS Code/VSCodium
+install-continue — AI assistant for editors
 install-mcp-servers — MCP protocol servers
 ```
 
 ## First Steps
 1. Run `ai-setup` to download AI models
 2. Run `opencode` for AI coding in terminal
-3. Run `aider` for AI pair programming
-4. Run `install-continue` for AI assistant in VS Code/VSCodium
+3. Run `install-continue` for AI assistant in editor
+4. Run `setup-python-ai-stack` for Python AI libs (PyTorch, transformers, langchain)
 5. Run `rustup default stable` for Rust
 6. Run `pyenv install 3.12` for Python
 7. Run `nvm install --lts` for Node.js
@@ -1223,12 +1177,6 @@ Terminal=false
 Categories=System;
 EOF
 chmod 755 /home/vibe/Desktop/Install-AI-Tools.desktop
-
-# VS Code — desktop shortcut (copy from package .desktop)
-if [[ -f /usr/share/applications/code-oss.desktop ]]; then
-  cp /usr/share/applications/code-oss.desktop /home/vibe/Desktop/VS-Code.desktop
-  chmod 755 /home/vibe/Desktop/VS-Code.desktop
-fi
 
 # Zed — desktop shortcut (copy from package .desktop)
 if [[ -f /usr/share/applications/dev.zed.Zed.desktop ]]; then
@@ -1507,7 +1455,14 @@ if [[ -f "$USERS_CONF" ]]; then
     sed -i '/^doAutologin:/a\autologinGroup: wheel' "$USERS_CONF"
   fi
   if ! grep -q '\- docker' "$USERS_CONF"; then
-    sed -i '/^defaultGroups:/,/^[a-zA-Z]/ { /^[a-zA-Z]/ i\    - docker' -e '}' "$USERS_CONF"
+    awk '
+/^[a-zA-Z0-9]/ && !seen_default && default_section {
+    print "    - docker"
+    default_section = 0
+}
+/^defaultGroups:/ { default_section = 1; seen_default = 1 }
+{ print }
+' "$USERS_CONF" > "${USERS_CONF}.tmp" && mv "${USERS_CONF}.tmp" "$USERS_CONF"
   fi
 else
   # fallback — создаём минимальный, если CachyOS конфига нет
@@ -1714,10 +1669,13 @@ for f in /home/vibe/Desktop/*.desktop; do
   fi
 done
 
-# Копируем обои в /etc/skel
-mkdir -p /etc/skel/.config
+# Копируем обои и autostart в /etc/skel
+mkdir -p /etc/skel/.config /etc/skel/.config/autostart
 if [[ -f /home/vibe/.config/plasma-org.kde.plasma.desktop-appletsrc ]]; then
   cp /home/vibe/.config/plasma-org.kde.plasma.desktop-appletsrc /etc/skel/.config/
+fi
+if [[ -f /home/vibe/.config/autostart/set-wallpaper.desktop ]]; then
+  cp /home/vibe/.config/autostart/set-wallpaper.desktop /etc/skel/.config/autostart/
 fi
 if [[ -f /home/vibe/.config/kdeglobals ]]; then
   cp /home/vibe/.config/kdeglobals /etc/skel/.config/

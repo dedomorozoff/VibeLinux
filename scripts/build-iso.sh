@@ -193,8 +193,6 @@ case "${BUILD_MODE}" in
     cp "${ROOT_DIR}/scripts/drivers/install-nvidia.sh" "${CHROOT_DIR}/root/install-nvidia.sh"
 
     need_file "${ROOT_DIR}/scripts/dev/chroot-configs/kitty.conf"
-    need_file "${ROOT_DIR}/scripts/dev/configs/vscodium-settings.json"
-    need_file "${ROOT_DIR}/scripts/dev/configs/vscodium-extensions.txt"
 
     # Копируем брендинг
     if [[ -d "${ROOT_DIR}/branding" ]]; then
@@ -330,15 +328,6 @@ case "${BUILD_MODE}" in
       fi
     "
 
-    # Копируем конфиги для VSCodium в chroot
-    mkdir -p "${CHROOT_DIR}/root/configs"
-    if [[ -f "${ROOT_DIR}/scripts/dev/configs/vscodium-settings.json" ]]; then
-      cp "${ROOT_DIR}/scripts/dev/configs/vscodium-settings.json" "${CHROOT_DIR}/root/configs/"
-    fi
-    if [[ -f "${ROOT_DIR}/scripts/dev/configs/vscodium-extensions.txt" ]]; then
-      cp "${ROOT_DIR}/scripts/dev/configs/vscodium-extensions.txt" "${CHROOT_DIR}/root/configs/"
-    fi
-
     # Установка терминала (Kitty + Zsh + Starship)
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/setup-terminal.sh vibecode"
 
@@ -348,7 +337,7 @@ case "${BUILD_MODE}" in
     # Установка языков программирования
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/setup-langs.sh vibecode"
 
-    # Установка редакторов (VSCodium, Neovim, Zed)
+    # Установка редактора (Zed)
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/setup-editors.sh vibecode"
 
     # Установка devtools (Git, lazygit, Docker)
@@ -369,6 +358,46 @@ case "${BUILD_MODE}" in
         cp "${ROOT_DIR}/soft/nlsh/nlsh.svg" "${CHROOT_DIR}/usr/share/pixmaps/nlsh.svg"
         log "nlsh иконка скопирована"
       fi
+
+      # Bundle small AI model for offline use (Q2_K ~200MB for weak machines)
+      NLSH_MODELS_DIR="${CHROOT_DIR}/home/vibecode/.config/nlsh/models"
+      mkdir -p "$NLSH_MODELS_DIR"
+
+      MODEL_NAME="qwen2.5-0.5b-instruct-q2_k.gguf"
+      MODEL_URL="https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q2_k.gguf"
+
+      if [[ -f "${ROOT_DIR}/soft/nlsh/models/$MODEL_NAME" ]]; then
+        cp "${ROOT_DIR}/soft/nlsh/models/$MODEL_NAME" "$NLSH_MODELS_DIR/"
+        log "OK: bundled model Q2_K from local file"
+      else
+        log "Downloading Q2_K model (~200MB)..."
+        curl -L "$MODEL_URL" -o "$NLSH_MODELS_DIR/$MODEL_NAME" 2>&1 | tail -5 || \
+          log "WARNING: model download failed"
+      fi
+
+      # Default config for vibecode user
+      NLSH_CONFIG_DIR="${CHROOT_DIR}/home/vibecode/.config/nlsh"
+      mkdir -p "$NLSH_CONFIG_DIR"
+      cat > "$NLSH_CONFIG_DIR/config.json" << NLSCONF
+{
+  "default_model": "$MODEL_NAME",
+  "ctx_size": 2048,
+  "max_tokens": 256,
+  "temperature": 0.2,
+  "top_p": 0.9,
+  "mode": "ai",
+  "shell": "/bin/zsh"
+}
+NLSCONF
+
+      # Also copy to /etc/skel for new user creation
+      mkdir -p "${CHROOT_DIR}/etc/skel/.config/nlsh/models"
+      cp "$NLSH_CONFIG_DIR/config.json" "${CHROOT_DIR}/etc/skel/.config/nlsh/config.json"
+      if [[ -f "$NLSH_MODELS_DIR/$MODEL_NAME" ]]; then
+        cp "$NLSH_MODELS_DIR/$MODEL_NAME" "${CHROOT_DIR}/etc/skel/.config/nlsh/models/"
+      fi
+
+      log "nlsh model bundled and config created"
     else
       log "WARNING: nlsh бинарник не найден в soft/nlsh/"
     fi

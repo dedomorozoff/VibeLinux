@@ -84,10 +84,7 @@ unzip
 zstd
 git
 lazygit
-neovim
-
-# Editors (GUI)
-code
+# Editor
 zed
 flatpak
 
@@ -116,8 +113,8 @@ gparted
 sqlite3
 sqlitebrowser
 
-# Calamares installer (Qt6 + GRUB, from CachyOS repos)
-cachyos-calamares-qt6-grub
+# Calamares installer (official Arch repo)
+calamares
 boost-libs
 extra-cmake-modules
 ninja

@@ -126,35 +126,13 @@ apt-get install -y \
     php-intl \
     php-bcmath
 
-# === РЕДАКТОРЫ ===
-echo "[full-chroot] Установка редакторов..."
-
-# VSCodium
-curl -fsSL https://gitlab.com/paulcarroty/vscodium-deb-rpm-repo/raw/master/pub.gpg | gpg --dearmor > /etc/apt/trusted.gpg.d/vscodium.gpg
-echo 'deb https://paulcarroty.gitlab.io/vscodium-deb-rpm-repo/debs vscodium main' > /etc/apt/sources.list.d/vscodium.list
-apt-get update
-apt-get install -y codium
-
-# Neovim
-apt-get install -y neovim
-
-# Zed — быстрый современный редактор (официальный скрипт установки)
+# === РЕДАКТОР ===
 echo "[full-chroot] Установка Zed..."
+
 if curl -sf --connect-timeout 5 https://zed.dev >/dev/null 2>&1; then
   curl -f https://zed.dev/install.sh 2>/dev/null | sh || echo "[full-chroot] WARNING: Zed install failed"
 else
   echo "[full-chroot] Пропуск Zed — нет сети"
-fi
-
-# VS Code — проприетарный редактор от Microsoft (опционально, для Full)
-echo "[full-chroot] Установка VS Code..."
-if curl -sf --connect-timeout 5 https://packages.microsoft.com >/dev/null 2>&1; then
-  curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /etc/apt/trusted.gpg.d/microsoft.gpg
-  echo "deb [arch=amd64 signed-by=/etc/apt/trusted.gpg.d/microsoft.gpg] https://packages.microsoft.com/repos/code stable main" > /etc/apt/sources.list.d/vscode.list
-  apt-get update
-  apt-get install -y code || echo "[full-chroot] WARNING: VS Code install failed"
-else
-  echo "[full-chroot] Пропуск VS Code — нет сети"
 fi
 
 # === GIT И DEVTOOLS ===
@@ -180,31 +158,7 @@ apt-get install -y \
     docker-compose \
     docker-compose-v2
 
-# === AI-СТЕК ===
-echo "[full-chroot] Установка AI-инструментов..."
-
-# Ollama
-curl -fsSL https://ollama.com/install.sh | sh
-
-# Python AI библиотеки
-python3 -m venv /opt/venv-ai
-source /opt/venv-ai/bin/activate
-pip install --upgrade pip
-pip install \
-    torch \
-    torchvision \
-    torchaudio \
-    transformers \
-    accelerate \
-    langchain \
-    langchain-community \
-    llama-index \
-    ollama \
-    numpy \
-    pandas \
-    matplotlib \
-    jupyter
-deactivate
+# AI-стек устанавливается post-install через vibe-wizard или setup-ai-stack.sh
 
 # === ДОПОЛНИТЕЛЬНЫЕ УТИЛИТЫ ===
 echo "[full-chroot] Установка дополнительных утилит..."
