@@ -29,8 +29,10 @@ konsole
 sddm
 xorg-server
 wayland
-plasma-discover
-packagekit-qt6
+discover
+# packagekit-qt6 намеренно не включён — Discover использует тот же бэкенд,
+# но packagekit не знает ID=vibelinux и выдаёт предупреждение.
+# Управление пакетами через pacman, Discover — только для Flatpak/дополнений.
 
 # Audio
 pipewire
@@ -116,8 +118,8 @@ gparted
 sqlite3
 sqlitebrowser
 
-# Calamares installer (with Python support)
-calamares
+# Calamares installer (Qt6 + GRUB, from CachyOS repos)
+cachyos-calamares-qt6-grub
 boost-libs
 extra-cmake-modules
 ninja
