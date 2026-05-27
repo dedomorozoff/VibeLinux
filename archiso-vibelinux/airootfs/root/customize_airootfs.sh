@@ -1264,6 +1264,7 @@ aur_build() {
 
 aur_build yay-bin yay
 aur_build bruno-bin bruno
+aur_build calamares calamares
 # far2l — pre-built packages (pacman -U sometimes fails in chroot due to space checks)
 if ls /root/far2l/far2l-*.pkg.tar.zst 2>/dev/null | head -1; then
   echo "Installing far2l from pre-built packages..."
@@ -1308,14 +1309,13 @@ PINTADESK
     rm -f /opt/pinta/pinta.AppImage
   fi
 fi
-# cachyos-calamares-qt6-next-grub built without Python scripting — no ABI hacks needed
-echo "Verifying calamares installation..."
+# Calamares built from AUR source — no Python/Boost dependencies
 if [[ -x /usr/bin/calamares ]]; then
-  MISSING=$(for f in $(find /usr/lib/calamares -name '*.so' -type f); do ldd "$f" 2>/dev/null; done | grep "not found" | awk '{print $1}' | sort -u)
-  if [[ -n "$MISSING" ]]; then
-    echo "WARNING: calamares has missing libraries: $MISSING"
+  MISSING=$(for f in $(find /usr/lib/calamares -name '*.so' -type f 2>/dev/null); do ldd "$f" 2>/dev/null; done | grep "not found" | awk '{print $1}' | sort -u)
+  if [[ -z "$MISSING" ]]; then
+    echo "OK: calamares — all libraries resolved"
   else
-    echo "OK: calamares all libraries resolved"
+    echo "WARNING: calamares — missing: $MISSING"
   fi
 fi
 
@@ -1456,10 +1456,7 @@ doAutologin: true
 EOF
 fi
 
-# mount — монтирование разделов
-cat > /etc/calamares/modules/mount.conf << 'EOF'
----
-EOF
+# mount — монтирование разделов (используем дефолтный от CachyOS, он уже в пакете)
 
 # unpackfs — копирование системы в целевой раздел
 cat > /etc/calamares/modules/unpackfs.conf << 'EOF'
