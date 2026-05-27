@@ -118,7 +118,8 @@ sqlite3
 sqlitebrowser
 
 # Calamares installer (from CachyOS repo)
-cachyos-calamares-qt6-grub
+# cachyos-calamares-qt6-next-grub: built WITHOUT Python scripting — avoids Python ABI mismatch
+cachyos-calamares-qt6-next-grub
 boost-libs
 extra-cmake-modules
 ninja

@@ -1308,63 +1308,15 @@ PINTADESK
     rm -f /opt/pinta/pinta.AppImage
   fi
 fi
-# calamares installed from official repos (avoids Python ABI mismatch)
-
-# Fix: resolve missing calamares library dependencies (boost/python/yaml-cpp/icu version mismatch)
-# Проверяем и calamares бинарник, и все модули .so
-echo "Checking calamares library dependencies..."
-CALAMARES_BIN="/usr/bin/calamares"
-CALAMARES_MODULES="/usr/lib/calamares/modules"
-ALL_CHECKS=$(find "$CALAMARES_MODULES" -name '*.so' -type f 2>/dev/null)
-if [[ -x "$CALAMARES_BIN" ]]; then
-  ALL_CHECKS="$CALAMARES_BIN $ALL_CHECKS"
-fi
-if [[ -n "$ALL_CHECKS" ]]; then
-  > /tmp/calamares-missing-libs.txt
-  for CHECK_PATH in $ALL_CHECKS; do
-    ldd "$CHECK_PATH" 2>/dev/null | grep "not found" | awk '{print $1}' >> /tmp/calamares-missing-libs.txt
-  done
-  try_find_lib() {
-    local PREFIX="$1"
-    local FOUND
-    FOUND=$(find /usr/lib /usr/lib64 -name "${PREFIX}.so*" ! -name '*.a' -type f,l 2>/dev/null | head -1)
-    if [[ -z "$FOUND" ]]; then
-      FOUND=$(find /usr/lib /usr/lib64 -name "${PREFIX}*.so*" ! -name '*.a' -type f,l 2>/dev/null | head -1)
-    fi
-    echo "$FOUND"
-  }
-
-  sort -u /tmp/calamares-missing-libs.txt | while IFS= read -r LIB_NAME; do
-    [[ -z "$LIB_NAME" ]] && continue
-    echo "  Need: $LIB_NAME"
-    LIB_PREFIX=$(echo "$LIB_NAME" | sed -E 's/\.so(\.[0-9]+)*$//')
-    FOUND_LIB=$(try_find_lib "$LIB_PREFIX")
-
-    if [[ -z "$FOUND_LIB" ]]; then
-      CURRENT="$LIB_PREFIX"
-      while [[ -z "$FOUND_LIB" && -n "$CURRENT" ]]; do
-        PREV="$CURRENT"
-        CURRENT=$(echo "$CURRENT" | sed -E 's/\.[0-9]+$//')
-        if [[ "$CURRENT" == "$PREV" ]]; then
-          CURRENT=$(echo "$CURRENT" | sed -E 's/[0-9]+$//')
-        fi
-        [[ "$CURRENT" == "$PREV" ]] && break
-        FOUND_LIB=$(try_find_lib "$CURRENT")
-      done
-    fi
-
-    if [[ -n "$FOUND_LIB" ]]; then
-      echo "  Found: $(basename "$FOUND_LIB") -> symlink as $LIB_NAME"
-      ln -sf "$FOUND_LIB" "/usr/lib/$LIB_NAME"
-    else
-      echo "  WARNING: no replacement found for $LIB_NAME — calamares may fail"
-    fi
-  done
-  rm -f /tmp/calamares-missing-libs.txt
-  ldconfig
-  echo "OK: calamares library symlinks updated"
-else
-  echo "WARNING: calamares binary not found — skipping library fixes"
+# cachyos-calamares-qt6-next-grub built without Python scripting — no ABI hacks needed
+echo "Verifying calamares installation..."
+if [[ -x /usr/bin/calamares ]]; then
+  MISSING=$(for f in $(find /usr/lib/calamares -name '*.so' -type f); do ldd "$f" 2>/dev/null; done | grep "not found" | awk '{print $1}' | sort -u)
+  if [[ -n "$MISSING" ]]; then
+    echo "WARNING: calamares has missing libraries: $MISSING"
+  else
+    echo "OK: calamares all libraries resolved"
+  fi
 fi
 
 rm -f /etc/sudoers.d/90-builder
