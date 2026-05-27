@@ -1221,6 +1221,12 @@ chown vibe:vibe /home/vibe/.config/kickoffrc
 
 # === AUR packages ===
 echo "Installing AUR packages..."
+# Активируем первый mirror в /etc/pacman.d/mirrorlist (все закомментированы по умолчанию)
+if grep -q '^#Server' /etc/pacman.d/mirrorlist 2>/dev/null; then
+  sed -i '0,/^#Server/{s/^#Server/Server/}' /etc/pacman.d/mirrorlist
+  echo "OK: first mirror activated in /etc/pacman.d/mirrorlist"
+fi
+
 if ! id builder &>/dev/null; then
   useradd -m builder
 fi
@@ -1249,6 +1255,7 @@ aur_build() {
 
 aur_build yay-bin yay
 aur_build bruno-bin bruno
+aur_build far2l far2l
 # Pinta — lightweight image editor (AppImage, прямой download вместо AUR)
 PINTA_URL="https://github.com/pkgforge-dev/Pinta-AppImage/releases/latest/download/Pinta-3.1.2-1-anylinux-x86_64.AppImage"
 if [[ ! -f /opt/pinta/pinta.AppImage ]]; then

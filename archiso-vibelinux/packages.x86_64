@@ -87,8 +87,9 @@ unzip
 zstd
 git
 lazygit
-# Editor
+# Editors
 zed
+helix
 flatpak
 
 # AI tools
