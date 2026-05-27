@@ -134,6 +134,10 @@ e2fsprogs
 xfsprogs
 gptfdisk
 
+# far2l runtime deps (pre-installed — makepkg не работает в chroot)
+uchardet
+wxwidgets-gtk3
+
 # Utilities
 fastfetch
 wget

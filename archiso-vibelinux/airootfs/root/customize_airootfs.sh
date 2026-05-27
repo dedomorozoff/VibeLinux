@@ -1255,7 +1255,17 @@ aur_build() {
 
 aur_build yay-bin yay
 aur_build bruno-bin bruno
-aur_build far2l far2l
+# far2l — pre-built packages (AUR build нестабилен в chroot)
+if ls /root/far2l/far2l-*.pkg.tar.zst 2>/dev/null | head -1; then
+  echo "Installing far2l from pre-built packages..."
+  pacman -U --noconfirm /root/far2l/far2l-2.8.0-1-x86_64.pkg.tar.zst \
+                      /root/far2l/far2l-gui-2.8.0-1-x86_64.pkg.tar.zst \
+                      2>&1 | tail -3 || echo "WARNING: far2l install failed"
+  rm -rf /root/far2l
+  echo "far2l + far2l-gui installed from local packages"
+else
+  echo "WARNING: far2l pre-built packages not found"
+fi
 # Pinta — lightweight image editor (AppImage, прямой download вместо AUR)
 PINTA_URL="https://github.com/pkgforge-dev/Pinta-AppImage/releases/latest/download/Pinta-3.1.2-1-anylinux-x86_64.AppImage"
 if [[ ! -f /opt/pinta/pinta.AppImage ]]; then
