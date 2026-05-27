@@ -1,6 +1,15 @@
 #!/usr/bin/env bash
 set -e
 
+# Minimal /dev — arch-chroot не монтирует devtmpfs
+if [[ ! -e /dev/null ]]; then
+  mknod /dev/null c 1 3
+  mknod /dev/zero c 1 5
+  mknod /dev/random c 1 8
+  mknod /dev/urandom c 1 9
+  chmod 666 /dev/{null,zero,random,urandom}
+fi
+
 echo "=== VibeLinux customization ==="
 
 # Hostname
@@ -1255,14 +1264,20 @@ aur_build() {
 
 aur_build yay-bin yay
 aur_build bruno-bin bruno
-# far2l — pre-built packages (AUR build нестабилен в chroot)
+# far2l — pre-built packages (pacman -U sometimes fails in chroot due to space checks)
 if ls /root/far2l/far2l-*.pkg.tar.zst 2>/dev/null | head -1; then
   echo "Installing far2l from pre-built packages..."
-  pacman -U --noconfirm /root/far2l/far2l-2.8.0-1-x86_64.pkg.tar.zst \
-                      /root/far2l/far2l-gui-2.8.0-1-x86_64.pkg.tar.zst \
-                      2>&1 | tail -3 || echo "WARNING: far2l install failed"
+  # Try pacman -U first; fall back to tar extraction
+  if pacman -U --noconfirm /root/far2l/far2l-2.8.0-1-x86_64.pkg.tar.zst \
+                            /root/far2l/far2l-gui-2.8.0-1-x86_64.pkg.tar.zst; then
+    echo "far2l + far2l-gui installed via pacman"
+  else
+    echo "pacman -U failed, falling back to tar extraction..."
+    tar -I zstd -xf /root/far2l/far2l-2.8.0-1-x86_64.pkg.tar.zst -C /
+    tar -I zstd -xf /root/far2l/far2l-gui-2.8.0-1-x86_64.pkg.tar.zst -C /
+    echo "far2l + far2l-gui extracted (not in pacman DB)"
+  fi
   rm -rf /root/far2l
-  echo "far2l + far2l-gui installed from local packages"
 else
   echo "WARNING: far2l pre-built packages not found"
 fi
