@@ -1,6 +1,15 @@
 #!/usr/bin/env bash
 set -e
 
+# Minimal /dev — arch-chroot не монтирует devtmpfs
+if [[ ! -e /dev/null ]]; then
+  mknod /dev/null c 1 3
+  mknod /dev/zero c 1 5
+  mknod /dev/random c 1 8
+  mknod /dev/urandom c 1 9
+  chmod 666 /dev/{null,zero,random,urandom}
+fi
+
 echo "=== VibeLinux customization ==="
 
 # Hostname
@@ -160,6 +169,20 @@ cat > /etc/modprobe.d/nvidia.conf << 'EOF'
 options nvidia_drm modeset=1
 options nvidia NVreg_EnableBacklightHandler=1
 EOF
+
+# Ensure /boot/vmlinuz-linux exists and is non-empty before mkinitcpio runs.
+# The linux package installs the kernel only at /usr/lib/modules/<ver>/vmlinuz;
+# /boot/vmlinuz-linux is created by the 90-mkinitcpio-install.hook, which may
+# fail or create a 0-byte file depending on trigger order (relative path issue).
+# This symlink is overwritten later by mkarchiso when preparing the ISO boot
+# directory, and on the installed system by the shellprocess symlink.
+if [[ ! -s /boot/vmlinuz-linux ]]; then
+  KVER=$(ls /usr/lib/modules/ 2>/dev/null | grep -v 'extramodules' | sort -V | tail -1)
+  if [[ -n "$KVER" && -f "/usr/lib/modules/$KVER/vmlinuz" ]]; then
+    ln -sf "/usr/lib/modules/$KVER/vmlinuz" /boot/vmlinuz-linux
+    echo "OK: created symlink /boot/vmlinuz-linux → /usr/lib/modules/$KVER/vmlinuz"
+  fi
+fi
 
 # NVIDIA: rebuild initramfs with nvidia modules
 # Force-write mkinitcpio.conf (pacman may overwrite it during install)
@@ -549,8 +572,6 @@ status() {
 echo "VibeLinux — AI Tool Installer"
 echo "=============================="
 echo ""
-echo "Available tools:"
-echo ""
 echo "  [1] opencode      — Open source AI coding agent ($(status opencode))"
 echo "  [2] qwen-code     — Qwen AI coding agent ($(status qwen))"
 echo "  [3] aider         — AI pair programming ($(status aider))"
@@ -909,11 +930,10 @@ if [[ -d /root/branding/plymouth ]]; then
   plymouth-set-default-theme vibelinux 2>/dev/null || true
 fi
 
-# GRUB config for installed system
-# Ensure base defaults exist
+# GRUB config for installed system — always apply VibeLinux defaults
 GRUB_DEFAULT_FILE="/etc/default/grub"
-if [[ ! -f "$GRUB_DEFAULT_FILE" ]]; then
-  cat > "$GRUB_DEFAULT_FILE" << 'GRUBBASE'
+# Force known keys; sed handles both new and existing files
+cat > "$GRUB_DEFAULT_FILE" << 'GRUBBASE'
 # GRUB boot loader configuration
 GRUB_TIMEOUT=5
 GRUB_DISTRIBUTOR="VibeLinux"
@@ -930,7 +950,6 @@ GRUB_SAVEDEFAULT=true
 GRUB_DEFAULT=saved
 GRUB_DISABLE_SUBMENU=y
 GRUBBASE
-fi
 
 # VibeLinux branding (PNG, потому что GRUB не поддерживает SVG)
 # Конвертируем SVG→PNG если PNG ещё нет
@@ -1012,6 +1031,18 @@ fi
 if grep -q "^GRUB_CMDLINE_LINUX=" "$GRUB_DEFAULT_FILE" 2>/dev/null; then
   if ! grep -q "nvidia-drm.modeset=1" "$GRUB_DEFAULT_FILE"; then
     sed -i 's/^GRUB_CMDLINE_LINUX="\(.*\)"/GRUB_CMDLINE_LINUX="\1 nvidia-drm.modeset=1"/' "$GRUB_DEFAULT_FILE"
+  fi
+fi
+
+# Fallback: ensure /boot/vmlinuz-linux exists before mkinitcpio -P runs in the
+# chroot. The kernel is always at /usr/lib/modules/<ver>/vmlinuz; the linux
+# package may not ship /boot/vmlinuz-linux directly (the 90-mkinitcpio-install
+# hook creates it, and may fail on relative paths).
+if [[ ! -s /boot/vmlinuz-linux ]]; then
+  KVER=$(ls /usr/lib/modules/ 2>/dev/null | grep -v 'extramodules' | sort -V | tail -1)
+  if [[ -n "$KVER" && -f "/usr/lib/modules/$KVER/vmlinuz" ]]; then
+    ln -sf "/usr/lib/modules/$KVER/vmlinuz" /boot/vmlinuz-linux
+    echo "OK: created symlink /boot/vmlinuz-linux → /usr/lib/modules/$KVER/vmlinuz"
   fi
 fi
 
@@ -1279,8 +1310,14 @@ else
 fi
 
 # Copy desktop shortcuts to system applications so they appear in Kickoff menu
+# Skip files that already exist or came from packages (avoid duplicates in menu)
 for f in /home/vibe/Desktop/*.desktop; do
-  cp "$f" /usr/share/applications/
+  base=$(basename "$f")
+  # Skip Zed — already installed by package as dev.zed.Zed.desktop
+  [[ "$base" == "Zed.desktop" ]] && continue
+  if [[ ! -f "/usr/share/applications/$base" ]]; then
+    cp "$f" /usr/share/applications/
+  fi
 done
 
 # KDE Kickoff Favorites
@@ -1293,6 +1330,12 @@ chown vibe:vibe /home/vibe/.config/kickoffrc
 
 # === AUR packages ===
 echo "Installing AUR packages..."
+# Активируем первый mirror в /etc/pacman.d/mirrorlist (все закомментированы по умолчанию)
+if grep -q '^#Server' /etc/pacman.d/mirrorlist 2>/dev/null; then
+  sed -i '0,/^#Server/{s/^#Server/Server/}' /etc/pacman.d/mirrorlist
+  echo "OK: first mirror activated in /etc/pacman.d/mirrorlist"
+fi
+
 if ! id builder &>/dev/null; then
   useradd -m builder
 fi
@@ -1321,6 +1364,24 @@ aur_build() {
 
 aur_build yay-bin yay
 aur_build bruno-bin bruno
+aur_build calamares calamares
+# far2l — pre-built packages (pacman -U sometimes fails in chroot due to space checks)
+if ls /root/far2l/far2l-*.pkg.tar.zst 2>/dev/null | head -1; then
+  echo "Installing far2l from pre-built packages..."
+  # Try pacman -U first; fall back to tar extraction
+  if pacman -U --noconfirm /root/far2l/far2l-2.8.0-1-x86_64.pkg.tar.zst \
+                            /root/far2l/far2l-gui-2.8.0-1-x86_64.pkg.tar.zst; then
+    echo "far2l + far2l-gui installed via pacman"
+  else
+    echo "pacman -U failed, falling back to tar extraction..."
+    tar -I zstd -xf /root/far2l/far2l-2.8.0-1-x86_64.pkg.tar.zst -C /
+    tar -I zstd -xf /root/far2l/far2l-gui-2.8.0-1-x86_64.pkg.tar.zst -C /
+    echo "far2l + far2l-gui extracted (not in pacman DB)"
+  fi
+  rm -rf /root/far2l
+else
+  echo "WARNING: far2l pre-built packages not found"
+fi
 # Pinta — lightweight image editor (AppImage, прямой download вместо AUR)
 PINTA_URL="https://github.com/pkgforge-dev/Pinta-AppImage/releases/latest/download/Pinta-3.1.2-1-anylinux-x86_64.AppImage"
 if [[ ! -f /opt/pinta/pinta.AppImage ]]; then
@@ -1348,63 +1409,14 @@ PINTADESK
     rm -f /opt/pinta/pinta.AppImage
   fi
 fi
-# calamares installed from official repos (avoids Python ABI mismatch)
-
-# Fix: resolve missing calamares library dependencies (boost/python/yaml-cpp/icu version mismatch)
-# Проверяем и calamares бинарник, и все модули .so
-echo "Checking calamares library dependencies..."
-CALAMARES_BIN="/usr/bin/calamares"
-CALAMARES_MODULES="/usr/lib/calamares/modules"
-ALL_CHECKS=$(find "$CALAMARES_MODULES" -name '*.so' -type f 2>/dev/null)
-if [[ -x "$CALAMARES_BIN" ]]; then
-  ALL_CHECKS="$CALAMARES_BIN $ALL_CHECKS"
-fi
-if [[ -n "$ALL_CHECKS" ]]; then
-  > /tmp/calamares-missing-libs.txt
-  for CHECK_PATH in $ALL_CHECKS; do
-    ldd "$CHECK_PATH" 2>/dev/null | grep "not found" | awk '{print $1}' >> /tmp/calamares-missing-libs.txt
-  done
-  try_find_lib() {
-    local PREFIX="$1"
-    local FOUND
-    FOUND=$(find /usr/lib /usr/lib64 -name "${PREFIX}.so*" ! -name '*.a' -type f,l 2>/dev/null | head -1)
-    if [[ -z "$FOUND" ]]; then
-      FOUND=$(find /usr/lib /usr/lib64 -name "${PREFIX}*.so*" ! -name '*.a' -type f,l 2>/dev/null | head -1)
-    fi
-    echo "$FOUND"
-  }
-
-  sort -u /tmp/calamares-missing-libs.txt | while IFS= read -r LIB_NAME; do
-    [[ -z "$LIB_NAME" ]] && continue
-    echo "  Need: $LIB_NAME"
-    LIB_PREFIX=$(echo "$LIB_NAME" | sed -E 's/\.so(\.[0-9]+)*$//')
-    FOUND_LIB=$(try_find_lib "$LIB_PREFIX")
-
-    if [[ -z "$FOUND_LIB" ]]; then
-      CURRENT="$LIB_PREFIX"
-      while [[ -z "$FOUND_LIB" && -n "$CURRENT" ]]; do
-        PREV="$CURRENT"
-        CURRENT=$(echo "$CURRENT" | sed -E 's/\.[0-9]+$//')
-        if [[ "$CURRENT" == "$PREV" ]]; then
-          CURRENT=$(echo "$CURRENT" | sed -E 's/[0-9]+$//')
-        fi
-        [[ "$CURRENT" == "$PREV" ]] && break
-        FOUND_LIB=$(try_find_lib "$CURRENT")
-      done
-    fi
-
-    if [[ -n "$FOUND_LIB" ]]; then
-      echo "  Found: $(basename "$FOUND_LIB") -> symlink as $LIB_NAME"
-      ln -sf "$FOUND_LIB" "/usr/lib/$LIB_NAME"
-    else
-      echo "  WARNING: no replacement found for $LIB_NAME — calamares may fail"
-    fi
-  done
-  rm -f /tmp/calamares-missing-libs.txt
-  ldconfig
-  echo "OK: calamares library symlinks updated"
-else
-  echo "WARNING: calamares binary not found — skipping library fixes"
+# Calamares built from AUR source — no Python/Boost dependencies
+if [[ -x /usr/bin/calamares ]]; then
+  MISSING=$(for f in $(find /usr/lib/calamares -name '*.so' -type f 2>/dev/null); do ldd "$f" 2>/dev/null; done | grep "not found" | awk '{print $1}' | sort -u)
+  if [[ -z "$MISSING" ]]; then
+    echo "OK: calamares — all libraries resolved"
+  else
+    echo "WARNING: calamares — missing: $MISSING"
+  fi
 fi
 
 rm -f /etc/sudoers.d/90-builder
@@ -1418,6 +1430,11 @@ mkdir -p /etc/calamares /etc/calamares/modules /usr/share/calamares/modules
 cat > /etc/calamares/settings.conf << 'CALCONF'
 ---
 modules-search: [ local ]
+
+instances:
+  - id:       shellprocess-kernel-copy
+    module:   shellprocess
+    config:   shellprocess-kernel-copy.conf
 
 branding: vibelinux
 
@@ -1433,6 +1450,7 @@ sequence:
     - partition
     - mount
     - unpackfs
+    - shellprocess@shellprocess-kernel-copy
     - machineid
     - fstab
     - locale
@@ -1505,7 +1523,6 @@ alwaysShowPartitionLabels: true
 initialPartitioningChoice: none
 initialSwapChoice: none
 defaultFileSystemType: "btrfs"
-defaultPartitionTableType: gpt
 availableFileSystemTypes: ["btrfs", "ext4", "xfs", "f2fs"]
 EOF
 
@@ -1544,10 +1561,7 @@ doAutologin: true
 EOF
 fi
 
-# mount — монтирование разделов
-cat > /etc/calamares/modules/mount.conf << 'EOF'
----
-EOF
+# mount — монтирование разделов (используем дефолтный от CachyOS, он уже в пакете)
 
 # unpackfs — копирование системы в целевой раздел
 cat > /etc/calamares/modules/unpackfs.conf << 'EOF'
@@ -1556,12 +1570,34 @@ unpack:
   - source: "/run/archiso/bootmnt/arch/x86_64/airootfs.sfs"
     sourcefs: "squashfs"
     destination: ""
-  - source: "/run/archiso/bootmnt/arch/boot/x86_64/vmlinuz-linux"
-    sourcefs: "file"
-    destination: "/boot/vmlinuz-linux"
-  - source: "/run/archiso/bootmnt/arch/boot/x86_64/initramfs-linux.img"
-    sourcefs: "file"
-    destination: "/boot/initramfs-linux.img"
+EOF
+
+# kernel-copy — скрипт для shellprocess
+mkdir -p /etc/calamares/scripts
+cat > /etc/calamares/scripts/copy-kernel.sh << 'SCRIPT'
+#!/bin/bash
+# Copy kernel from /usr/lib/modules/ to /boot/vmlinuz-linux
+# (avoids rsync/reflink corruption on Btrfs+zstd; GRUB does not follow
+#  symlinks reliably on Btrfs, so we copy instead of symlink)
+for d in /usr/lib/modules/*/; do
+  k="${d%/}"
+  [ "${k##*/}" = "extramodules" ] && continue
+  if [ -f "${d}vmlinuz" ]; then
+    install -Dm644 "${d}vmlinuz" /boot/vmlinuz-linux
+    exit 0
+  fi
+done
+exit 1
+SCRIPT
+chmod +x /etc/calamares/scripts/copy-kernel.sh
+
+# shellprocess-kernel-copy — копирование ядра в /boot/vmlinuz-linux
+cat > /etc/calamares/modules/shellprocess-kernel-copy.conf << 'EOF'
+---
+dontChroot: false
+timeout: 10
+script:
+    - "/etc/calamares/scripts/copy-kernel.sh"
 EOF
 
 # machineid — генерация machine-id

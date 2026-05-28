@@ -92,10 +92,47 @@ log "Using profile: $PROFILE_DIR"
 log "Work dir: $WORKDIR"
 log "Output dir: $OUTDIR"
 
-# 4) Cleanup (optional)
+# 4) Cleanup / force rebuild
 if [[ "${CLEAN:-0}" == "1" ]]; then
     log "Cleaning working directory..."
     rm -rf "$WORKDIR"
+elif [[ -d "$WORKDIR" ]]; then
+    # Incremental rebuild: remove mkarchiso _run_once markers for steps after
+    # _make_packages (keep it to avoid re-installing packages).
+    log "Removing run-once markers (incremental rebuild)..."
+    # Remove all markers except work_dir, pacman_conf, version, and packages
+    find "$WORKDIR" -maxdepth 1 -type f \
+        -name 'base.*' \
+        ! -name 'base._make_work_dir' \
+        ! -name 'base._make_pacman_conf' \
+        ! -name 'base._make_version' \
+        ! -name 'base._make_packages' \
+        -delete
+    rm -f "$WORKDIR"/build._build_buildmode_iso \
+          "$WORKDIR"/iso._build_iso_image
+fi
+
+# 4b) Pre-populate /boot/vmlinuz-linux before mkarchiso runs pacstrap.
+#     The mkinitcpio hook (90-mkinitcpio-install) expects this file to exist
+#     when it calls mkinitcpio -P, but the linux package does not ship it
+#     directly — the hook's install_kernel() copies it from /usr/lib/modules/.
+#     If that copy fails (relative-path race), /boot/vmlinuz-linux stays 0‑byte
+#     and mkinitcpio -P errors: "must be readable".
+#     Copying the kernel here (rather than using a symlink) ensures the host-side
+#     install/cp in mkarchiso's _make_boot_on_iso9660 can stat the file.
+mkdir -p "$WORKDIR/x86_64/airootfs/boot"
+KVER=$(ls "$WORKDIR"/x86_64/airootfs/usr/lib/modules/ 2>/dev/null | grep -v extramodules | sort -V | tail -1)
+if [[ -n "$KVER" && -f "$WORKDIR/x86_64/airootfs/usr/lib/modules/$KVER/vmlinuz" ]]; then
+  # kernel already installed (incremental build) – copy it directly
+  # Remove any dangling symlink from a previous run first
+  rm -f "$WORKDIR/x86_64/airootfs/boot/vmlinuz-linux"
+  cp "$WORKDIR/x86_64/airootfs/usr/lib/modules/$KVER/vmlinuz" \
+     "$WORKDIR/x86_64/airootfs/boot/vmlinuz-linux"
+  log "Pre-populated /boot/vmlinuz-linux from /usr/lib/modules/$KVER/vmlinuz"
+else
+  # first build – placeholder; pacstrap + mkinitcpio hook will fill it
+  touch "$WORKDIR/x86_64/airootfs/boot/vmlinuz-linux"
+  log "Pre-populated /boot/vmlinuz-linux (empty placeholder)"
 fi
 
 # 5) Build ISO

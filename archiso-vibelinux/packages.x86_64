@@ -87,8 +87,9 @@ unzip
 zstd
 git
 lazygit
-# Editor
+# Editors
 zed
+helix
 flatpak
 
 # AI tools
@@ -116,14 +117,22 @@ gparted
 sqlite3
 sqlitebrowser
 
-# Calamares installer (from CachyOS repo)
-cachyos-calamares-qt6-grub
-boost-libs
+# Calamares installer (built from AUR — uses system Python 3.14 / Boost 1.91 / yaml-cpp 0.9)
+# Runtime deps (installed via pacman, makepkg -s pulls MakeDepends automatically)
+kcoreaddons
+kpmcore
+libpwquality
+yaml-cpp
+qt6-declarative
+qt6-svg
+# Build deps (kept explicitly for archiso offline consistency)
 extra-cmake-modules
 ninja
 qt6-tools
 qt6-translations
 libglvnd
+# Fallback TUI installer
+archinstall
 
 # Filesystem tools — для разметки дисков и форматирования (нужны Calamares partition module)
 parted
@@ -133,10 +142,15 @@ e2fsprogs
 xfsprogs
 gptfdisk
 
+# far2l runtime deps (pre-installed — makepkg не работает в chroot)
+uchardet
+wxwidgets-gtk3
+
 # Utilities
 fastfetch
 wget
 curl
+rsync
 p7zip
 mc
 xdg-user-dirs
