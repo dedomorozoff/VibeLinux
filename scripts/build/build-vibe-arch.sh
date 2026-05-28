@@ -98,6 +98,17 @@ if [[ "${CLEAN:-0}" == "1" ]]; then
     rm -rf "$WORKDIR"
 fi
 
+# 4b) Pre-populate /boot/vmlinuz-linux before mkarchiso runs pacstrap.
+#     The mkinitcpio hook (90-mkinitcpio-install) expects this file to exist
+#     when it calls mkinitcpio -P, but the linux package does not ship it
+#     directly — the hook's install_kernel() copies it from /usr/lib/modules/.
+#     If that copy fails (relative-path race), /boot/vmlinuz-linux stays 0‑byte
+#     and mkinitcpio -P errors: "must be readable".
+#     A placeholder file here ensures the hook's install overwrites it with the
+#     real kernel, or our customize_airootfs.sh replaces it with a symlink later.
+mkdir -p "$WORKDIR/x86_64/airootfs/boot"
+touch "$WORKDIR/x86_64/airootfs/boot/vmlinuz-linux"
+
 # 5) Build ISO
 log "Starting build with mkarchiso..."
 BUILD_EXIT=0

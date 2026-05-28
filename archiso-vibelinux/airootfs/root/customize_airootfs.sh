@@ -170,6 +170,20 @@ options nvidia_drm modeset=1
 options nvidia NVreg_EnableBacklightHandler=1
 EOF
 
+# Ensure /boot/vmlinuz-linux exists and is non-empty before mkinitcpio runs.
+# The linux package installs the kernel only at /usr/lib/modules/<ver>/vmlinuz;
+# /boot/vmlinuz-linux is created by the 90-mkinitcpio-install.hook, which may
+# fail or create a 0-byte file depending on trigger order (relative path issue).
+# This symlink is overwritten later by mkarchiso when preparing the ISO boot
+# directory, and on the installed system by the second unpackfs entry.
+if [[ ! -s /boot/vmlinuz-linux ]]; then
+  KVER=$(ls /usr/lib/modules/ 2>/dev/null | grep -v 'extramodules' | sort -V | tail -1)
+  if [[ -n "$KVER" && -f "/usr/lib/modules/$KVER/vmlinuz" ]]; then
+    ln -sf "/usr/lib/modules/$KVER/vmlinuz" /boot/vmlinuz-linux
+    echo "OK: created symlink /boot/vmlinuz-linux → /usr/lib/modules/$KVER/vmlinuz"
+  fi
+fi
+
 # NVIDIA: rebuild initramfs with nvidia modules
 # Force-write mkinitcpio.conf (pacman may overwrite it during install)
 cat > /etc/mkinitcpio.conf << 'EOF'
@@ -962,11 +976,11 @@ if grep -q "^GRUB_CMDLINE_LINUX=" "$GRUB_DEFAULT_FILE" 2>/dev/null; then
   fi
 fi
 
-# Create /boot/vmlinuz-linux as symlink to the kernel in /usr/lib/modules/
-# (The linux package may not create this file in the squashfs; a symlink
-# avoids rsync corruption issues on Btrfs with compress=zstd)
-if [[ ! -f /boot/vmlinuz-linux ]]; then
-  KVER=$(ls /usr/lib/modules/ 2>/dev/null | sort -V | tail -1)
+# Fallback: ensure /boot/vmlinuz-linux is present in the squashfs so that
+# the installed system has a symlink even if the second unpackfs entry fails.
+# (The kernel itself is always at /usr/lib/modules/<ver>/vmlinuz from squashfs.)
+if [[ ! -s /boot/vmlinuz-linux ]]; then
+  KVER=$(ls /usr/lib/modules/ 2>/dev/null | grep -v 'extramodules' | sort -V | tail -1)
   if [[ -n "$KVER" && -f "/usr/lib/modules/$KVER/vmlinuz" ]]; then
     ln -sf "/usr/lib/modules/$KVER/vmlinuz" /boot/vmlinuz-linux
     echo "OK: created symlink /boot/vmlinuz-linux → /usr/lib/modules/$KVER/vmlinuz"
@@ -1491,6 +1505,9 @@ unpack:
   - source: "/run/archiso/bootmnt/arch/x86_64/airootfs.sfs"
     sourcefs: "squashfs"
     destination: ""
+  - source: "/run/archiso/bootmnt/arch/boot/x86_64/vmlinuz-linux"
+    sourcefs: "file"
+    destination: "/boot/vmlinuz-linux"
 EOF
 
 # machineid — генерация machine-id
