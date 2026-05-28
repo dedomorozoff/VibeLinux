@@ -505,33 +505,45 @@ chmod +x /usr/local/bin/install-mcp-servers
 # Unified AI installer script
 cat > /usr/local/bin/ai-install << 'INSTALLEOF'
 #!/usr/bin/env bash
-echo "VibeLinux — AI Tool Installer"
-echo "=============================="
+set -e
+
+check_tool() {
+  local cmd="$1"
+  if command -v "$cmd" >/dev/null 2>&1; then
+    echo "  ✓ $cmd installed: $(command -v "$cmd")"
+    return 0
+  fi
+  echo "  ✗ $cmd not found"
+  return 1
+}
+
 echo ""
-echo "Available tools:"
+echo "  VibeLinux — AI Tool Installer"
+echo "  =============================="
 echo ""
-echo "  [1] opencode      — Open source AI coding agent (pre-installed)"
-echo "  [2] qwen-code     — Qwen AI coding agent (pre-installed, run 'qwen')"
-echo "  [3] aider         — AI pair programming (install via setup-python-ai-stack)"
-echo "  [4] Continue.dev  — AI assistant for editors (install-ext)"
-echo "  [5] MCP servers   — Model Context Protocol (filesystem, github)"
-echo "  [6] Cursor        — Proprietary AI IDE"
-echo "  [7] Kiro          — Amazon's AI coding assistant"
-echo "  [8] Claude Code   — Anthropic's terminal AI"
-  echo "  [9] ai-chat       — Local Ollama chat (pre-installed)"
-  echo ""
-  read -rp "Install [1-9]: " choice
+echo "  Installed tools:"
+check_tool opencode || true
+check_tool qwen || true
+check_tool aider || true
+check_tool ollama || true
+check_tool nlsh || true
+echo ""
+echo "  Install options:"
+echo "  [1] Cursor IDE      — Download Cursor AppImage"
+echo "  [2] Claude Code     — Install Claude Code (npm)"
+echo "  [3] Continue.dev    — Install Continue extension"
+echo "  [4] MCP servers     — Install Model Context Protocol servers"
+echo "  [5] Kiro            — Amazon's AI coding assistant (npm)"
+echo ""
+read -rp "  Choose [1-5]: " choice
+echo ""
 case "$choice" in
-  1) echo "opencode is already installed. Run: opencode" ;;
-  2) echo "qwen-code is already installed. Run: qwen" ;;
-  3) echo "aider is pre-installed. Run: aider" ;;
-  4) install-continue ;;
-  5) install-mcp-servers ;;
-  6) install-cursor ;;
-  7) install-kiro ;;
-  8) install-claude-code ;;
-  9) echo "ai-chat is pre-installed. Run: ai-chat" ;;
-  *) echo "Nothing to install." ;;
+  1) install-cursor ;;
+  2) install-claude-code ;;
+  3) install-continue ;;
+  4) install-mcp-servers ;;
+  5) install-kiro ;;
+  *) echo "  Cancelled."; exit 0 ;;
 esac
 INSTALLEOF
 chmod +x /usr/local/bin/ai-install
@@ -846,11 +858,10 @@ if [[ -d /root/branding/plymouth ]]; then
   plymouth-set-default-theme vibelinux 2>/dev/null || true
 fi
 
-# GRUB config for installed system
-# Ensure base defaults exist
+# GRUB config for installed system — always apply VibeLinux defaults
 GRUB_DEFAULT_FILE="/etc/default/grub"
-if [[ ! -f "$GRUB_DEFAULT_FILE" ]]; then
-  cat > "$GRUB_DEFAULT_FILE" << 'GRUBBASE'
+# Force known keys; sed handles both new and existing files
+cat > "$GRUB_DEFAULT_FILE" << 'GRUBBASE'
 # GRUB boot loader configuration
 GRUB_TIMEOUT=5
 GRUB_DISTRIBUTOR="VibeLinux"
@@ -867,7 +878,6 @@ GRUB_SAVEDEFAULT=true
 GRUB_DEFAULT=saved
 GRUB_DISABLE_SUBMENU=y
 GRUBBASE
-fi
 
 # VibeLinux branding (PNG, потому что GRUB не поддерживает SVG)
 # Конвертируем SVG→PNG если PNG ещё нет
@@ -949,6 +959,17 @@ fi
 if grep -q "^GRUB_CMDLINE_LINUX=" "$GRUB_DEFAULT_FILE" 2>/dev/null; then
   if ! grep -q "nvidia-drm.modeset=1" "$GRUB_DEFAULT_FILE"; then
     sed -i 's/^GRUB_CMDLINE_LINUX="\(.*\)"/GRUB_CMDLINE_LINUX="\1 nvidia-drm.modeset=1"/' "$GRUB_DEFAULT_FILE"
+  fi
+fi
+
+# Create /boot/vmlinuz-linux as symlink to the kernel in /usr/lib/modules/
+# (The linux package may not create this file in the squashfs; a symlink
+# avoids rsync corruption issues on Btrfs with compress=zstd)
+if [[ ! -f /boot/vmlinuz-linux ]]; then
+  KVER=$(ls /usr/lib/modules/ 2>/dev/null | sort -V | tail -1)
+  if [[ -n "$KVER" && -f "/usr/lib/modules/$KVER/vmlinuz" ]]; then
+    ln -sf "/usr/lib/modules/$KVER/vmlinuz" /boot/vmlinuz-linux
+    echo "OK: created symlink /boot/vmlinuz-linux → /usr/lib/modules/$KVER/vmlinuz"
   fi
 fi
 
@@ -1470,9 +1491,6 @@ unpack:
   - source: "/run/archiso/bootmnt/arch/x86_64/airootfs.sfs"
     sourcefs: "squashfs"
     destination: ""
-  - source: "/run/archiso/bootmnt/arch/boot/x86_64/vmlinuz-linux"
-    sourcefs: "file"
-    destination: "/boot/vmlinuz-linux"
 EOF
 
 # machineid — генерация machine-id
