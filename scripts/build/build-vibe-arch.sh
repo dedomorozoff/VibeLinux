@@ -124,6 +124,8 @@ mkdir -p "$WORKDIR/x86_64/airootfs/boot"
 KVER=$(ls "$WORKDIR"/x86_64/airootfs/usr/lib/modules/ 2>/dev/null | grep -v extramodules | sort -V | tail -1)
 if [[ -n "$KVER" && -f "$WORKDIR/x86_64/airootfs/usr/lib/modules/$KVER/vmlinuz" ]]; then
   # kernel already installed (incremental build) – copy it directly
+  # Remove any dangling symlink from a previous run first
+  rm -f "$WORKDIR/x86_64/airootfs/boot/vmlinuz-linux"
   cp "$WORKDIR/x86_64/airootfs/usr/lib/modules/$KVER/vmlinuz" \
      "$WORKDIR/x86_64/airootfs/boot/vmlinuz-linux"
   log "Pre-populated /boot/vmlinuz-linux from /usr/lib/modules/$KVER/vmlinuz"
