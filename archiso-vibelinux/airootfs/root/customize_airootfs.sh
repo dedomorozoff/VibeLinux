@@ -1216,8 +1216,14 @@ else
 fi
 
 # Copy desktop shortcuts to system applications so they appear in Kickoff menu
+# Skip files that already exist or came from packages (avoid duplicates in menu)
 for f in /home/vibe/Desktop/*.desktop; do
-  cp "$f" /usr/share/applications/
+  base=$(basename "$f")
+  # Skip Zed — already installed by package as dev.zed.Zed.desktop
+  [[ "$base" == "Zed.desktop" ]] && continue
+  if [[ ! -f "/usr/share/applications/$base" ]]; then
+    cp "$f" /usr/share/applications/
+  fi
 done
 
 # KDE Kickoff Favorites
