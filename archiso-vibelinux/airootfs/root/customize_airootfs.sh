@@ -175,7 +175,7 @@ EOF
 # /boot/vmlinuz-linux is created by the 90-mkinitcpio-install.hook, which may
 # fail or create a 0-byte file depending on trigger order (relative path issue).
 # This symlink is overwritten later by mkarchiso when preparing the ISO boot
-# directory, and on the installed system by the second unpackfs entry.
+# directory, and on the installed system by the shellprocess symlink.
 if [[ ! -s /boot/vmlinuz-linux ]]; then
   KVER=$(ls /usr/lib/modules/ 2>/dev/null | grep -v 'extramodules' | sort -V | tail -1)
   if [[ -n "$KVER" && -f "/usr/lib/modules/$KVER/vmlinuz" ]]; then
@@ -976,9 +976,10 @@ if grep -q "^GRUB_CMDLINE_LINUX=" "$GRUB_DEFAULT_FILE" 2>/dev/null; then
   fi
 fi
 
-# Fallback: ensure /boot/vmlinuz-linux is present in the squashfs so that
-# the installed system has a symlink even if the second unpackfs entry fails.
-# (The kernel itself is always at /usr/lib/modules/<ver>/vmlinuz from squashfs.)
+# Fallback: ensure /boot/vmlinuz-linux exists before mkinitcpio -P runs in the
+# chroot. The kernel is always at /usr/lib/modules/<ver>/vmlinuz; the linux
+# package may not ship /boot/vmlinuz-linux directly (the 90-mkinitcpio-install
+# hook creates it, and may fail on relative paths).
 if [[ ! -s /boot/vmlinuz-linux ]]; then
   KVER=$(ls /usr/lib/modules/ 2>/dev/null | grep -v 'extramodules' | sort -V | tail -1)
   if [[ -n "$KVER" && -f "/usr/lib/modules/$KVER/vmlinuz" ]]; then
@@ -1386,6 +1387,7 @@ sequence:
     - partition
     - mount
     - unpackfs
+    - shellprocess-kernel-symlink
     - machineid
     - fstab
     - locale
@@ -1505,9 +1507,32 @@ unpack:
   - source: "/run/archiso/bootmnt/arch/x86_64/airootfs.sfs"
     sourcefs: "squashfs"
     destination: ""
-  - source: "/run/archiso/bootmnt/arch/boot/x86_64/vmlinuz-linux"
-    sourcefs: "file"
-    destination: "/boot/vmlinuz-linux"
+EOF
+
+# kernel-symlink — скрипт для shellprocess
+mkdir -p /etc/calamares/scripts
+cat > /etc/calamares/scripts/create-kernel-symlink.sh << 'SCRIPT'
+#!/bin/bash
+# Create /boot/vmlinuz-linux → /usr/lib/modules/<ver>/vmlinuz
+for d in /usr/lib/modules/*/; do
+  k="${d%/}"
+  [ "${k##*/}" = "extramodules" ] && continue
+  if [ -f "${d}vmlinuz" ]; then
+    ln -sf "${d}vmlinuz" /boot/vmlinuz-linux
+    exit 0
+  fi
+done
+exit 1
+SCRIPT
+chmod +x /etc/calamares/scripts/create-kernel-symlink.sh
+
+# shellprocess-kernel-symlink — создание симлинка /boot/vmlinuz-linux
+cat > /etc/calamares/modules/shellprocess-kernel-symlink.conf << 'EOF'
+---
+dontChroot: false
+timeout: 10
+script:
+    - "/etc/calamares/scripts/create-kernel-symlink.sh"
 EOF
 
 # machineid — генерация machine-id
