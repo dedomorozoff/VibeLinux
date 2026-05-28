@@ -1417,7 +1417,6 @@ alwaysShowPartitionLabels: true
 initialPartitioningChoice: none
 initialSwapChoice: none
 defaultFileSystemType: "btrfs"
-defaultPartitionTableType: gpt
 availableFileSystemTypes: ["btrfs", "ext4", "xfs", "f2fs"]
 EOF
 
