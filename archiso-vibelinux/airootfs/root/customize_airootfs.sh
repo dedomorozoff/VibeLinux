@@ -1387,7 +1387,7 @@ sequence:
     - partition
     - mount
     - unpackfs
-    - shellprocess-kernel-symlink
+    - shellprocess-kernel-copy
     - machineid
     - fstab
     - locale
@@ -1509,30 +1509,32 @@ unpack:
     destination: ""
 EOF
 
-# kernel-symlink — скрипт для shellprocess
+# kernel-copy — скрипт для shellprocess
 mkdir -p /etc/calamares/scripts
-cat > /etc/calamares/scripts/create-kernel-symlink.sh << 'SCRIPT'
+cat > /etc/calamares/scripts/copy-kernel.sh << 'SCRIPT'
 #!/bin/bash
-# Create /boot/vmlinuz-linux → /usr/lib/modules/<ver>/vmlinuz
+# Copy kernel from /usr/lib/modules/ to /boot/vmlinuz-linux
+# (avoids rsync/reflink corruption on Btrfs+zstd; GRUB does not follow
+#  symlinks reliably on Btrfs, so we copy instead of symlink)
 for d in /usr/lib/modules/*/; do
   k="${d%/}"
   [ "${k##*/}" = "extramodules" ] && continue
   if [ -f "${d}vmlinuz" ]; then
-    ln -sf "${d}vmlinuz" /boot/vmlinuz-linux
+    install -Dm644 "${d}vmlinuz" /boot/vmlinuz-linux
     exit 0
   fi
 done
 exit 1
 SCRIPT
-chmod +x /etc/calamares/scripts/create-kernel-symlink.sh
+chmod +x /etc/calamares/scripts/copy-kernel.sh
 
-# shellprocess-kernel-symlink — создание симлинка /boot/vmlinuz-linux
-cat > /etc/calamares/modules/shellprocess-kernel-symlink.conf << 'EOF'
+# shellprocess-kernel-copy — копирование ядра в /boot/vmlinuz-linux
+cat > /etc/calamares/modules/shellprocess-kernel-copy.conf << 'EOF'
 ---
 dontChroot: false
 timeout: 10
 script:
-    - "/etc/calamares/scripts/create-kernel-symlink.sh"
+    - "/etc/calamares/scripts/copy-kernel.sh"
 EOF
 
 # machineid — генерация machine-id
