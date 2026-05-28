@@ -118,10 +118,20 @@ fi
 #     directly — the hook's install_kernel() copies it from /usr/lib/modules/.
 #     If that copy fails (relative-path race), /boot/vmlinuz-linux stays 0‑byte
 #     and mkinitcpio -P errors: "must be readable".
-#     A placeholder file here ensures the hook's install overwrites it with the
-#     real kernel, or our customize_airootfs.sh replaces it with a symlink later.
+#     Copying the kernel here (rather than using a symlink) ensures the host-side
+#     install/cp in mkarchiso's _make_boot_on_iso9660 can stat the file.
 mkdir -p "$WORKDIR/x86_64/airootfs/boot"
-touch "$WORKDIR/x86_64/airootfs/boot/vmlinuz-linux"
+KVER=$(ls "$WORKDIR"/x86_64/airootfs/usr/lib/modules/ 2>/dev/null | grep -v extramodules | sort -V | tail -1)
+if [[ -n "$KVER" && -f "$WORKDIR/x86_64/airootfs/usr/lib/modules/$KVER/vmlinuz" ]]; then
+  # kernel already installed (incremental build) – copy it directly
+  cp "$WORKDIR/x86_64/airootfs/usr/lib/modules/$KVER/vmlinuz" \
+     "$WORKDIR/x86_64/airootfs/boot/vmlinuz-linux"
+  log "Pre-populated /boot/vmlinuz-linux from /usr/lib/modules/$KVER/vmlinuz"
+else
+  # first build – placeholder; pacstrap + mkinitcpio hook will fill it
+  touch "$WORKDIR/x86_64/airootfs/boot/vmlinuz-linux"
+  log "Pre-populated /boot/vmlinuz-linux (empty placeholder)"
+fi
 
 # 5) Build ISO
 log "Starting build with mkarchiso..."
