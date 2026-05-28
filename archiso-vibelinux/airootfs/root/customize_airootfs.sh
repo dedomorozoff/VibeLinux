@@ -1373,6 +1373,11 @@ cat > /etc/calamares/settings.conf << 'CALCONF'
 ---
 modules-search: [ local ]
 
+instances:
+  - id:       shellprocess-kernel-copy
+    module:   shellprocess
+    config:   shellprocess-kernel-copy.conf
+
 branding: vibelinux
 
 sequence:
@@ -1387,7 +1392,7 @@ sequence:
     - partition
     - mount
     - unpackfs
-    - shellprocess-kernel-copy
+    - shellprocess@shellprocess-kernel-copy
     - machineid
     - fstab
     - locale
