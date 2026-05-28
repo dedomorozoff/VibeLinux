@@ -12,13 +12,25 @@ fi
 INSTALL_DIR="/opt/vibecode/comfyui"
 
 echo "[setup-comfyui] Установка системных зависимостей..."
-apt-get update -y
-DEBIAN_FRONTEND=noninteractive apt-get install -y \
-  git \
-  python3 \
-  python3-venv \
-  python3-pip \
-  ca-certificates
+if command -v pacman >/dev/null 2>&1; then
+  pacman -Sy --noconfirm --needed \
+    git \
+    python \
+    python-pip \
+    python-virtualenv \
+    ca-certificates
+elif command -v apt-get >/dev/null 2>&1; then
+  apt-get update -y
+  DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    git \
+    python3 \
+    python3-venv \
+    python3-pip \
+    ca-certificates
+else
+  echo "[setup-comfyui] Неподдерживаемый пакетный менеджер (нужен pacman или apt-get)."
+  exit 1
+fi
 
 mkdir -p "$(dirname "$INSTALL_DIR")"
 

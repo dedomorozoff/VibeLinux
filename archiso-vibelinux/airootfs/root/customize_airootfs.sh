@@ -397,16 +397,44 @@ chmod +x /usr/local/bin/ai-setup
 # Cursor IDE installer
 cat > /usr/local/bin/install-cursor << 'CURSOREOF'
 #!/usr/bin/env bash
+set -euo pipefail
+
 echo "Installing Cursor IDE..."
-curl -L "https://downloads.cursor.com/production/$(uname -m)/appimage/Cursor.AppImage" -o /tmp/Cursor.AppImage 2>/dev/null || {
-  echo "Trying alternative download..."
-  wget -q "https://cursor.sh/download/linux" -O /tmp/Cursor.AppImage 2>/dev/null || true
-}
-if [[ -f /tmp/Cursor.AppImage ]]; then
-  mkdir -p /opt/cursor
-  mv /tmp/Cursor.AppImage /opt/cursor/Cursor.AppImage
-  chmod +x /opt/cursor/Cursor.AppImage
-  cat > /usr/share/applications/cursor.desktop << EOF
+
+if command -v yay >/dev/null 2>&1; then
+  echo "Using AUR package: cursor-bin"
+  yay -S --noconfirm cursor-bin
+  exit 0
+fi
+
+if command -v paru >/dev/null 2>&1; then
+  echo "Using AUR package: cursor-bin"
+  paru -S --noconfirm cursor-bin
+  exit 0
+fi
+
+ARCH="$(uname -m)"
+case "$ARCH" in
+  x86_64) CURSOR_ARCH="x64" ;;
+  aarch64) CURSOR_ARCH="arm64" ;;
+  *)
+    echo "Unsupported CPU architecture: $ARCH"
+    echo "Install Cursor manually: https://cursor.com/downloads"
+    exit 1
+    ;;
+esac
+
+TMP_APPIMAGE="/tmp/Cursor.AppImage"
+if ! curl -fL "https://downloads.cursor.com/production/linux/${CURSOR_ARCH}/Cursor.AppImage" -o "$TMP_APPIMAGE"; then
+  echo "Failed to download Cursor AppImage."
+  echo "Install manually: https://cursor.com/downloads"
+  exit 1
+fi
+
+mkdir -p /opt/cursor
+mv "$TMP_APPIMAGE" /opt/cursor/Cursor.AppImage
+chmod +x /opt/cursor/Cursor.AppImage
+cat > /usr/share/applications/cursor.desktop << EOF
 [Desktop Entry]
 Name=Cursor
 Exec=/opt/cursor/Cursor.AppImage --no-sandbox
@@ -414,10 +442,7 @@ Icon=utilities-terminal
 Type=Application
 Categories=Development;IDE;
 EOF
-  echo "Cursor installed: /opt/cursor/Cursor.AppImage"
-else
-  echo "Failed to download Cursor. Get it at: https://cursor.sh"
-fi
+echo "Cursor installed: /opt/cursor/Cursor.AppImage"
 CURSOREOF
 chmod +x /usr/local/bin/install-cursor
 
@@ -453,10 +478,21 @@ chmod +x /usr/local/bin/install-claude-code
 # Continue.dev installer
 cat > /usr/local/bin/install-continue << 'CONTINUEEOF'
 #!/usr/bin/env bash
-echo "Installing Continue.dev for Zed..."
-echo "Open Zed → Extensions → Search 'Continue' → Install"
-echo "Or run: zed: extensions continue.continue"
-echo "Manual install: https://docs.continue.dev/install"
+set -euo pipefail
+
+echo "Installing Continue.dev..."
+
+if command -v code >/dev/null 2>&1; then
+  code --install-extension continue.continue || true
+elif command -v codium >/dev/null 2>&1; then
+  codium --install-extension continue.continue || true
+elif command -v vscodium >/dev/null 2>&1; then
+  vscodium --install-extension continue.continue || true
+else
+  echo "No supported editor CLI found (code/codium/vscodium)."
+  echo "Manual install: https://docs.continue.dev/install"
+fi
+
 CONFIG_DIR="$HOME/.continue"
 if [[ ! -d "$CONFIG_DIR" ]]; then
   mkdir -p "$CONFIG_DIR"
@@ -496,26 +532,62 @@ chmod +x /usr/local/bin/install-mcp-servers
 # Unified AI installer script
 cat > /usr/local/bin/ai-install << 'INSTALLEOF'
 #!/usr/bin/env bash
+set -euo pipefail
+
+is_installed() {
+  command -v "$1" >/dev/null 2>&1
+}
+
+status() {
+  if is_installed "$1"; then
+    printf "installed"
+  else
+    printf "not installed"
+  fi
+}
+
 echo "VibeLinux — AI Tool Installer"
 echo "=============================="
 echo ""
 echo "Available tools:"
 echo ""
-echo "  [1] opencode      — Open source AI coding agent (pre-installed)"
-echo "  [2] qwen-code     — Qwen AI coding agent (pre-installed, run 'qwen')"
-echo "  [3] aider         — AI pair programming (install via setup-python-ai-stack)"
+echo "  [1] opencode      — Open source AI coding agent ($(status opencode))"
+echo "  [2] qwen-code     — Qwen AI coding agent ($(status qwen))"
+echo "  [3] aider         — AI pair programming ($(status aider))"
 echo "  [4] Continue.dev  — AI assistant for editors (install-ext)"
 echo "  [5] MCP servers   — Model Context Protocol (filesystem, github)"
 echo "  [6] Cursor        — Proprietary AI IDE"
 echo "  [7] Kiro          — Amazon's AI coding assistant"
-echo "  [8] Claude Code   — Anthropic's terminal AI"
-  echo "  [9] ai-chat       — Local Ollama chat (pre-installed)"
-  echo ""
-  read -rp "Install [1-9]: " choice
+echo "  [8] Claude Code   — Anthropic terminal AI ($(status claude))"
+echo "  [9] ai-chat       — Local Ollama chat ($(status ai-chat))"
+echo ""
+read -rp "Install [1-9]: " choice
 case "$choice" in
-  1) echo "opencode is already installed. Run: opencode" ;;
-  2) echo "qwen-code is already installed. Run: qwen" ;;
-  3) echo "aider is pre-installed. Run: aider" ;;
+  1)
+    if is_installed opencode; then
+      echo "opencode is already installed. Run: opencode"
+    else
+      echo "opencode is not installed in this image."
+    fi
+    ;;
+  2)
+    if is_installed qwen; then
+      echo "qwen-code is already installed. Run: qwen"
+    elif command -v npm >/dev/null 2>&1; then
+      npm install -g @qwen-code/qwen-code
+    else
+      echo "npm not found. Install Node.js first."
+    fi
+    ;;
+  3)
+    if is_installed aider; then
+      echo "aider is already installed. Run: aider"
+    elif command -v pipx >/dev/null 2>&1; then
+      pipx install aider-chat
+    else
+      echo "pipx not found. Install pipx first."
+    fi
+    ;;
   4) install-continue ;;
   5) install-mcp-servers ;;
   6) install-cursor ;;
@@ -1487,6 +1559,9 @@ unpack:
   - source: "/run/archiso/bootmnt/arch/boot/x86_64/vmlinuz-linux"
     sourcefs: "file"
     destination: "/boot/vmlinuz-linux"
+  - source: "/run/archiso/bootmnt/arch/boot/x86_64/initramfs-linux.img"
+    sourcefs: "file"
+    destination: "/boot/initramfs-linux.img"
 EOF
 
 # machineid — генерация machine-id
@@ -1571,8 +1646,8 @@ grubMkconfig: "grub-mkconfig"
 grubCfg: "/boot/grub/grub.cfg"
 grubProbe: "grub-probe"
 efiBootMgr: "efibootmgr"
-kernelSearchPath: "/usr/lib/modules"
-kernelPattern: "^vmlinuz.*"
+kernelSearchPath: "/boot"
+kernelPattern: "^vmlinuz-linux$"
 kernelParams: [ "quiet", "nowatchdog" ]
 installEFIFallback: true
 EOF

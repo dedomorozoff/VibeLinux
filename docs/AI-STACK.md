@@ -37,7 +37,7 @@
 - Мощный AI-инструмент для парного программирования в терминале.
 - Позволяет редактировать код, создавать коммиты и файлы, просто общаясь с AI.
 - Интегрируется с Git и локальными/облачными LLM.
-- **Pre-installed** в образе (через `/opt/vibecode/ai-venv`), запуск: `aider`.
+- Устанавливается post-install через `scripts/ai/install-aider.sh`, запуск: `aider`.
 
 **Современные agentic CLI (опционально)**
 - **Codex CLI** — `scripts/ai/install-codex-cli.sh`
@@ -80,7 +80,7 @@
 
 ### **AI‑фреймворки и библиотеки**
 
-Системное виртуальное окружение `/opt/vibecode/ai-venv` с предустановленными библиотеками:
+Виртуальное окружение `~/.venv-ai`, создаётся скриптом `scripts/ai/setup-python-ai-stack.sh`:
 
 - PyTorch (CPU, с инструкциями для GPU)
 - Transformers, Accelerate (стабильные версии с PyPI)
@@ -88,14 +88,14 @@
 - LlamaIndex
 - ChromaDB (векторная БД для RAG)
 - HuggingFace Hub (huggingface-cli для управления моделями)
-- Aider (AI pair programming)
 - Ollama Python SDK
 
-Активация: `python-ai` (симлинк в `/usr/local/bin/python-ai` — это Python из venv)
+Активация: `ai-env` (alias на `source ~/.venv-ai/bin/activate`)
 
 Для GPU PyTorch:
 ```bash
-python-ai -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+ai-env
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 ```
 
 ---
@@ -138,7 +138,7 @@ sudo ./scripts/ai/install-ollama-models.sh
 Использование:
 - Open WebUI: http://localhost:3000
 - Terminal AI: `ai-chat`
-- Python AI: `python-ai` (Python с AI-библиотеками из `/opt/vibecode/ai-venv`)
+- Python AI: `ai-env` (активация окружения `~/.venv-ai`)
 - AI pair programming: `aider`
 - ComfyUI: `sudo bash scripts/ai/start-sd.sh` → http://localhost:8188
 

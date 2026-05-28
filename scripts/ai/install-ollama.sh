@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Установка Ollama в Ubuntu и включение сервиса.
+# Установка Ollama и включение сервиса.
 
 if [[ $EUID -ne 0 ]]; then
   echo "Пожалуйста, запустите этот скрипт с sudo или от root."
@@ -9,8 +9,15 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 echo "[install-ollama] Установка зависимостей..."
-apt-get update -y
-DEBIAN_FRONTEND=noninteractive apt-get install -y curl ca-certificates
+if command -v pacman >/dev/null 2>&1; then
+  pacman -Sy --noconfirm --needed curl ca-certificates
+elif command -v apt-get >/dev/null 2>&1; then
+  apt-get update -y
+  DEBIAN_FRONTEND=noninteractive apt-get install -y curl ca-certificates
+else
+  echo "[install-ollama] Неподдерживаемый пакетный менеджер (нужен pacman или apt-get)."
+  exit 1
+fi
 
 if command -v ollama >/dev/null 2>&1; then
   echo "[install-ollama] Ollama уже установлена."

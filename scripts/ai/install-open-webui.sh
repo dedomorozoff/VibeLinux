@@ -19,6 +19,10 @@ echo "[install-open-webui] Создание volume для данных..."
 docker volume create open-webui || true
 
 echo "[install-open-webui] Запуск контейнера Open WebUI..."
+if docker container inspect open-webui >/dev/null 2>&1; then
+  docker rm -f open-webui >/dev/null 2>&1 || true
+fi
+
 docker run -d \
   --name open-webui \
   --restart unless-stopped \

@@ -41,6 +41,7 @@ sudo ./setup-ai-stack.sh
 - Создаёт venv в ~/.venv-ai
 - Устанавливает PyTorch, Transformers, LangChain, LlamaIndex
 - Алиас для активации: `ai-env`
+- Работает в Arch и Debian/Ubuntu (`pacman` или `apt-get`)
 
 ### Генерация изображений
 
@@ -48,6 +49,7 @@ sudo ./setup-ai-stack.sh
 - Устанавливает ComfyUI в /opt/vibecode/comfyui
 - CPU-версия по умолчанию
 - Инструкции для GPU в выводе скрипта
+- Работает в Arch и Debian/Ubuntu (`pacman` или `apt-get`)
 
 **start-sd.sh**
 - Запускает ComfyUI
@@ -57,21 +59,27 @@ sudo ./setup-ai-stack.sh
 
 **install-openai-cli.sh**
 - OpenAI CLI (требует API-ключ)
+- Системные зависимости ставятся через `pacman` или `apt-get`
 
 **install-github-copilot-cli.sh**
 - GitHub Copilot CLI (требует подписку)
+- Системные зависимости ставятся через `pacman` или `apt-get`
 
 **install-codex-cli.sh**
 - OpenAI Codex CLI
+- Системные зависимости ставятся через `pacman` или `apt-get`
 
 **install-claude-code.sh**
 - Anthropic Claude Code
+- Системные зависимости ставятся через `pacman` или `apt-get`
 
 **install-qwen-code.sh**
 - Qwen Code
+- Системные зависимости ставятся через `pacman` или `apt-get`
 
 **install-terminal-ai.sh**
 - Дополнительные терминальные AI-утилиты
+- Работает в Arch и Debian/Ubuntu (`pacman` или `apt-get`)
 
 ## Требования
 

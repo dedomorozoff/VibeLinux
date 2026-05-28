@@ -10,8 +10,15 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 echo "[install-terminal-ai] Установка зависимостей..."
-apt-get update -y
-DEBIAN_FRONTEND=noninteractive apt-get install -y curl ca-certificates jq
+if command -v pacman >/dev/null 2>&1; then
+  pacman -Sy --noconfirm --needed curl ca-certificates jq
+elif command -v apt-get >/dev/null 2>&1; then
+  apt-get update -y
+  DEBIAN_FRONTEND=noninteractive apt-get install -y curl ca-certificates jq
+else
+  echo "[install-terminal-ai] Неподдерживаемый пакетный менеджер (нужен pacman или apt-get)."
+  exit 1
+fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 

@@ -23,8 +23,10 @@ case "$EDITOR" in
     echo "Install VS Code extension:"
     echo "  code --install-extension continue.continue"
     code --install-extension continue.continue 2>/dev/null || {
-      echo "  Trying marketplace URL..."
-      open "https://marketplace.visualstudio.com/items?itemName=continue.continue" 2>/dev/null || true
+      echo "  Could not install via CLI. Open marketplace page manually:"
+      echo "  https://marketplace.visualstudio.com/items?itemName=continue.continue"
+      command -v xdg-open >/dev/null 2>&1 && \
+        xdg-open "https://marketplace.visualstudio.com/items?itemName=continue.continue" >/dev/null 2>&1 || true
     }
     ;;
   vscodium)
