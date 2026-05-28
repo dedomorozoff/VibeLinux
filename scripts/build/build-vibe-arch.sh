@@ -92,10 +92,24 @@ log "Using profile: $PROFILE_DIR"
 log "Work dir: $WORKDIR"
 log "Output dir: $OUTDIR"
 
-# 4) Cleanup (optional)
+# 4) Cleanup / force rebuild
 if [[ "${CLEAN:-0}" == "1" ]]; then
     log "Cleaning working directory..."
     rm -rf "$WORKDIR"
+elif [[ -d "$WORKDIR" ]]; then
+    # Incremental rebuild: remove mkarchiso _run_once markers for steps after
+    # _make_packages (keep it to avoid re-installing packages).
+    log "Removing run-once markers (incremental rebuild)..."
+    # Remove all markers except work_dir, pacman_conf, version, and packages
+    find "$WORKDIR" -maxdepth 1 -type f \
+        -name 'base.*' \
+        ! -name 'base._make_work_dir' \
+        ! -name 'base._make_pacman_conf' \
+        ! -name 'base._make_version' \
+        ! -name 'base._make_packages' \
+        -delete
+    rm -f "$WORKDIR"/build._build_buildmode_iso \
+          "$WORKDIR"/iso._build_iso_image
 fi
 
 # 4b) Pre-populate /boot/vmlinuz-linux before mkarchiso runs pacstrap.
