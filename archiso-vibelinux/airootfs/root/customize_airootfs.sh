@@ -174,13 +174,15 @@ EOF
 # The linux package installs the kernel only at /usr/lib/modules/<ver>/vmlinuz;
 # /boot/vmlinuz-linux is created by the 90-mkinitcpio-install.hook, which may
 # fail or create a 0-byte file depending on trigger order (relative path issue).
-# This symlink is overwritten later by mkarchiso when preparing the ISO boot
-# directory, and on the installed system by the shellprocess symlink.
+# We copy (not symlink) because GRUB on Btrfs cannot read symlinks — it reads
+# the symlink file itself (0 bytes) and fails with "преждевременный конец файла".
+# The Calamares copy-kernel.sh will also re-copy on the installed system.
 if [[ ! -s /boot/vmlinuz-linux ]]; then
   KVER=$(ls /usr/lib/modules/ 2>/dev/null | grep -v 'extramodules' | sort -V | tail -1)
   if [[ -n "$KVER" && -f "/usr/lib/modules/$KVER/vmlinuz" ]]; then
-    ln -sf "/usr/lib/modules/$KVER/vmlinuz" /boot/vmlinuz-linux
-    echo "OK: created symlink /boot/vmlinuz-linux → /usr/lib/modules/$KVER/vmlinuz"
+    cp -f "/usr/lib/modules/$KVER/vmlinuz" /boot/vmlinuz-linux
+    chmod 644 /boot/vmlinuz-linux
+    echo "OK: copied kernel to /boot/vmlinuz-linux ($(stat -c%s /boot/vmlinuz-linux) bytes)"
   fi
 fi
 
@@ -198,6 +200,47 @@ EOF
 if command -v mkinitcpio &>/dev/null; then
   mkinitcpio -P
 fi
+
+# Pacman hook: copy kernel to /boot/vmlinuz-linux after every linux package update.
+# GRUB on Btrfs cannot read symlinks — it reads the symlink file itself (0 bytes)
+# and fails with "преждевременный конец файла" (premature end of file).
+# Only the first kernel found in /usr/lib/modules/*/ is copied (usually the latest).
+mkdir -p /etc/pacman.d/hooks
+cat > /etc/pacman.d/hooks/90-vmlinuz-copy.hook << 'HOOK'
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = linux
+Target = linux-lts
+Target = linux-zen
+Target = linux-hardened
+Target = linux-cachyos
+Target = linux-cachyos-lts
+Target = linux-rt
+Target = linux-rt-lts
+
+[Action]
+Description = Copying kernel to /boot/vmlinuz-linux (regular file for GRUB)...
+When = PostTransaction
+Exec = /bin/sh -c '
+  TARGET="/boot/vmlinuz-linux"
+  rm -f "$TARGET"
+  for d in /usr/lib/modules/*/; do
+    k="${d%/}"; [ "${k##*/}" = "extramodules" ] && continue
+    if [ -f "${d}vmlinuz" ]; then
+      cp -f "${d}vmlinuz" "$TARGET"
+      chmod 644 "$TARGET"
+      echo "  -> kernel copied to $TARGET ($(stat -c%s "$TARGET") bytes)"
+      break
+    fi
+  done
+  # If no kernel was found and we're on FAT32, warn but do not fail
+  if [ ! -f "$TARGET" ]; then
+    echo "  WARN: no vmlinuz found in /usr/lib/modules/*/"
+  fi
+'
+HOOK
 
 # SDDM autologin (Wayland — KDE 6 дефолт)
 mkdir -p /etc/sddm.conf.d
@@ -939,7 +982,8 @@ GRUB_TIMEOUT=5
 GRUB_DISTRIBUTOR="VibeLinux"
 GRUB_CMDLINE_LINUX_DEFAULT="nvidia-drm.modeset=1 quiet splash"
 GRUB_CMDLINE_LINUX="nvidia-drm.modeset=1"
-GRUB_PRELOAD_MODULES="part_gpt part_msdos"
+GRUB_PRELOAD_MODULES="part_gpt part_msdos btrfs"
+GRUB_DISABLE_LINUX_PARTUUID=true
 GRUB_TERMINAL_INPUT="console"
 GRUB_GFXMODE=1920x1080,auto
 GRUB_GFXPAYLOAD_LINUX="keep"
@@ -1038,11 +1082,13 @@ fi
 # chroot. The kernel is always at /usr/lib/modules/<ver>/vmlinuz; the linux
 # package may not ship /boot/vmlinuz-linux directly (the 90-mkinitcpio-install
 # hook creates it, and may fail on relative paths).
+# Copy (not symlink) — GRUB on Btrfs cannot read symlinks.
 if [[ ! -s /boot/vmlinuz-linux ]]; then
   KVER=$(ls /usr/lib/modules/ 2>/dev/null | grep -v 'extramodules' | sort -V | tail -1)
   if [[ -n "$KVER" && -f "/usr/lib/modules/$KVER/vmlinuz" ]]; then
-    ln -sf "/usr/lib/modules/$KVER/vmlinuz" /boot/vmlinuz-linux
-    echo "OK: created symlink /boot/vmlinuz-linux → /usr/lib/modules/$KVER/vmlinuz"
+    cp -f "/usr/lib/modules/$KVER/vmlinuz" /boot/vmlinuz-linux
+    chmod 644 /boot/vmlinuz-linux
+    echo "OK: copied kernel to /boot/vmlinuz-linux ($(stat -c%s /boot/vmlinuz-linux) bytes)"
   fi
 fi
 
@@ -1435,6 +1481,9 @@ instances:
   - id:       shellprocess-kernel-copy
     module:   shellprocess
     config:   shellprocess-kernel-copy.conf
+  - id:       shellprocess-finalize-boot
+    module:   shellprocess
+    config:   shellprocess-finalize-boot.conf
 
 branding: vibelinux
 
@@ -1464,6 +1513,7 @@ sequence:
     - hwclock
     - services-systemd
     - bootloader
+    - shellprocess@shellprocess-finalize-boot
     - umount
   - show:
     - finished
@@ -1576,18 +1626,87 @@ EOF
 mkdir -p /etc/calamares/scripts
 cat > /etc/calamares/scripts/copy-kernel.sh << 'SCRIPT'
 #!/bin/bash
-# Copy kernel from /usr/lib/modules/ to /boot/vmlinuz-linux
-# (avoids rsync/reflink corruption on Btrfs+zstd; GRUB does not follow
-#  symlinks reliably on Btrfs, so we copy instead of symlink)
+# Copy kernel + initramfs from /usr/lib/modules/ to /boot/vmlinuz-linux.
+# Uses copy (not symlink) because:
+#   - GRUB on Btrfs does not follow symlinks (reads symlink body = 0 bytes)
+#   - FAT32 /boot (EFI system partition) does not support Linux symlinks
+# Both cases cause "преждевременный конец файла" (premature end of file).
+#
+# Also ensures /boot/grub/grubenv is not sparse (GRUB check_blocklists
+# rejects sparse files with "sparse file not allowed").
+set -e
+
+KERNEL_DST="/boot/vmlinuz-linux"
+INITRD_DST="/boot/initramfs-linux.img"
+GRUBENV="/boot/grub/grubenv"
+
+# Detect filesystem type of /boot
+BOOT_FSTYPE=$(findmnt -n -o FSTYPE /boot 2>/dev/null || echo "unknown")
+
+# 1. Copy kernel as a regular file (never a symlink)
 for d in /usr/lib/modules/*/; do
   k="${d%/}"
-  [ "${k##*/}" = "extramodules" ] && continue
+  [ "${k##*/}" = "extramodules" ] || [ "${k##*/}" = "extramessages" ] && continue
   if [ -f "${d}vmlinuz" ]; then
-    install -Dm644 "${d}vmlinuz" /boot/vmlinuz-linux
-    exit 0
+    rm -f "$KERNEL_DST"
+    cp -f "${d}vmlinuz" "$KERNEL_DST"
+    chmod 644 "$KERNEL_DST"
+    if [ ! -f "$KERNEL_DST" ] || [ -h "$KERNEL_DST" ]; then
+      echo "FATAL: $KERNEL_DST is not a regular file after copy"
+      exit 1
+    fi
+    echo "OK: kernel copied to $KERNEL_DST ($(stat -c%s "$KERNEL_DST") bytes, fs=$BOOT_FSTYPE)"
+
+    # Also copy matching initramfs if available (common names)
+    for initrd_src in "${d}initramfs.img" "${d}initramfs-linux.img" "${d}initrd.img"; do
+      if [ -f "$initrd_src" ]; then
+        rm -f "$INITRD_DST"
+        cp -f "$initrd_src" "$INITRD_DST"
+        chmod 644 "$INITRD_DST"
+        echo "OK: initramfs copied to $INITRD_DST ($(stat -c%s "$INITRD_DST") bytes)"
+        break
+      fi
+    done
+    break
   fi
 done
-exit 1
+
+if [ ! -f "$KERNEL_DST" ]; then
+  echo "WARN: no vmlinuz found in /usr/lib/modules/*/"
+fi
+
+# 2. Fix sparse grubenv — GRUB rejects sparse files in check_blocklists
+# Check using st_blocks (allocated blocks) vs st_size: sparse files have blocks < size
+# On FAT32, st_blocks is always 0 for any file, so we skip the sparse check.
+create_grubenv() {
+  rm -f "$GRUBENV" 2>/dev/null || true
+  dd if=/dev/zero of="$GRUBENV" bs=1024 count=1 conv=notrunc status=none 2>/dev/null
+  chmod 644 "$GRUBENV"
+  chattr -c "$GRUBENV" 2>/dev/null || true
+}
+
+if [ "$BOOT_FSTYPE" != "vfat" ] && [ "$BOOT_FSTYPE" != "fat32" ]; then
+  if [ -f "$GRUBENV" ]; then
+    SIZE=$(stat -c%s "$GRUBENV" 2>/dev/null || echo 0)
+    BLOCKS=$(stat -c%b "$GRUBENV" 2>/dev/null || echo 0)
+    if [ "$SIZE" -ne 1024 ] || [ "$BLOCKS" -eq 0 ]; then
+      echo "WARN: grubenv is sparse or wrong size ($SIZE bytes, $BLOCKS blocks), recreating..."
+      create_grubenv
+      echo "OK: grubenv recreated (non-sparse)"
+    else
+      echo "OK: grubenv is valid ($SIZE bytes, $BLOCKS blocks)"
+    fi
+  elif command -v grub-install &>/dev/null; then
+    echo "Creating grubenv..."
+    mkdir -p "$(dirname "$GRUBENV")"
+    create_grubenv
+    echo "OK: grubenv created (non-sparse)"
+  else
+    echo "SKIP: grubenv not created (GRUB not installed)"
+  fi
+else
+  echo "SKIP: grubenv sparse check skipped (/boot is $BOOT_FSTYPE, sparse not possible)"
+fi
 SCRIPT
 chmod +x /etc/calamares/scripts/copy-kernel.sh
 
@@ -1598,6 +1717,17 @@ dontChroot: false
 timeout: 10
 script:
     - "/etc/calamares/scripts/copy-kernel.sh"
+EOF
+
+# shellprocess-finalize-boot — финализация загрузчика после установки
+cat > /etc/calamares/modules/shellprocess-finalize-boot.conf << 'EOF'
+---
+dontChroot: false
+timeout: 30
+script:
+    - "/etc/calamares/scripts/copy-kernel.sh"
+    - "grub-mkconfig -o /boot/grub/grub.cfg"
+    - "if command -v limine-entry-tool &>/dev/null; then limine-entry-tool; fi"
 EOF
 
 # machineid — генерация machine-id
