@@ -201,10 +201,7 @@ if command -v mkinitcpio &>/dev/null; then
   mkinitcpio -P
 fi
 
-# Pacman hook: copy kernel to /boot/vmlinuz-linux after every linux package update.
-# GRUB on Btrfs cannot read symlinks — it reads the symlink file itself (0 bytes)
-# and fails with "преждевременный конец файла" (premature end of file).
-# Only the first kernel found in /usr/lib/modules/*/ is copied (usually the latest).
+# Pacman hook: finalize boot files (copy kernel as regular file, fix symlinks)
 mkdir -p /etc/pacman.d/hooks
 cat > /etc/pacman.d/hooks/90-vmlinuz-copy.hook << 'HOOK'
 [Trigger]
@@ -221,25 +218,9 @@ Target = linux-rt
 Target = linux-rt-lts
 
 [Action]
-Description = Copying kernel to /boot/vmlinuz-linux (regular file for GRUB)...
+Description = Finalizing VibeLinux boot files (copying kernels, fixing symlinks)...
 When = PostTransaction
-Exec = /bin/sh -c '
-  TARGET="/boot/vmlinuz-linux"
-  rm -f "$TARGET"
-  for d in /usr/lib/modules/*/; do
-    k="${d%/}"; [ "${k##*/}" = "extramodules" ] && continue
-    if [ -f "${d}vmlinuz" ]; then
-      cp -f "${d}vmlinuz" "$TARGET"
-      chmod 644 "$TARGET"
-      echo "  -> kernel copied to $TARGET ($(stat -c%s "$TARGET") bytes)"
-      break
-    fi
-  done
-  # If no kernel was found and we're on FAT32, warn but do not fail
-  if [ ! -f "$TARGET" ]; then
-    echo "  WARN: no vmlinuz found in /usr/lib/modules/*/"
-  fi
-'
+Exec = /usr/local/bin/vibe-finalize-boot
 HOOK
 
 # SDDM autologin (Wayland — KDE 6 дефолт)
@@ -1622,62 +1603,108 @@ unpack:
     destination: ""
 EOF
 
-# kernel-copy — скрипт для shellprocess
-mkdir -p /etc/calamares/scripts
-cat > /etc/calamares/scripts/copy-kernel.sh << 'SCRIPT'
+# vibe-finalize-boot — универсальный скрипт финализации файлов загрузки
+mkdir -p /usr/local/bin
+cat > /usr/local/bin/vibe-finalize-boot << 'SCRIPT'
 #!/bin/bash
-# Copy kernel + initramfs from /usr/lib/modules/ to /boot/vmlinuz-linux.
-# Uses copy (not symlink) because:
-#   - GRUB on Btrfs does not follow symlinks (reads symlink body = 0 bytes)
-#   - FAT32 /boot (EFI system partition) does not support Linux symlinks
-# Both cases cause "преждевременный конец файла" (premature end of file).
-#
-# Also ensures /boot/grub/grubenv is not sparse (GRUB check_blocklists
-# rejects sparse files with "sparse file not allowed").
+# vibe-finalize-boot — финализация файлов загрузки VibeLinux.
+# 1. Заменяет симлинки в /boot на реальные копии (фикс GRUB на Btrfs).
+# 2. Синхронизирует ядра из /usr/lib/modules/ в /boot.
+# 3. Делает установленное ядро дефолтным (vmlinuz-linux / initramfs-linux.img).
+# 4. Исправляет sparse grubenv.
 set -e
 
 KERNEL_DST="/boot/vmlinuz-linux"
 INITRD_DST="/boot/initramfs-linux.img"
+INITRD_FALLBACK_DST="/boot/initramfs-linux-fallback.img"
 GRUBENV="/boot/grub/grubenv"
 
 # Detect filesystem type of /boot
 BOOT_FSTYPE=$(findmnt -n -o FSTYPE /boot 2>/dev/null || echo "unknown")
 
-# 1. Copy kernel as a regular file (never a symlink)
-for d in /usr/lib/modules/*/; do
-  k="${d%/}"
-  [ "${k##*/}" = "extramodules" ] || [ "${k##*/}" = "extramessages" ] && continue
-  if [ -f "${d}vmlinuz" ]; then
-    rm -f "$KERNEL_DST"
-    cp -f "${d}vmlinuz" "$KERNEL_DST"
-    chmod 644 "$KERNEL_DST"
-    if [ ! -f "$KERNEL_DST" ] || [ -h "$KERNEL_DST" ]; then
-      echo "FATAL: $KERNEL_DST is not a regular file after copy"
-      exit 1
-    fi
-    echo "OK: kernel copied to $KERNEL_DST ($(stat -c%s "$KERNEL_DST") bytes, fs=$BOOT_FSTYPE)"
+echo "=== VibeLinux Boot Finalizer ==="
+echo "Boot filesystem type: $BOOT_FSTYPE"
 
-    # Also copy matching initramfs if available (common names)
-    for initrd_src in "${d}initramfs.img" "${d}initramfs-linux.img" "${d}initrd.img"; do
-      if [ -f "$initrd_src" ]; then
-        rm -f "$INITRD_DST"
-        cp -f "$initrd_src" "$INITRD_DST"
-        chmod 644 "$INITRD_DST"
-        echo "OK: initramfs copied to $INITRD_DST ($(stat -c%s "$INITRD_DST") bytes)"
-        break
-      fi
-    done
-    break
+# 1. Заменяем все симлинки в /boot на реальные файлы
+echo "Checking symlinks in /boot..."
+for f in /boot/vmlinuz-* /boot/initramfs-*; do
+  [ -e "$f" ] || continue
+  if [ -h "$f" ]; then
+    target=$(readlink -f "$f")
+    if [ -f "$target" ]; then
+      rm -f "$f"
+      cp -f "$target" "$f"
+      chmod 644 "$f"
+      echo "  -> Replaced symlink $f with copy of $target"
+    fi
   fi
 done
 
-if [ ! -f "$KERNEL_DST" ]; then
-  echo "WARN: no vmlinuz found in /usr/lib/modules/*/"
+# 2. Копируем ядра из /usr/lib/modules/ в /boot
+echo "Syncing kernels from /usr/lib/modules/..."
+PRIMARY_KERNEL=""
+for d in /usr/lib/modules/*/; do
+  kver="${d%/}"
+  kver="${kver##*/}"
+  [ "$kver" = "extramodules" ] || [ "$kver" = "extramessages" ] && continue
+  
+  if [ -f "${d}vmlinuz" ]; then
+    # Определяем имя ядра из pkgbase
+    if [ -f "${d}pkgbase" ]; then
+      kernel_name=$(cat "${d}pkgbase" | tr -d ' \n\r')
+    else
+      # Fallback угадывание по имени директории
+      if [[ "$kver" == *"-cachyos"* ]]; then
+        kernel_name="linux-cachyos"
+      elif [[ "$kver" == *"-zen"* ]]; then
+        kernel_name="linux-zen"
+      elif [[ "$kver" == *"-lts"* ]]; then
+        kernel_name="linux-lts"
+      else
+        kernel_name="linux"
+      fi
+    fi
+    
+    echo "Found kernel: $kernel_name (version: $kver)"
+    if [ -z "$PRIMARY_KERNEL" ]; then
+      PRIMARY_KERNEL="$kernel_name"
+    fi
+    
+    dest="/boot/vmlinuz-$kernel_name"
+    rm -f "$dest"
+    cp -f "${d}vmlinuz" "$dest"
+    chmod 644 "$dest"
+    echo "  -> Copied kernel to $dest"
+  fi
+done
+
+# 3. Делаем основное ядро дефолтным (vmlinuz-linux)
+if [ -n "$PRIMARY_KERNEL" ]; then
+  if [ "$PRIMARY_KERNEL" != "linux" ]; then
+    echo "Making $PRIMARY_KERNEL the default kernel..."
+    rm -f "$KERNEL_DST"
+    cp -f "/boot/vmlinuz-$PRIMARY_KERNEL" "$KERNEL_DST"
+    chmod 644 "$KERNEL_DST"
+    
+    if [ -f "/boot/initramfs-$PRIMARY_KERNEL.img" ]; then
+      rm -f "$INITRD_DST"
+      cp -f "/boot/initramfs-$PRIMARY_KERNEL.img" "$INITRD_DST"
+      chmod 644 "$INITRD_DST"
+      echo "  -> Copied initramfs to $INITRD_DST"
+    fi
+    
+    if [ -f "/boot/initramfs-$PRIMARY_KERNEL-fallback.img" ]; then
+      rm -f "$INITRD_FALLBACK_DST"
+      cp -f "/boot/initramfs-$PRIMARY_KERNEL-fallback.img" "$INITRD_FALLBACK_DST"
+      chmod 644 "$INITRD_FALLBACK_DST"
+      echo "  -> Copied fallback initramfs to $INITRD_FALLBACK_DST"
+    fi
+  else
+    echo "Primary kernel is standard 'linux'. Default mapping skipped (already set up)."
+  fi
 fi
 
-# 2. Fix sparse grubenv — GRUB rejects sparse files in check_blocklists
-# Check using st_blocks (allocated blocks) vs st_size: sparse files have blocks < size
-# On FAT32, st_blocks is always 0 for any file, so we skip the sparse check.
+# 4. Fix sparse grubenv
 create_grubenv() {
   rm -f "$GRUBENV" 2>/dev/null || true
   dd if=/dev/zero of="$GRUBENV" bs=1024 count=1 conv=notrunc status=none 2>/dev/null
@@ -1692,23 +1719,17 @@ if [ "$BOOT_FSTYPE" != "vfat" ] && [ "$BOOT_FSTYPE" != "fat32" ]; then
     if [ "$SIZE" -ne 1024 ] || [ "$BLOCKS" -eq 0 ]; then
       echo "WARN: grubenv is sparse or wrong size ($SIZE bytes, $BLOCKS blocks), recreating..."
       create_grubenv
-      echo "OK: grubenv recreated (non-sparse)"
     else
-      echo "OK: grubenv is valid ($SIZE bytes, $BLOCKS blocks)"
+      echo "OK: grubenv is valid"
     fi
   elif command -v grub-install &>/dev/null; then
     echo "Creating grubenv..."
     mkdir -p "$(dirname "$GRUBENV")"
     create_grubenv
-    echo "OK: grubenv created (non-sparse)"
-  else
-    echo "SKIP: grubenv not created (GRUB not installed)"
   fi
-else
-  echo "SKIP: grubenv sparse check skipped (/boot is $BOOT_FSTYPE, sparse not possible)"
 fi
 SCRIPT
-chmod +x /etc/calamares/scripts/copy-kernel.sh
+chmod +x /usr/local/bin/vibe-finalize-boot
 
 # shellprocess-kernel-copy — копирование ядра в /boot/vmlinuz-linux
 cat > /etc/calamares/modules/shellprocess-kernel-copy.conf << 'EOF'
@@ -1716,7 +1737,7 @@ cat > /etc/calamares/modules/shellprocess-kernel-copy.conf << 'EOF'
 dontChroot: false
 timeout: 10
 script:
-    - "/etc/calamares/scripts/copy-kernel.sh"
+    - "/usr/local/bin/vibe-finalize-boot"
 EOF
 
 # shellprocess-finalize-boot — финализация загрузчика после установки
@@ -1725,7 +1746,7 @@ cat > /etc/calamares/modules/shellprocess-finalize-boot.conf << 'EOF'
 dontChroot: false
 timeout: 30
 script:
-    - "/etc/calamares/scripts/copy-kernel.sh"
+    - "/usr/local/bin/vibe-finalize-boot"
     - "grub-mkconfig -o /boot/grub/grub.cfg"
     - "if command -v limine-entry-tool &>/dev/null; then limine-entry-tool; fi"
 EOF
@@ -1752,7 +1773,7 @@ useSystemdHook: false
 hooks:
   prepend: [  ]
   append: [  ]
-  remove: [  ]
+  remove: [ "archiso" ]
 source: "/etc/mkinitcpio.conf"
 EOF
 
