@@ -1707,7 +1707,12 @@ fi
 # 4. Fix sparse grubenv
 create_grubenv() {
   rm -f "$GRUBENV" 2>/dev/null || true
-  dd if=/dev/zero of="$GRUBENV" bs=1024 count=1 conv=notrunc status=none 2>/dev/null
+  if command -v grub-editenv &>/dev/null; then
+    grub-editenv "$GRUBENV" create
+  else
+    dd if=/dev/zero of="$GRUBENV" bs=1024 count=1 conv=notrunc status=none 2>/dev/null
+    printf '# GRUB Environment Block\n' | dd of="$GRUBENV" conv=notrunc status=none 2>/dev/null
+  fi
   chmod 644 "$GRUBENV"
   chattr -c "$GRUBENV" 2>/dev/null || true
 }
@@ -1744,10 +1749,11 @@ EOF
 cat > /etc/calamares/modules/shellprocess-finalize-boot.conf << 'EOF'
 ---
 dontChroot: false
-timeout: 30
+timeout: 60
 script:
     - "/usr/local/bin/vibe-finalize-boot"
     - "grub-mkconfig -o /boot/grub/grub.cfg"
+    - "if [ ! -d /sys/firmware/efi ]; then grub-install --target=i386-pc --boot-directory=/boot \"$(lsblk -ndo pkname \"$(findmnt -n -o SOURCE /)\" 2>/dev/null | head -1)\" 2>/dev/null || grub-install --target=i386-pc --boot-directory=/boot /dev/sda; fi"
     - "if command -v limine-entry-tool &>/dev/null; then limine-entry-tool; fi"
 EOF
 
