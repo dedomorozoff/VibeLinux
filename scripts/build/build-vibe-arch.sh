@@ -126,13 +126,13 @@ if [[ -n "$KVER" && -f "$WORKDIR/x86_64/airootfs/usr/lib/modules/$KVER/vmlinuz" 
   # kernel already installed (incremental build) – copy it directly
   # Remove any dangling symlink from a previous run first
   rm -f "$WORKDIR/x86_64/airootfs/boot/vmlinuz-linux"
-  cp "$WORKDIR/x86_64/airootfs/usr/lib/modules/$KVER/vmlinuz" \
+  cp --sparse=never "$WORKDIR/x86_64/airootfs/usr/lib/modules/$KVER/vmlinuz" \
      "$WORKDIR/x86_64/airootfs/boot/vmlinuz-linux"
-  log "Pre-populated /boot/vmlinuz-linux from /usr/lib/modules/$KVER/vmlinuz"
+  log "Pre-populated /boot/vmlinuz-linux from /usr/lib/modules/$KVER/vmlinuz (non-sparse)"
 else
-  # first build – placeholder; pacstrap + mkinitcpio hook will fill it
-  touch "$WORKDIR/x86_64/airootfs/boot/vmlinuz-linux"
-  log "Pre-populated /boot/vmlinuz-linux (empty placeholder)"
+  # first build – placeholder (non-sparse, 1 block); pacstrap + mkinitcpio hook will fill it
+  dd if=/dev/zero bs=1024 count=1 of="$WORKDIR/x86_64/airootfs/boot/vmlinuz-linux" status=none 2>/dev/null
+  log "Pre-populated /boot/vmlinuz-linux (1024-byte placeholder, non-sparse)"
 fi
 
 # 5) Build ISO

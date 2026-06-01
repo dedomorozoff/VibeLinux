@@ -724,7 +724,7 @@ CASPERCONF
       WORK_DIR=$(mktemp -d /tmp/initrd-work-XXXXXX)
       
       # Распаковываем initrd
-      cp "${CHROOT_DIR}/boot/initrd.img.new" "${WORK_DIR}/initrd.img.new"
+      cp --sparse=never "${CHROOT_DIR}/boot/initrd.img.new" "${WORK_DIR}/initrd.img.new"
       INITRD_FILE="${WORK_DIR}/initrd.img.new"
       mkdir -p "${WORK_DIR}/initrd-extracted"
       
@@ -846,28 +846,28 @@ CASPERCONF
 
     # Копируем в casper (для live-сессии)
     if [[ -f "${CHROOT_DIR}/boot/vmlinuz" ]]; then
-      cp "${CHROOT_DIR}/boot/vmlinuz" "${IMAGE_DIR}/casper/vmlinuz"
-      cp "${CHROOT_DIR}/boot/vmlinuz" "${IMAGE_DIR}/boot/vmlinuz"
+      cp --sparse=never "${CHROOT_DIR}/boot/vmlinuz" "${IMAGE_DIR}/casper/vmlinuz"
+      cp --sparse=never "${CHROOT_DIR}/boot/vmlinuz" "${IMAGE_DIR}/boot/vmlinuz"
     else
       # Ищем первое подходящее ядро по шаблону vmlinuz-*
       kernel_candidates=( "${CHROOT_DIR}"/boot/vmlinuz-* )
       if [[ -n "${kernel_candidates[0]:-}" && -f "${kernel_candidates[0]}" ]]; then
-        cp "${kernel_candidates[0]}" "${IMAGE_DIR}/casper/vmlinuz"
-        cp "${kernel_candidates[0]}" "${IMAGE_DIR}/boot/vmlinuz"
+        cp --sparse=never "${kernel_candidates[0]}" "${IMAGE_DIR}/casper/vmlinuz"
+        cp --sparse=never "${kernel_candidates[0]}" "${IMAGE_DIR}/boot/vmlinuz"
       else
         die "Не удалось найти ядро vmlinuz в chroot/boot"
       fi
     fi
 
     if [[ -f "${CHROOT_DIR}/boot/initrd.img" ]]; then
-      cp "${CHROOT_DIR}/boot/initrd.img" "${IMAGE_DIR}/casper/initrd"
-      cp "${CHROOT_DIR}/boot/initrd.img" "${IMAGE_DIR}/boot/initrd"
+      cp --sparse=never "${CHROOT_DIR}/boot/initrd.img" "${IMAGE_DIR}/casper/initrd"
+      cp --sparse=never "${CHROOT_DIR}/boot/initrd.img" "${IMAGE_DIR}/boot/initrd"
     else
       # Ищем первое подходящее initrd по шаблону initrd.img-*
       initrd_candidates=( "${CHROOT_DIR}"/boot/initrd.img-* )
       if [[ -n "${initrd_candidates[0]:-}" && -f "${initrd_candidates[0]}" ]]; then
-        cp "${initrd_candidates[0]}" "${IMAGE_DIR}/casper/initrd"
-        cp "${initrd_candidates[0]}" "${IMAGE_DIR}/boot/initrd"
+        cp --sparse=never "${initrd_candidates[0]}" "${IMAGE_DIR}/casper/initrd"
+        cp --sparse=never "${initrd_candidates[0]}" "${IMAGE_DIR}/boot/initrd"
       else
         die "Не удалось найти initrd в chroot/boot"
       fi

@@ -180,7 +180,7 @@ EOF
 if [[ ! -s /boot/vmlinuz-linux ]]; then
   KVER=$(ls /usr/lib/modules/ 2>/dev/null | grep -v 'extramodules' | sort -V | tail -1)
   if [[ -n "$KVER" && -f "/usr/lib/modules/$KVER/vmlinuz" ]]; then
-    cp -f "/usr/lib/modules/$KVER/vmlinuz" /boot/vmlinuz-linux
+    cp --sparse=never -f "/usr/lib/modules/$KVER/vmlinuz" /boot/vmlinuz-linux
     chmod 644 /boot/vmlinuz-linux
     echo "OK: copied kernel to /boot/vmlinuz-linux ($(stat -c%s /boot/vmlinuz-linux) bytes)"
   fi
@@ -1047,6 +1047,12 @@ terminal-font: "unicode"
 GRUBTHEME
 echo 'GRUB_THEME=/boot/grub/themes/vibelinux/theme.txt' >> "$GRUB_DEFAULT_FILE"
 
+# Fix menu entry name: 10_linux appends " Linux" to GRUB_DISTRIBUTOR,
+# producing "VibeLinux Linux, with Linux linux". Remove the duplicate.
+if [[ -f /etc/grub.d/10_linux ]]; then
+  sed -i 's/OS="${GRUB_DISTRIBUTOR} Linux"/OS="${GRUB_DISTRIBUTOR}"/' /etc/grub.d/10_linux
+fi
+
 # Ensure nvidia-drm.modeset=1 is in GRUB_CMDLINE_LINUX_DEFAULT
 if grep -q "^GRUB_CMDLINE_LINUX_DEFAULT=" "$GRUB_DEFAULT_FILE" 2>/dev/null; then
   if ! grep -q "nvidia-drm.modeset=1" "$GRUB_DEFAULT_FILE"; then
@@ -1067,7 +1073,7 @@ fi
 if [[ ! -s /boot/vmlinuz-linux ]]; then
   KVER=$(ls /usr/lib/modules/ 2>/dev/null | grep -v 'extramodules' | sort -V | tail -1)
   if [[ -n "$KVER" && -f "/usr/lib/modules/$KVER/vmlinuz" ]]; then
-    cp -f "/usr/lib/modules/$KVER/vmlinuz" /boot/vmlinuz-linux
+    cp --sparse=never -f "/usr/lib/modules/$KVER/vmlinuz" /boot/vmlinuz-linux
     chmod 644 /boot/vmlinuz-linux
     echo "OK: copied kernel to /boot/vmlinuz-linux ($(stat -c%s /boot/vmlinuz-linux) bytes)"
   fi
@@ -1633,7 +1639,7 @@ for f in /boot/vmlinuz-* /boot/initramfs-*; do
     target=$(readlink -f "$f")
     if [ -f "$target" ]; then
       rm -f "$f"
-      cp -f "$target" "$f"
+      cp --sparse=never -f "$target" "$f"
       chmod 644 "$f"
       echo "  -> Replaced symlink $f with copy of $target"
     fi
@@ -1672,7 +1678,7 @@ for d in /usr/lib/modules/*/; do
     
     dest="/boot/vmlinuz-$kernel_name"
     rm -f "$dest"
-    cp -f "${d}vmlinuz" "$dest"
+    cp --sparse=never -f "${d}vmlinuz" "$dest"
     chmod 644 "$dest"
     echo "  -> Copied kernel to $dest"
   fi
@@ -1683,19 +1689,19 @@ if [ -n "$PRIMARY_KERNEL" ]; then
   if [ "$PRIMARY_KERNEL" != "linux" ]; then
     echo "Making $PRIMARY_KERNEL the default kernel..."
     rm -f "$KERNEL_DST"
-    cp -f "/boot/vmlinuz-$PRIMARY_KERNEL" "$KERNEL_DST"
+    cp --sparse=never -f "/boot/vmlinuz-$PRIMARY_KERNEL" "$KERNEL_DST"
     chmod 644 "$KERNEL_DST"
     
     if [ -f "/boot/initramfs-$PRIMARY_KERNEL.img" ]; then
       rm -f "$INITRD_DST"
-      cp -f "/boot/initramfs-$PRIMARY_KERNEL.img" "$INITRD_DST"
+      cp --sparse=never -f "/boot/initramfs-$PRIMARY_KERNEL.img" "$INITRD_DST"
       chmod 644 "$INITRD_DST"
       echo "  -> Copied initramfs to $INITRD_DST"
     fi
     
     if [ -f "/boot/initramfs-$PRIMARY_KERNEL-fallback.img" ]; then
       rm -f "$INITRD_FALLBACK_DST"
-      cp -f "/boot/initramfs-$PRIMARY_KERNEL-fallback.img" "$INITRD_FALLBACK_DST"
+      cp --sparse=never -f "/boot/initramfs-$PRIMARY_KERNEL-fallback.img" "$INITRD_FALLBACK_DST"
       chmod 644 "$INITRD_FALLBACK_DST"
       echo "  -> Copied fallback initramfs to $INITRD_FALLBACK_DST"
     fi
@@ -1710,8 +1716,8 @@ create_grubenv() {
   if command -v grub-editenv &>/dev/null; then
     grub-editenv "$GRUBENV" create
   else
-    dd if=/dev/zero of="$GRUBENV" bs=1024 count=1 conv=notrunc status=none 2>/dev/null
-    printf '# GRUB Environment Block\n' | dd of="$GRUBENV" conv=notrunc status=none 2>/dev/null
+    # legacy fallback — создаёт не-sparse 1024‑байтовый файл
+    dd if=/dev/zero bs=1024 count=1 of="$GRUBENV" conv=notrunc status=none 2>/dev/null
   fi
   chmod 644 "$GRUBENV"
   chattr -c "$GRUBENV" 2>/dev/null || true

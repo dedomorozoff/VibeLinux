@@ -375,10 +375,10 @@ MODULES
     [[ -n "${INITRD_FOUND}" ]] && log "Найден initrd: ${INITRD_FOUND}"
 
     if [[ -n "${KERNEL_FOUND}" ]] && [[ -n "${INITRD_FOUND}" ]]; then
-        cp "${KERNEL_FOUND}" "${IMAGE_DIR}/casper/vmlinuz"
-        cp "${INITRD_FOUND}" "${IMAGE_DIR}/casper/initrd"
-        cp "${IMAGE_DIR}/casper/vmlinuz" "${IMAGE_DIR}/boot/vmlinuz"
-        cp "${IMAGE_DIR}/casper/initrd" "${IMAGE_DIR}/boot/initrd.img"
+        cp --sparse=never "${KERNEL_FOUND}" "${IMAGE_DIR}/casper/vmlinuz"
+        cp --sparse=never "${INITRD_FOUND}" "${IMAGE_DIR}/casper/initrd"
+        cp --sparse=never "${IMAGE_DIR}/casper/vmlinuz" "${IMAGE_DIR}/boot/vmlinuz"
+        cp --sparse=never "${IMAGE_DIR}/casper/initrd" "${IMAGE_DIR}/boot/initrd.img"
         log "Ядро и initrd скопированы в casper/ и boot/"
     else
         log "ERROR: Ядро или initrd не найдены!"
