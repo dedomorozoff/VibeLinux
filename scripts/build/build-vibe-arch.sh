@@ -121,7 +121,7 @@ fi
 #     Copying the kernel here (rather than using a symlink) ensures the host-side
 #     install/cp in mkarchiso's _make_boot_on_iso9660 can stat the file.
 mkdir -p "$WORKDIR/x86_64/airootfs/boot"
-KVER=$(ls "$WORKDIR"/x86_64/airootfs/usr/lib/modules/ 2>/dev/null | grep -v extramodules | sort -V | tail -1)
+KVER=$(ls "$WORKDIR"/x86_64/airootfs/usr/lib/modules/ 2>/dev/null | grep -v extramodules | sort -V | tail -1) || KVER=""
 if [[ -n "$KVER" && -f "$WORKDIR/x86_64/airootfs/usr/lib/modules/$KVER/vmlinuz" ]]; then
   # kernel already installed (incremental build) – copy it directly
   # Remove any dangling symlink from a previous run first
@@ -149,7 +149,7 @@ if [[ $BUILD_EXIT -ne 0 ]]; then
 fi
 
 # 6) Verify result
-ISO_FILE=$(ls -t "$OUTDIR"/vibelinux-*.iso 2>/dev/null | head -1)
+ISO_FILE=$(ls -t "$OUTDIR"/vibelinux-*.iso 2>/dev/null | head -1) || ISO_FILE=""
 if [[ -f "$ISO_FILE" ]]; then
     log "Done! ISO at: $ISO_FILE"
     log "Size: $(du -h "$ISO_FILE" | cut -f1)"
