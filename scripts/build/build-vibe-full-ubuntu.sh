@@ -425,8 +425,8 @@ if [[ -z "$KERNEL_SRC" || -z "$INITRD_SRC" ]]; then
   err "Cannot build a bootable ISO."
   exit 1
 fi
-cp -f "$KERNEL_SRC" "$WORKDIR/iso/boot/vmlinuz"
-cp -f "$INITRD_SRC" "$WORKDIR/iso/boot/initrd.img"
+cp -f --sparse=never "$KERNEL_SRC" "$WORKDIR/iso/boot/vmlinuz"
+cp -f --sparse=never "$INITRD_SRC" "$WORKDIR/iso/boot/initrd.img"
 
 cat > "$WORKDIR/iso/boot/grub/grub.cfg" << 'GRUB'
 set default=0
