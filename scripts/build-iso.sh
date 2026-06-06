@@ -828,6 +828,7 @@ CASPERCONF
     mkdir -p "${IMAGE_DIR}/casper"
     mksquashfs "${CHROOT_DIR}" "${IMAGE_DIR}/casper/filesystem.squashfs" \
       -comp zstd \
+      -no-sparse \
       -e boot
 
     # Шаг 6: Подготовка структуры live-ISO
@@ -872,6 +873,14 @@ CASPERCONF
         die "Не удалось найти initrd в chroot/boot"
       fi
     fi
+
+    # Файлы ядра и initrd не должны быть sparse (GRUB не умеет загружать sparse через blocklist)
+    for f in "${IMAGE_DIR}/casper/vmlinuz" "${IMAGE_DIR}/casper/initrd" "${IMAGE_DIR}/boot/vmlinuz" "${IMAGE_DIR}/boot/initrd"; do
+      if [[ -f "$f" ]]; then
+        tmpf="${f}.tmp"
+        cat "$f" > "$tmpf" && mv "$tmpf" "$f" || true
+      fi
+    done
 
     log "Ядро и initrd скопированы в casper/ и boot/"
 
@@ -965,7 +974,8 @@ message-color: "#ffffff"
 
     item_color = "#ffffff"
     selected_item_color = "#3498db"
-    selected_item_pixmap = "selected.png"
+    # selected.png не существует, для pixmap нужен модуль png — не используем
+    # selected_item_pixmap = "selected.png"
 
     item_font = "DejaVu Sans:16"
     selected_item_font = "DejaVu Sans:bold:16"
