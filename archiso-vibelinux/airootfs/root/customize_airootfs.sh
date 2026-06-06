@@ -964,13 +964,11 @@ GRUB_DISTRIBUTOR="VibeLinux"
 GRUB_CMDLINE_LINUX_DEFAULT="nvidia-drm.modeset=1 quiet splash"
 GRUB_CMDLINE_LINUX="nvidia-drm.modeset=1"
 GRUB_PRELOAD_MODULES="part_gpt part_msdos btrfs"
-GRUB_DISABLE_LINUX_PARTUUID=true
+GRUB_DISABLE_LINUX_PARTUUID=false
+GRUB_DISABLE_LINUX_UUID=false
 GRUB_TERMINAL_INPUT="console"
-GRUB_GFXMODE=1920x1080,auto
-GRUB_GFXPAYLOAD_LINUX="keep"
-GRUB_DISABLE_LINUX_UUID=true
 GRUB_DISABLE_RECOVERY=true
-GRUB_ENABLE_CRYPTODISK=y
+GRUB_ENABLE_CRYPTODISK=n
 GRUB_SAVEDEFAULT=true
 GRUB_DEFAULT=saved
 GRUB_DISABLE_SUBMENU=y
@@ -1049,9 +1047,14 @@ echo 'GRUB_THEME=/boot/grub/themes/vibelinux/theme.txt' >> "$GRUB_DEFAULT_FILE"
 
 # Fix menu entry name: 10_linux appends " Linux" to GRUB_DISTRIBUTOR,
 # producing "VibeLinux Linux, with Linux linux". Remove the duplicate.
-if [[ -f /etc/grub.d/10_linux ]]; then
-  sed -i 's/OS="${GRUB_DISTRIBUTOR} Linux"/OS="${GRUB_DISTRIBUTOR}"/' /etc/grub.d/10_linux
-fi
+fix_10_linux() {
+  local f="/etc/grub.d/10_linux"
+  if [[ -f "$f" ]]; then
+    # Работает и с OS="${GRUB_DISTRIBUTOR} Linux" и с OS="${GRUB_DISTRIBUTOR} Linux "
+    sed -i 's/OS="${GRUB_DISTRIBUTOR}\s*Linux"/OS="${GRUB_DISTRIBUTOR}"/' "$f"
+  fi
+}
+fix_10_linux
 
 # Ensure nvidia-drm.modeset=1 is in GRUB_CMDLINE_LINUX_DEFAULT
 if grep -q "^GRUB_CMDLINE_LINUX_DEFAULT=" "$GRUB_DEFAULT_FILE" 2>/dev/null; then
@@ -1118,6 +1121,22 @@ Exec=/usr/local/bin/vibe-welcome
 Terminal=true
 X-GNOME-Autostart-enabled=true
 EOF
+
+# Systemd service — Welcome App (срабатывает даже без графической сессии)
+cat > /etc/systemd/system/vibe-welcome.service << 'SVCEOF'
+[Unit]
+Description=VibeLinux First Boot Welcome
+After=graphical-session.target
+ConditionPathExists=!/home/vibe/.vibe-welcome-done
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/vibe-welcome
+RemainAfterExit=yes
+
+[Install]
+WantedBy=default.target
+SVCEOF
 
 # Welcome App shortcut on desktop
 mkdir -p /home/vibe/Desktop
@@ -1739,6 +1758,56 @@ if [ "$BOOT_FSTYPE" != "vfat" ] && [ "$BOOT_FSTYPE" != "fat32" ]; then
     create_grubenv
   fi
 fi
+
+# 5. Recreate GRUB theme (grub-install может перезаписать /boot/grub/)
+echo "Ensuring GRUB theme..."
+WALL_PNG="/usr/share/wallpapers/VibeLinux/contents/images/2560x1440.png"
+BG_IMAGE="$WALL_PNG"
+if [[ ! -f "$BG_IMAGE" ]]; then
+  # fallback: starfield из GRUB
+  BG_IMAGE="/usr/share/grub/starfield.png"
+fi
+
+mkdir -p /boot/grub/themes/vibelinux
+cat > /boot/grub/themes/vibelinux/theme.txt << GRUBTHEME
+# VibeLinux GRUB theme
+title-text: "VibeLinux"
+title-color: "#4CC9F0"
+title-font: "unicode"
+desktop-image: "${BG_IMAGE}"
+desktop-color: "#0B1020"
+terminal-font: "unicode"
++ boot_menu {
+    left = 18%
+    top = 20%
+    width = 64%
+    height = 60%
+    item_color = "#C0C0C0"
+    selected_item_color = "#4CC9F0"
+    item_height = 36
+    item_padding = 8
+    item_spacing = 6
+    item_font = "unicode"
+    selected_item_font = "unicode"
+    scrollbar = false
+}
++ progress_bar {
+    id = "progress_module"
+    left = 18%
+    top = 85%
+    width = 64%
+    height = 8%
+    fg_color = "#4CC9F0"
+    bg_color = "#0B1020"
+}
+GRUBTHEME
+chmod 644 /boot/grub/themes/vibelinux/theme.txt
+echo "  -> GRUB theme ensured at /boot/grub/themes/vibelinux/theme.txt"
+
+# 6. Fix 10_linux menu entry (убираем дубликат "Linux" в названии)
+if [[ -f /etc/grub.d/10_linux ]]; then
+  sed -i 's/OS="${GRUB_DISTRIBUTOR}\s*Linux"/OS="${GRUB_DISTRIBUTOR}"/' /etc/grub.d/10_linux
+fi
 SCRIPT
 chmod +x /usr/local/bin/vibe-finalize-boot
 
@@ -1832,6 +1901,8 @@ services:
   - name: docker
     action: enable
   - name: ollama
+    action: enable
+  - name: vibe-welcome
     action: enable
 EOF
 
