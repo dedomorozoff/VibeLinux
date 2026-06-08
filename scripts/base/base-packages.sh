@@ -104,7 +104,7 @@ cat > /etc/default/keyboard << 'KEYBOARDEOF'
 XKBMODEL="pc105"
 XKBLAYOUT="us,ru"
 XKBVARIANT=",typewriter"
-XKBOPTIONS="grp:alt_shift_toggle,grp_led:scroll"
+XKBOPTIONS="grp:caps_toggle,grp_led:scroll"
 BACKSPACE="guess"
 KEYBOARDEOF
 

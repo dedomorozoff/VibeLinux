@@ -12,7 +12,7 @@
   "locale": "ru_RU.UTF-8",
   "keyboard": {
     "layouts": "us,ru",
-    "options": "grp:alt_shift_toggle"
+    "options": "grp:caps_toggle"
   },
   "autologin": true,
   "packages_extra": []

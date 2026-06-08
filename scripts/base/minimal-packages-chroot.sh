@@ -75,7 +75,7 @@ cat > /etc/default/keyboard << 'EOF'
 XKBMODEL="pc105"
 XKBLAYOUT="us,ru"
 XKBVARIANT=""
-XKBOPTIONS="grp:alt_shift_toggle,grp_led:scroll"
+XKBOPTIONS="grp:caps_toggle,grp_led:scroll"
 EOF
 
 # Отключение casper-md5check (чтобы не было ошибки)

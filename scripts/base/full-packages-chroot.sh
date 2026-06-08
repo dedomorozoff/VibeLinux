@@ -227,7 +227,7 @@ cat > /etc/default/keyboard << 'EOF'
 XKBMODEL="pc105"
 XKBLAYOUT="us,ru"
 XKBVARIANT=""
-XKBOPTIONS="grp:alt_shift_toggle,grp_led:scroll"
+XKBOPTIONS="grp:caps_toggle,grp_led:scroll"
 EOF
 
 # === НАСТРОЙКА ПОЛЬЗОВАТЕЛЯ ===
@@ -236,6 +236,10 @@ useradd -m -s /bin/bash vibecode
 echo "vibecode:vibecode" | chpasswd
 usermod -aG sudo vibecode
 usermod -aG docker vibecode
+
+# Обеспечиваем sudo через группу sudo (на случай если в sudoers закомментировано)
+sed -i 's/^# %sudo ALL=(ALL:ALL) ALL/%sudo ALL=(ALL:ALL) ALL/' /etc/sudoers 2>/dev/null || true
+sed -i 's/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/' /etc/sudoers 2>/dev/null || true
 
 # Копирование конфигов для vibecode
 cp -r /root/.config /home/vibecode/ 2>/dev/null || true
