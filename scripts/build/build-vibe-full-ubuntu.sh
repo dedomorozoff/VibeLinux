@@ -110,6 +110,9 @@ HOSTNAME="__HOST__"
 
 id "$USERNAME" &>/dev/null || useradd -m -s /usr/bin/zsh "$USERNAME"
 echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/90_vibe
+# Включаем sudo для групп wheel/sudo (пользователь Calamares попадает в wheel)
+sed -i 's/^# %sudo ALL=(ALL:ALL) ALL/%sudo ALL=(ALL:ALL) ALL/' /etc/sudoers 2>/dev/null || true
+sed -i 's/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/' /etc/sudoers 2>/dev/null || true
 
 echo "$HOSTNAME" > /etc/hostname
 echo "127.0.0.1 localhost $HOSTNAME" > /etc/hosts
@@ -120,7 +123,7 @@ update-locale LANG=ru_RU.UTF-8 || true
 cat > /etc/default/keyboard << KBD
 XKBLAYOUT="us,ru"
 XKBVARIANT=""
-XKBOPTIONS="grp:alt_shift_toggle"
+XKBOPTIONS="grp:caps_toggle"
 BACKSPACE="guess"
 KBD
 

@@ -10,6 +10,13 @@ fi
 
 echo "[bootloader] Настройка GRUB для VibeCode OS..."
 
+# Fix: GRUB background image — копируем в тему GRUB (нужен относительный путь)
+if [[ -f /usr/share/wallpapers/VibeLinux/contents/images/2560x1440.png ]]; then
+  mkdir -p /boot/grub/themes/vibelinux
+  cp /usr/share/wallpapers/VibeLinux/contents/images/2560x1440.png /boot/grub/themes/vibelinux/background.png
+  chattr +m /boot/grub/themes/vibelinux/background.png 2>/dev/null || true
+fi
+
 # Обновляем конфигурацию GRUB
 if [[ -f /etc/default/grub ]]; then
   # Бэкап оригинального конфига
@@ -51,6 +58,17 @@ if command -v update-grub &> /dev/null; then
 
   # Отключаем os-prober для ускорения (не нужен в chroot/ISO)
   echo "GRUB_DISABLE_OS_PROBER=true" >> /etc/default/grub
+
+  # Fix: grubenv не должен быть sparse на btrfs (иначе GRUB падает с sparse file not allowed)
+  GRUBENV="/boot/grub/grubenv"
+  if [[ -f "$GRUBENV" ]]; then
+    grub-editenv "$GRUBENV" set default=0 2>/dev/null || {
+      rm -f "$GRUBENV"
+      grub-editenv "$GRUBENV" create 2>/dev/null || dd if=/dev/zero bs=1024 count=1 of="$GRUBENV" 2>/dev/null
+      grub-editenv "$GRUBENV" set default=0 2>/dev/null || true
+    }
+    chattr +m "$GRUBENV" 2>/dev/null || true
+  fi
 
   update-grub || echo "[bootloader] Предупреждение: не удалось обновить GRUB (возможно, в chroot)"
 fi

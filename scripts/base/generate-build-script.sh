@@ -177,7 +177,7 @@ update-locale LANG=ru_RU.UTF-8 || true
 cat > /etc/default/keyboard << KBD
 XKBLAYOUT="us,ru"
 XKBVARIANT=""
-XKBOPTIONS="grp:alt_shift_toggle"
+XKBOPTIONS="grp:caps_toggle"
 BACKSPACE="guess"
 KBD
 

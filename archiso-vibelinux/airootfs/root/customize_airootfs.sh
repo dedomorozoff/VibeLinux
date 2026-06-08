@@ -139,7 +139,7 @@ Section "InputClass"
     MatchIsKeyboard "on"
     Option "XkbLayout" "us,ru"
     Option "XkbModel" "pc105"
-    Option "XkbOptions" "grp:alt_shift_toggle"
+    Option "XkbOptions" "grp:caps_toggle"
 EndSection
 EOF
 
@@ -153,6 +153,9 @@ if ! id vibe &>/dev/null; then
 fi
 echo "vibe ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/90_vibe
 chmod 440 /etc/sudoers.d/90_vibe
+
+# Enable wheel group sudo (пользователь Calamares добавляется в wheel)
+sed -i 's/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/' /etc/sudoers
 
 # Services
 systemctl enable NetworkManager || true
@@ -755,6 +758,17 @@ OnlyShowIn=KDE
 X-KDE-autostart-phase=2
 X-KDE-autostart-after=plasma-desktop
 AUTOSTART
+
+# 2b. Автозапуск: закрепляем Konsole в панели (Plasma 6)
+cat > /home/vibe/.config/autostart/pin-konsole.desktop << AUTOSTART2
+[Desktop Entry]
+Type=Application
+Name=Pin Konsole to Panel
+Exec=bash -c 'sleep 10 && kwriteconfig6 --file plasma-org.kde.plasma.desktop-appletsrc --group Containments --group 3 --group Applets --group 6 --group Configuration --group General --key launchers "file:///usr/share/applications/org.kde.konsole.desktop,preferred://browser,file:///usr/share/applications/org.kde.dolphin.desktop,file:///usr/share/applications/org.kde.systemsettings.desktop" && killall plasmashell 2>/dev/null; kstart6 plasmashell 2>/dev/null' 
+OnlyShowIn=KDE
+X-KDE-autostart-phase=2
+X-KDE-autostart-after=plasma-desktop
+AUTOSTART2
 chown -R vibe:vibe /home/vibe/.config/autostart
 
 # 3. Plasma 6 Look-and-Feel: заменяем стандартные обои Breeze Dark на VibeLinux
@@ -998,25 +1012,21 @@ GRUB_GFXPAYLOAD_LINUX=keep
 GRUB_FONT_PATH=/usr/share/grub/unicode.pf2
 GRUBRAND
 
+# Copy background image to GRUB theme dir (GRUB needs relative paths)
+mkdir -p /boot/grub/themes/vibelinux
 if [[ -f "$WALL_PNG" ]]; then
-  echo 'GRUB_BACKGROUND='"$WALL_PNG" >> "$GRUB_DEFAULT_FILE"
+  cp "$WALL_PNG" /boot/grub/themes/vibelinux/background.png
+  echo 'GRUB_BACKGROUND=/boot/grub/themes/vibelinux/background.png' >> "$GRUB_DEFAULT_FILE"
+  chattr +m /boot/grub/themes/vibelinux/background.png 2>/dev/null || true
 fi
 
 # GRUB theme — VibeLinux minimal
-STARFIELD="/usr/share/grub/starfield.png"
-if [[ ! -f "$STARFIELD" ]]; then
-  # Создаём простой фон из PNG если есть
-  if [[ -f "$WALL_PNG" ]]; then
-    STARFIELD="$WALL_PNG"
-  fi
-fi
-mkdir -p /boot/grub/themes/vibelinux
 cat > /boot/grub/themes/vibelinux/theme.txt << GRUBTHEME
 # VibeLinux GRUB theme
 title-text: "VibeLinux"
 title-color: "#4CC9F0"
 title-font: "unicode"
-desktop-image: "${STARFIELD}"
+desktop-image: "background.png"
 desktop-color: "#0B1020"
 terminal-font: "unicode"
 + boot_menu {
@@ -1762,19 +1772,18 @@ fi
 # 5. Recreate GRUB theme (grub-install может перезаписать /boot/grub/)
 echo "Ensuring GRUB theme..."
 WALL_PNG="/usr/share/wallpapers/VibeLinux/contents/images/2560x1440.png"
-BG_IMAGE="$WALL_PNG"
-if [[ ! -f "$BG_IMAGE" ]]; then
-  # fallback: starfield из GRUB
-  BG_IMAGE="/usr/share/grub/starfield.png"
+mkdir -p /boot/grub/themes/vibelinux
+if [[ -f "$WALL_PNG" ]]; then
+  cp "$WALL_PNG" /boot/grub/themes/vibelinux/background.png
+  chattr +m /boot/grub/themes/vibelinux/background.png 2>/dev/null || true
 fi
 
-mkdir -p /boot/grub/themes/vibelinux
 cat > /boot/grub/themes/vibelinux/theme.txt << GRUBTHEME
 # VibeLinux GRUB theme
 title-text: "VibeLinux"
 title-color: "#4CC9F0"
 title-font: "unicode"
-desktop-image: "${BG_IMAGE}"
+desktop-image: "background.png"
 desktop-color: "#0B1020"
 terminal-font: "unicode"
 + boot_menu {
