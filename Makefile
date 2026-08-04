@@ -21,7 +21,7 @@
 all: help
 
 # Makefile для сборки VibeCode OS / VibeCode OS
-ПУТЬ := /home/dedo/VibeLinux
+ПУТЬ := $(CURDIR)
 
 DETECT_DISTRO := $(shell if command -v pacman >/dev/null 2>&1; then echo "arch"; elif command -v dnf >/dev/null 2>&1; then echo "fedora"; else echo "ubuntu"; fi)
 
