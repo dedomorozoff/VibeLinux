@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### Fixed
+- **Arch ISO (mkinitcpio):** Убран хук `autodetect` из `archiso-vibelinux/airootfs/etc/mkinitcpio.conf`
+  - `autodetect` урезал модули под железо машины сборки: без оптического привода на хосте
+    из initramfs выпадал `sr_mod`, и live-ISO не могло загрузиться с виртуального CD/DVD
+    в VirtualBox (`ERROR: '/dev/disk/by-label/VIBELINUX_ARCH' device did not show up after 30 seconds`)
+  - Теперь, как в официальном archiso (releng), в initramfs попадают все драйверы
+
 ### Added
 - **Russian Language Support:** Полная поддержка русского языка во всей системе
   - Языковые пакеты: language-pack-ru, language-pack-gnome-ru, kde-l10n-ru
