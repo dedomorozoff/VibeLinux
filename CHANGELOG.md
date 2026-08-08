@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed
+- **nlsh (Arch ISO):** Сборка использует предсобранный пакет `soft/nlsh/*.pkg.tar.zst`
+  - Не нужно собирать nlsh под Arch — `build-vibe-arch.sh` копирует пакет в airootfs,
+    а `customize_airootfs.sh` ставит его через `pacman -U`
+  - Фолбэк на «сырой» бинарник `soft/nlsh/nlsh` сохранён
+
 ### Fixed
 - **Arch ISO (mkinitcpio):** Убран хук `autodetect` из `archiso-vibelinux/airootfs/etc/mkinitcpio.conf`
   - `autodetect` урезал модули под железо машины сборки: без оптического привода на хосте

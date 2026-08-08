@@ -1310,10 +1310,20 @@ fi
 
 # nlsh — Natural Language Shell (AI Shell Assistant)
 echo "Installing nlsh..."
-if [[ -f /root/nlsh/nlsh ]]; then
+NLSH_INSTALLED=0
+NLSH_PKG="$(ls /root/nlsh/nlsh-*.pkg.tar.zst 2>/dev/null | head -1 || true)"
+if [[ -n "$NLSH_PKG" ]]; then
+  # Pre-built Arch package — installs /usr/bin/nlsh
+  pacman -U --noconfirm "$NLSH_PKG"
+  NLSH_INSTALLED=1
+  echo "OK: nlsh installed from pre-built package ($(basename "$NLSH_PKG"))"
+elif [[ -f /root/nlsh/nlsh ]]; then
   cp /root/nlsh/nlsh /usr/local/bin/nlsh
   chmod +x /usr/local/bin/nlsh
+  NLSH_INSTALLED=1
+fi
 
+if [[ $NLSH_INSTALLED -eq 1 ]]; then
   # Bundle small AI model for offline use (Q2_K ~200MB for weak machines)
   NLSH_MODELS_DIR="/home/vibe/.config/nlsh/models"
   mkdir -p "$NLSH_MODELS_DIR"
@@ -1368,7 +1378,7 @@ EOF
   chmod 755 /home/vibe/Desktop/nlsh.desktop
   echo "nlsh installed with llama.cpp engine + offline model"
 else
-  echo "WARNING: nlsh binary not found in /root/nlsh/"
+  echo "WARNING: nlsh not found in /root/nlsh/ (no binary, no pre-built package)"
 fi
 
 # Copy desktop shortcuts to system applications so they appear in Kickoff menu

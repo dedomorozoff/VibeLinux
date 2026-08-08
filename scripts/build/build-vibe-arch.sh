@@ -69,10 +69,16 @@ if [[ -d "$BRANDING_DIR" ]]; then
 fi
 
 # 3b) Copy nlsh to airootfs
-SOFT_DIR="$(cd "$(dirname "$(readlink -f "$0")")/../../soft" 2>/dev/null && pwd)"
+# Prefer a pre-built Arch package (soft/nlsh/*.pkg.tar.zst) — no need to
+# build nlsh for Arch. Falls back to a loose binary if present.
+SOFT_DIR="$(cd "$(dirname "$(readlink -f "$0")")/../../soft" 2>/dev/null && pwd || true)"
 if [[ -d "$SOFT_DIR/nlsh" ]]; then
     log "Copying nlsh to airootfs..."
     mkdir -p "$PROFILE_DIR/airootfs/root/nlsh"
+    if compgen -G "$SOFT_DIR/nlsh/*.pkg.tar.zst" >/dev/null; then
+        cp "$SOFT_DIR"/nlsh/*.pkg.tar.zst "$PROFILE_DIR/airootfs/root/nlsh/"
+        log "Pre-built nlsh package copied to airootfs/root/nlsh/"
+    fi
     if [[ -f "$SOFT_DIR/nlsh/nlsh" ]]; then
         cp "$SOFT_DIR/nlsh/nlsh" "$PROFILE_DIR/airootfs/root/nlsh/"
         chmod +x "$PROFILE_DIR/airootfs/root/nlsh/nlsh"
@@ -121,7 +127,7 @@ fi
 #     Copying the kernel here (rather than using a symlink) ensures the host-side
 #     install/cp in mkarchiso's _make_boot_on_iso9660 can stat the file.
 mkdir -p "$WORKDIR/x86_64/airootfs/boot"
-KVER=$(ls "$WORKDIR"/x86_64/airootfs/usr/lib/modules/ 2>/dev/null | grep -v extramodules | sort -V | tail -1)
+KVER=$(ls "$WORKDIR"/x86_64/airootfs/usr/lib/modules/ 2>/dev/null | grep -v extramodules | sort -V | tail -1 || true)
 if [[ -n "$KVER" && -f "$WORKDIR/x86_64/airootfs/usr/lib/modules/$KVER/vmlinuz" ]]; then
   # kernel already installed (incremental build) – copy it directly
   # Remove any dangling symlink from a previous run first
