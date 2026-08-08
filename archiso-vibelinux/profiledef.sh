@@ -11,7 +11,9 @@ buildmodes=('iso')
 bootmodes=('bios.syslinux' 'uefi.systemd-boot')
 pacman_conf="pacman.conf"
 airootfs_image_type="squashfs"
-airootfs_image_tool_options=('-comp' 'zstd' '-Xcompression-level' '19')
+# zstd -15: balance скорости сборки и размера. -19 на 11 ГБ rootfs
+# занимает часы на слабом CPU и почти не уменьшает размер.
+airootfs_image_tool_options=('-comp' 'zstd' '-Xcompression-level' '15')
 file_permissions=(
   ["/etc/shadow"]="0:0:400"
   ["/root"]="0:0:750"

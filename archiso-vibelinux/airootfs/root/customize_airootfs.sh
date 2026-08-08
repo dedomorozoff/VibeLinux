@@ -1314,9 +1314,15 @@ NLSH_INSTALLED=0
 NLSH_PKG="$(ls /root/nlsh/nlsh-*.pkg.tar.zst 2>/dev/null | head -1 || true)"
 if [[ -n "$NLSH_PKG" ]]; then
   # Pre-built Arch package — installs /usr/bin/nlsh
-  pacman -U --noconfirm "$NLSH_PKG"
-  NLSH_INSTALLED=1
-  echo "OK: nlsh installed from pre-built package ($(basename "$NLSH_PKG"))"
+  # Post-transaction hooks (PackageKit/DBus) can fail inside the chroot;
+  # tolerate that and verify the binary instead of the pacman exit code.
+  pacman -U --noconfirm "$NLSH_PKG" >/dev/null 2>&1 || true
+  if [[ -x /usr/bin/nlsh ]]; then
+    NLSH_INSTALLED=1
+    echo "OK: nlsh installed from pre-built package ($(basename "$NLSH_PKG"))"
+  else
+    echo "ERROR: nlsh package installation failed"
+  fi
 elif [[ -f /root/nlsh/nlsh ]]; then
   cp /root/nlsh/nlsh /usr/local/bin/nlsh
   chmod +x /usr/local/bin/nlsh
