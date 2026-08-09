@@ -518,6 +518,24 @@ fi
 CLAUDEEOF
 chmod +x /usr/local/bin/install-claude-code
 
+# OpenAI Codex CLI installer
+cat > /usr/local/bin/install-codex << 'CODEXEOF'
+#!/usr/bin/env bash
+set -euo pipefail
+echo "Installing OpenAI Codex CLI..."
+if ! command -v npm >/dev/null 2>&1; then
+  echo "npm not found. Install Node.js first."
+  exit 1
+fi
+if npm install -g @openai/codex; then
+  echo "Codex installed! Run: codex"
+else
+  echo "Failed to install Codex. Check: https://developers.openai.com/codex/cli"
+  exit 1
+fi
+CODEXEOF
+chmod +x /usr/local/bin/install-codex
+
 # Continue.dev CLI installer
 cat > /usr/local/bin/install-continue << 'CONTINUEEOF'
 #!/usr/bin/env bash
@@ -596,13 +614,14 @@ echo "  [2] qwen-code     — Qwen AI coding agent ($(status qwen))"
 echo "  [3] Cursor Agent  — Cursor terminal agent ($(status agent))"
 echo "  [4] Kiro          — Amazon's AI coding assistant ($(status kiro))"
 echo "  [5] Claude Code   — Anthropic terminal AI ($(status claude))"
-echo "  [6] Kilo Code     — Open source AI coding agent ($(status kilo))"
-echo "  [7] MiMo Code     — Xiaomi terminal AI ($(status mimo))"
-echo "  [8] Continue.dev  — AI coding CLI ($(status cn))"
-echo "  [9] MCP servers   — Model Context Protocol (filesystem, github)"
-echo "  [10] Ollama       — Local LLM runtime ($(status ollama))"
+echo "  [6] Codex         — OpenAI terminal AI ($(status codex))"
+echo "  [7] Kilo Code     — Open source AI coding agent ($(status kilo))"
+echo "  [8] MiMo Code     — Xiaomi terminal AI ($(status mimo))"
+echo "  [9] Continue.dev  — AI coding CLI ($(status cn))"
+echo "  [10] MCP servers  — Model Context Protocol (filesystem, github)"
+echo "  [11] Ollama       — Local LLM runtime ($(status ollama))"
 echo ""
-read -rp "Install [1-10]: " choice
+read -rp "Install [1-11]: " choice
 case "$choice" in
   1)
     if is_installed opencode; then
@@ -623,11 +642,12 @@ case "$choice" in
   3) install-cursor ;;
   4) install-kiro ;;
   5) install-claude-code ;;
-  6) install-kilo ;;
-  7) install-mimo ;;
-  8) install-continue ;;
-  9) install-mcp-servers ;;
-  10) install-ollama ;;
+  6) install-codex ;;
+  7) install-kilo ;;
+  8) install-mimo ;;
+  9) install-continue ;;
+  10) install-mcp-servers ;;
+  11) install-ollama ;;
   *) echo "Nothing to install." ;;
 esac
 INSTALLEOF
