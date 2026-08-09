@@ -1101,6 +1101,13 @@ fi
 # Welcome App
 cat > /usr/local/bin/vibe-welcome << 'WELCOMEEOF'
 #!/usr/bin/env bash
+# VibeLinux first-run welcome. Запускается один раз:
+# после выбора создаёт маркер ~/.vibe-welcome-done.
+DONE_FILE="$HOME/.vibe-welcome-done"
+if [[ -f "$DONE_FILE" ]]; then
+  exit 0
+fi
+
 clear
 if [[ -f /usr/share/vibelinux/ascii-logo.txt ]]; then
   cat /usr/share/vibelinux/ascii-logo.txt
@@ -1112,47 +1119,33 @@ echo "  Welcome to VibeLinux!"
 echo "  Linux for vibe coding and AI development"
 echo "  ========================================="
 echo ""
-echo "  [1] Download AI models (ollama pull)"
-echo "  [2] Setup Rust (rustup default)"
+echo "  [1] Install AI tools (ollama, claude-code, aider)"
+echo "  [2] Download AI models (ai-setup)"
 echo "  [3] System info (fastfetch)"
 echo "  [4] Skip"
 echo ""
 read -rp "  Choose [1-4]: " choice
 case "$choice" in
-  1) ai-setup ;;
-  2) runuser -u vibe -- bash -c 'rustup default stable' || true ;;
+  1) ai-install ;;
+  2) ai-setup ;;
   3) fastfetch ;;
-  *) echo "  Happy coding!"; exit 0 ;;
+  *) echo "  Happy coding!" ;;
 esac
+touch "$DONE_FILE"
+exit 0
 WELCOMEEOF
 chmod +x /usr/local/bin/vibe-welcome
 
-# Autostart Welcome App (first run only)
+# Autostart Welcome App — открывается только пока нет маркера (первый вход в GUI)
 mkdir -p /home/vibe/.config/autostart
 cat > /home/vibe/.config/autostart/vibe-welcome.desktop << EOF
 [Desktop Entry]
 Type=Application
 Name=VibeLinux Welcome
-Exec=/usr/local/bin/vibe-welcome
+Exec=bash -c '[[ -f /home/vibe/.vibe-welcome-done ]] || /usr/local/bin/vibe-welcome'
 Terminal=true
 X-GNOME-Autostart-enabled=true
 EOF
-
-# Systemd service — Welcome App (срабатывает даже без графической сессии)
-cat > /etc/systemd/system/vibe-welcome.service << 'SVCEOF'
-[Unit]
-Description=VibeLinux First Boot Welcome
-After=graphical-session.target
-ConditionPathExists=!/home/vibe/.vibe-welcome-done
-
-[Service]
-Type=oneshot
-ExecStart=/usr/local/bin/vibe-welcome
-RemainAfterExit=yes
-
-[Install]
-WantedBy=default.target
-SVCEOF
 
 # Welcome App shortcut on desktop
 mkdir -p /home/vibe/Desktop
@@ -1167,15 +1160,15 @@ Categories=System;
 EOF
 chmod 755 /home/vibe/Desktop/VibeLinux-Welcome.desktop
 
+# Fix permissions
+chown -R vibe:vibe /home/vibe
+
 # Rust: ставим toolchain один раз при сборке, а не при каждом запуске терминала
 if command -v rustup &>/dev/null; then
   runuser -u vibe -- bash -c 'rustup default stable' && \
     touch /home/vibe/.vibe-rustup-ready || \
     echo "WARN: rustup toolchain не установлен (нет сети?) — можно: runuser -u vibe -- bash -c \"rustup default stable\""
 fi
-
-# Fix permissions
-chown -R vibe:vibe /home/vibe
 
 # Quick Start Guide
 cat > /home/vibe/Desktop/GET-STARTED.html << 'EOF'
@@ -1310,8 +1303,14 @@ if [[ -n "$NLSH_PKG" ]]; then
   # Pre-built Arch package — installs /usr/bin/nlsh
   # Post-transaction hooks (PackageKit/DBus) can fail inside the chroot;
   # tolerate that and verify the binary instead of the pacman exit code.
+  NLSH_TGT=/usr/bin/nlsh
   pacman -U --noconfirm "$NLSH_PKG" >/dev/null 2>&1 || true
-  if [[ -x /usr/bin/nlsh ]]; then
+  if [[ ! -x "$NLSH_TGT" ]]; then
+    # pacman -U может упасть в chroot из-за нехватки места (как far2l);
+    # извлекаем файлы пакета напрямую — /usr/bin/nlsh попадает на место.
+    tar -I zstd -xf "$NLSH_PKG" -C / 2>/dev/null || true
+  fi
+  if [[ -x "$NLSH_TGT" ]]; then
     NLSH_INSTALLED=1
     echo "OK: nlsh installed from pre-built package ($(basename "$NLSH_PKG"))"
   else
@@ -1396,7 +1395,7 @@ done
 mkdir -p /home/vibe/.config
 cat > /home/vibe/.config/kickoffrc << 'EOF'
 [General]
-favorites=preferred://browser,org.kde.dolphin.desktop,org.kde.konsole.desktop,nlsh.desktop,AI-Chat.desktop,OpenCode.desktop,Qwen-Code.desktop,Install-AI-Tools.desktop,VibeLinux-Welcome.desktop
+favorites=preferred://browser,org.kde.dolphin.desktop,org.kde.konsole.desktop,OpenCode.desktop,Qwen-Code.desktop,Install-AI-Tools.desktop,VibeLinux-Welcome.desktop
 EOF
 chown vibe:vibe /home/vibe/.config/kickoffrc
 
@@ -2025,6 +2024,10 @@ for f in /home/vibe/Desktop/*.desktop; do
     cp "$f" /etc/skel/Desktop/
   fi
 done
+# Quick Start Guide — руководство для новых пользователей
+if [[ -f /home/vibe/Desktop/GET-STARTED.html ]]; then
+  cp /home/vibe/Desktop/GET-STARTED.html /etc/skel/Desktop/
+fi
 
 # Копируем обои и autostart в /etc/skel
 mkdir -p /etc/skel/.config /etc/skel/.config/autostart
