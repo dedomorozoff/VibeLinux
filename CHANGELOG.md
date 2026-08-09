@@ -9,11 +9,18 @@
   - Фолбэк на «сырой» бинарник `soft/nlsh/nlsh` сохранён
 
 ### Fixed
-- **Arch ISO (mkinitcpio):** Убран хук `autodetect` из `archiso-vibelinux/airootfs/etc/mkinitcpio.conf`
+- **Arch ISO (mkinitcpio):** Убран хук `autodetect` из `mkinitcpio.conf` во всех местах
+  - Помимо `airootfs/etc/mkinitcpio.conf`, исправлен heredoc, который
+    `customize_airootfs.sh` принудительно перезаписывал с `autodetect`
+    во время сборки (именно он реально попадал в initramfs — генерация
+    происходит на этапе pacstrap, до копирования airootfs-оверлея профиля)
   - `autodetect` урезал модули под железо машины сборки: без оптического привода на хосте
     из initramfs выпадал `sr_mod`, и live-ISO не могло загрузиться с виртуального CD/DVD
-    в VirtualBox (`ERROR: '/dev/disk/by-label/VIBELINUX_ARCH' device did not show up after 30 seconds`)
+    в VirtualBox
   - Теперь, как в официальном archiso (releng), в initramfs попадают все драйверы
+- **Arch ISO (mkinitcpio):** `COMPRESSION_OPTIONS=(-19)` → `(-15)` для initramfs
+  - Приведено в соответствие со squashfs-политикой профиля (`-15` в `profiledef.sh`)
+  - Сборка initramfs быстрее, выигрыш в размере от `-19` минимален
 
 ### Added
 - **Russian Language Support:** Полная поддержка русского языка во всей системе

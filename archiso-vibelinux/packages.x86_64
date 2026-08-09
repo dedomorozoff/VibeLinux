@@ -64,13 +64,13 @@ bat
 fd
 zoxide
 btop
-htop
 
 # Dev tools
 base-devel
 python
 python-pip
 php
+composer
 go
 rustup
 nodejs
@@ -84,16 +84,25 @@ fzf
 ripgrep
 tmux
 unzip
+zip
 zstd
 git
 lazygit
+gh
+openssh
+kubectl
+wl-clipboard
+tree
+clang
+cmake
+gdb
 # Editors
 zed
 helix
+neovim
 flatpak
 
 # AI tools
-ollama
 opencode
 
 # NVIDIA drivers (open kernel module — nvidia-open)

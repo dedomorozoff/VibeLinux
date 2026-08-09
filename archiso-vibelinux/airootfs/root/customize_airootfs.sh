@@ -162,7 +162,6 @@ systemctl enable NetworkManager || true
 systemctl enable systemd-timesyncd || true
 systemctl enable docker || true
 systemctl enable sddm || true
-systemctl enable ollama || true
 systemctl enable vboxservice || true
 systemctl enable nvidia-persistenced || true
 
@@ -191,13 +190,17 @@ fi
 
 # NVIDIA: rebuild initramfs with nvidia modules
 # Force-write mkinitcpio.conf (pacman may overwrite it during install)
+# NOTE: no `autodetect` — it prunes modules to the build host's hardware
+# (e.g. sr_mod for CD-ROM drops out on hosts without an optical drive),
+# which breaks booting the ISO as an optical disc in VMs (VirtualBox).
+# Keep this heredoc in sync with airootfs/etc/mkinitcpio.conf.
 cat > /etc/mkinitcpio.conf << 'EOF'
 MODULES=(nvidia nvidia_modeset nvidia_uvm nvidia_drm vboxguest vboxsf vboxvideo)
 BINARIES=()
 FILES=()
-HOOKS=(base udev autodetect modconf kms block filesystems keyboard fsck archiso)
+HOOKS=(base udev modconf kms block filesystems keyboard fsck archiso)
 COMPRESSION="zstd"
-COMPRESSION_OPTIONS=(-19)
+COMPRESSION_OPTIONS=(-15)
 EOF
 
 if command -v mkinitcpio &>/dev/null; then
@@ -396,37 +399,6 @@ chown -R vibe:vibe /home/vibe/.npm
 # Python AI venv устанавливается post-install через:
 #   sudo /opt/vibecode/scripts/ai/setup-python-ai-stack.sh
 
-cat > /usr/local/bin/ai-chat << 'AICHATEOF'
-#!/usr/bin/env bash
-MODEL="${AI_MODEL:-qwen2.5-coder}"
-if ! command -v ollama &>/dev/null; then
-  echo "Ollama not installed. Run: sudo pacman -S ollama"
-  exit 1
-fi
-echo "VibeLinux AI Chat (model: $MODEL)"
-echo "Commands: /help, /model <name>, /quit"
-echo
-while true; do
-  read -rp "> " line
-  case "$line" in
-    /quit|/exit|/q) break ;;
-    /help)
-      echo "Commands:"
-      echo "  /model <name> - change model"
-      echo "  /quit         - exit"
-      ;;
-    /model\ *)
-      MODEL="${line#/model }"
-      export AI_MODEL="$MODEL"
-      echo "Model: $MODEL"
-      ;;
-    "") continue ;;
-    *) ollama run "$MODEL" "$line" ;;
-  esac
-done
-AICHATEOF
-chmod +x /usr/local/bin/ai-chat
-
 cat > /usr/local/bin/ai-setup << 'AISETUPEOF'
 #!/usr/bin/env bash
 echo "Downloading base Ollama models..."
@@ -436,7 +408,7 @@ for model in qwen2.5-coder:7b llama3.2:3b codellama:7b; do
   ollama pull "$model" 2>&1 | tail -1
   echo
 done
-echo "Done! Run: ai-chat"
+echo "Done!"
 AISETUPEOF
 chmod +x /usr/local/bin/ai-setup
 
@@ -444,103 +416,123 @@ chmod +x /usr/local/bin/ai-setup
 
 # Proprietary AI tool installers
 
-# Cursor IDE installer
+# Cursor Agent CLI installer (official)
 cat > /usr/local/bin/install-cursor << 'CURSOREOF'
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "Installing Cursor IDE..."
-
-if command -v yay >/dev/null 2>&1; then
-  echo "Using AUR package: cursor-bin"
-  yay -S --noconfirm cursor-bin
-  exit 0
-fi
-
-if command -v paru >/dev/null 2>&1; then
-  echo "Using AUR package: cursor-bin"
-  paru -S --noconfirm cursor-bin
-  exit 0
-fi
-
-ARCH="$(uname -m)"
-case "$ARCH" in
-  x86_64) CURSOR_ARCH="x64" ;;
-  aarch64) CURSOR_ARCH="arm64" ;;
-  *)
-    echo "Unsupported CPU architecture: $ARCH"
-    echo "Install Cursor manually: https://cursor.com/downloads"
-    exit 1
-    ;;
-esac
-
-TMP_APPIMAGE="/tmp/Cursor.AppImage"
-if ! curl -fL "https://downloads.cursor.com/production/linux/${CURSOR_ARCH}/Cursor.AppImage" -o "$TMP_APPIMAGE"; then
-  echo "Failed to download Cursor AppImage."
-  echo "Install manually: https://cursor.com/downloads"
+echo "Installing Cursor Agent CLI..."
+if curl -fsSL https://cursor.com/install | bash; then
+  echo "Cursor Agent installed! Run: agent"
+else
+  echo "Failed to install Cursor Agent."
+  echo "Manual install: https://cursor.com/docs/cli/overview"
   exit 1
 fi
-
-mkdir -p /opt/cursor
-mv "$TMP_APPIMAGE" /opt/cursor/Cursor.AppImage
-chmod +x /opt/cursor/Cursor.AppImage
-cat > /usr/share/applications/cursor.desktop << EOF
-[Desktop Entry]
-Name=Cursor
-Exec=/opt/cursor/Cursor.AppImage --no-sandbox
-Icon=utilities-terminal
-Type=Application
-Categories=Development;IDE;
-EOF
-echo "Cursor installed: /opt/cursor/Cursor.AppImage"
 CURSOREOF
 chmod +x /usr/local/bin/install-cursor
 
-# Amazon Kiro installer (if available)
+# Amazon Kiro installer (official CLI)
 cat > /usr/local/bin/install-kiro << 'KIROEOF'
 #!/usr/bin/env bash
-echo "Installing Amazon Kiro..."
-if command -v npm >/dev/null; then
-  npm install -g @amazon/kiro 2>/dev/null && echo "Kiro installed via npm" || {
-    echo "Kiro package not found on npm. Check: https://kiro.dev"
-    echo "Alternative: install from official site"
-  }
+set -euo pipefail
+echo "Installing Amazon Kiro CLI..."
+if curl -fsSL https://cli.kiro.dev/install | bash; then
+  echo "Kiro installed! Run: kiro"
 else
-  echo "npm not found. Install Node.js first."
+  echo "Failed to install Kiro. See: https://kiro.dev/downloads"
+  exit 1
 fi
 KIROEOF
 chmod +x /usr/local/bin/install-kiro
 
+# Kilo Code CLI installer
+cat > /usr/local/bin/install-kilo << 'KILOEOF'
+#!/usr/bin/env bash
+set -euo pipefail
+echo "Installing Kilo Code CLI..."
+if command -v npm >/dev/null 2>&1; then
+  npm install -g @kilocode/cli
+  echo "Kilo Code installed! Run: kilo"
+else
+  echo "npm not found. Install Node.js first."
+  exit 1
+fi
+KILOEOF
+chmod +x /usr/local/bin/install-kilo
+
+# MiMo Code CLI installer
+cat > /usr/local/bin/install-mimo << 'MIMOEOF'
+#!/usr/bin/env bash
+set -euo pipefail
+echo "Installing MiMo Code CLI..."
+if command -v npm >/dev/null 2>&1; then
+  npm install -g @mimo-ai/cli
+  echo "MiMo Code installed! Run: mimo"
+else
+  echo "npm not found. Install Node.js first."
+  exit 1
+fi
+MIMOEOF
+chmod +x /usr/local/bin/install-mimo
+
+# Ollama installer (post-install, Arch)
+cat > /usr/local/bin/install-ollama << 'OLLAMAEOF'
+#!/usr/bin/env bash
+set -euo pipefail
+echo "Installing Ollama..."
+if command -v ollama >/dev/null 2>&1; then
+  echo "Ollama is already installed: $(ollama --version 2>/dev/null || echo unknown version)"
+  exit 0
+fi
+if command -v pacman >/dev/null 2>&1; then
+  sudo pacman -S --noconfirm ollama
+  sudo systemctl enable --now ollama
+elif command -v apt-get >/dev/null 2>&1; then
+  curl -fsSL https://ollama.com/install.sh | sh
+  sudo systemctl enable --now ollama 2>/dev/null || true
+else
+  echo "Unsupported package manager. Install Ollama manually: https://ollama.com/download"
+  exit 1
+fi
+echo "Ollama installed and running!"
+echo "Download models: ollama pull qwen2.5-coder:7b  (or run: ai-setup)"
+OLLAMAEOF
+chmod +x /usr/local/bin/install-ollama
+
 # Claude Code installer
 cat > /usr/local/bin/install-claude-code << 'CLAUDEEOF'
 #!/usr/bin/env bash
+set -euo pipefail
 echo "Installing Claude Code..."
-if command -v npm >/dev/null; then
-  npm install -g @anthropic-ai/claude-code 2>/dev/null && echo "Claude Code installed" || {
-    echo "Failed to install Claude Code. Check: https://claude.ai/code"
-  }
-else
+if ! command -v npm >/dev/null 2>&1; then
   echo "npm not found. Install Node.js first."
+  exit 1
+fi
+if npm install -g @anthropic-ai/claude-code; then
+  echo "Claude Code installed! Run: claude"
+else
+  echo "Failed to install Claude Code. Check: https://claude.ai/code"
+  exit 1
 fi
 CLAUDEEOF
 chmod +x /usr/local/bin/install-claude-code
 
-# Continue.dev installer
+# Continue.dev CLI installer
 cat > /usr/local/bin/install-continue << 'CONTINUEEOF'
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "Installing Continue.dev..."
-
-if command -v code >/dev/null 2>&1; then
-  code --install-extension continue.continue || true
-elif command -v codium >/dev/null 2>&1; then
-  codium --install-extension continue.continue || true
-elif command -v vscodium >/dev/null 2>&1; then
-  vscodium --install-extension continue.continue || true
+echo "Installing Continue.dev CLI..."
+if ! command -v npm >/dev/null 2>&1; then
+  echo "npm not found. Install Node.js first."
+  exit 1
+fi
+if npm install -g @continuedev/cli; then
+  echo "Continue CLI installed! Run: cn"
 else
-  echo "No supported editor CLI found (code/codium/vscodium)."
-  echo "Manual install: https://docs.continue.dev/install"
+  echo "Failed to install Continue CLI. Check: https://docs.continue.dev/cli"
+  exit 1
 fi
 
 CONFIG_DIR="$HOME/.continue"
@@ -601,15 +593,16 @@ echo "=============================="
 echo ""
 echo "  [1] opencode      — Open source AI coding agent ($(status opencode))"
 echo "  [2] qwen-code     — Qwen AI coding agent ($(status qwen))"
-echo "  [3] aider         — AI pair programming ($(status aider))"
-echo "  [4] Continue.dev  — AI assistant for editors (install-ext)"
-echo "  [5] MCP servers   — Model Context Protocol (filesystem, github)"
-echo "  [6] Cursor        — Proprietary AI IDE"
-echo "  [7] Kiro          — Amazon's AI coding assistant"
-echo "  [8] Claude Code   — Anthropic terminal AI ($(status claude))"
-echo "  [9] ai-chat       — Local Ollama chat ($(status ai-chat))"
+echo "  [3] Cursor Agent  — Cursor terminal agent ($(status agent))"
+echo "  [4] Kiro          — Amazon's AI coding assistant ($(status kiro))"
+echo "  [5] Claude Code   — Anthropic terminal AI ($(status claude))"
+echo "  [6] Kilo Code     — Open source AI coding agent ($(status kilo))"
+echo "  [7] MiMo Code     — Xiaomi terminal AI ($(status mimo))"
+echo "  [8] Continue.dev  — AI coding CLI ($(status cn))"
+echo "  [9] MCP servers   — Model Context Protocol (filesystem, github)"
+echo "  [10] Ollama       — Local LLM runtime ($(status ollama))"
 echo ""
-read -rp "Install [1-9]: " choice
+read -rp "Install [1-10]: " choice
 case "$choice" in
   1)
     if is_installed opencode; then
@@ -627,21 +620,14 @@ case "$choice" in
       echo "npm not found. Install Node.js first."
     fi
     ;;
-  3)
-    if is_installed aider; then
-      echo "aider is already installed. Run: aider"
-    elif command -v pipx >/dev/null 2>&1; then
-      pipx install aider-chat
-    else
-      echo "pipx not found. Install pipx first."
-    fi
-    ;;
-  4) install-continue ;;
-  5) install-mcp-servers ;;
-  6) install-cursor ;;
-  7) install-kiro ;;
-  8) install-claude-code ;;
-  9) echo "ai-chat is pre-installed. Run: ai-chat" ;;
+  3) install-cursor ;;
+  4) install-kiro ;;
+  5) install-claude-code ;;
+  6) install-kilo ;;
+  7) install-mimo ;;
+  8) install-continue ;;
+  9) install-mcp-servers ;;
+  10) install-ollama ;;
   *) echo "Nothing to install." ;;
 esac
 INSTALLEOF
@@ -764,7 +750,7 @@ cat > /home/vibe/.config/autostart/pin-konsole.desktop << AUTOSTART2
 [Desktop Entry]
 Type=Application
 Name=Pin Konsole to Panel
-Exec=bash -c 'sleep 10 && kwriteconfig6 --file plasma-org.kde.plasma.desktop-appletsrc --group Containments --group 3 --group Applets --group 6 --group Configuration --group General --key launchers "file:///usr/share/applications/org.kde.konsole.desktop,preferred://browser,file:///usr/share/applications/org.kde.dolphin.desktop,file:///usr/share/applications/org.kde.systemsettings.desktop" && killall plasmashell 2>/dev/null; kstart6 plasmashell 2>/dev/null' 
+Exec=bash -c 'sleep 10 && kwriteconfig6 --file plasma-org.kde.plasma.desktop-appletsrc --group Containments --group 3 --group Applets --group 6 --group Configuration --group General --key launchers "file:///usr/share/applications/org.kde.konsole.desktop,preferred://browser,file:///usr/share/applications/org.kde.dolphin.desktop,file:///usr/share/applications/org.kde.systemsettings.desktop" && systemctl --user restart plasma-plasmashell.service' 
 OnlyShowIn=KDE
 X-KDE-autostart-phase=2
 X-KDE-autostart-after=plasma-desktop
@@ -1161,12 +1147,12 @@ Categories=System;
 EOF
 chmod 755 /home/vibe/Desktop/VibeLinux-Welcome.desktop
 
-# Rust setup hint
-cat >> /home/vibe/.zshrc << 'EOF'
-if command -v rustup &>/dev/null && [[ ! -f "$HOME/.cargo/env" ]]; then
-  rustup default stable 2>/dev/null || true
+# Rust: ставим toolchain один раз при сборке, а не при каждом запуске терминала
+if command -v rustup &>/dev/null; then
+  runuser -u vibe -- bash -c 'rustup default stable' && \
+    touch /home/vibe/.vibe-rustup-ready || \
+    echo "WARN: rustup toolchain не установлен (нет сети?) — можно: runuser -u vibe -- bash -c \"rustup default stable\""
 fi
-EOF
 
 # Fix permissions
 chown -R vibe:vibe /home/vibe
@@ -1228,9 +1214,8 @@ cat > /home/vibe/Desktop/GET-STARTED.html << 'EOF'
 <ul>
   <li><strong>opencode</strong> — <code>opencode</code> (AI coding agent)</li>
   <li><strong>qwen-code</strong> — <code>qwen</code> (Alibaba coding agent)</li>
-  <li><strong>Ollama</strong> — auto-started on boot</li>
+  <li><strong>Ollama</strong> — install: <code>ai-install</code> → [10]</li>
   <li><strong>nlsh</strong> — offline AI shell (model included)</li>
-  <li><strong>ai-chat</strong> — terminal chat with local LLMs</li>
 </ul>
 
 <h2>Quick Commands</h2>
@@ -1240,13 +1225,13 @@ cat > /home/vibe/Desktop/GET-STARTED.html << 'EOF'
 <span class="cmd">bat</span> file  <span class="sep">—</span> cat with syntax highlighting
 <span class="cmd">lazygit</span>  <span class="sep">—</span> git TUI
 <span class="cmd">opencode</span> <span class="sep">—</span> AI coding agent
-<span class="cmd">ai-chat</span>  <span class="sep">—</span> local AI chat
+<span class="cmd">qwen</span>     <span class="sep">—</span> AI coding agent
 <span class="cmd">ai-setup</span> <span class="sep">—</span> download AI models</pre>
 
 <h2>First Steps</h2>
 <ol>
   <li>Open <strong>Konsole</strong> (or Kitty)</li>
-  <li>Run <code>ai-chat</code> to chat with local AI</li>
+  <li>Run <code>ai-install</code> to add AI tools (Ollama, Claude Code, …)</li>
   <li>Run <code>opencode</code> for AI pair programming</li>
   <li>Run <code>ai-setup</code> to download more models</li>
   <li>Open <strong>Zed</strong> and start coding</li>
@@ -1258,17 +1243,6 @@ EOF
 chmod 644 /home/vibe/Desktop/GET-STARTED.html
 
 # Desktop shortcuts for key apps
-cat > /home/vibe/Desktop/AI-Chat.desktop << EOF
-[Desktop Entry]
-Type=Application
-Name=AI Chat
-Icon=utilities-terminal
-Exec=konsole --hold -e ai-chat
-Terminal=false
-Categories=Development;
-EOF
-chmod 755 /home/vibe/Desktop/AI-Chat.desktop
-
 cat > /home/vibe/Desktop/OpenCode.desktop << EOF
 [Desktop Entry]
 Type=Application
@@ -1441,7 +1415,6 @@ aur_build() {
 }
 
 aur_build yay-bin yay
-aur_build bruno-bin bruno
 aur_build calamares calamares
 # far2l — pre-built packages (pacman -U sometimes fails in chroot due to space checks)
 if ls /root/far2l/far2l-*.pkg.tar.zst 2>/dev/null | head -1; then
