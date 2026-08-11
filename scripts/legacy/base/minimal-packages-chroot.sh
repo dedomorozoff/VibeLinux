@@ -25,7 +25,7 @@ apt-get install -y --no-install-recommends \
     nano \
     vim-tiny \
     mc \
-    htop \
+    btop \
     curl \
     wget \
     unzip \

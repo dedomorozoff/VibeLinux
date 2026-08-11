@@ -3,6 +3,10 @@
 ## [Unreleased]
 
 ### Changed
+- **Основная редакция — Arch Linux + KDE Plasma 6:**
+  - Профиль `archiso-vibelinux/` (`make arch`, `scripts/build/build-vibe-arch.sh`)
+  - Ubuntu-редакции (Full / Minimal / Lite) переведены в статус legacy
+  - Обновлена документация: `AGENTS.md`, `PROJECT_OVERVIEW.md`, `BUILD-INSTRUCTIONS.md`, `EDITIONS.md`, `PACKAGES.md`, `docs/`
 - **nlsh (Arch ISO):** Сборка использует предсобранный пакет `soft/nlsh/*.pkg.tar.zst`
   - Не нужно собирать nlsh под Arch — `build-vibe-arch.sh` копирует пакет в airootfs,
     а `customize_airootfs.sh` ставит его через `pacman -U`
@@ -55,7 +59,7 @@
 **Core OS:**
 - Настройка GRUB и Plymouth с брендингом VibeCode OS
 - Скрипт `setup-bootloader.sh` для кастомизации загрузчика
-- Базовая система на Ubuntu 24.04 LTS + MATE
+- Базовая система на Ubuntu 24.04 LTS + KDE Plasma (legacy-редакция)
 
 **Dev Stack:**
 - Полная установка dev-окружения через `setup-dev-env.sh`

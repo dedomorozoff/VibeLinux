@@ -39,12 +39,12 @@ fi
 # OS Release (for fastfetch / lsb_release)
 cat > /etc/os-release << 'EOF'
 NAME="VibeLinux"
-PRETTY_NAME="VibeLinux (Arch Linux based)"
+PRETTY_NAME="VibeLinux"
 ID=vibelinux
 ID_LIKE=arch
-VERSION=2026.04
+VERSION=2026.08
 VERSION_CODENAME=genesis
-HOME_URL="https://vibelinux.org"
+HOME_URL="https://dmintegroff.ru"
 DOCUMENTATION_URL="https://github.com/vibelinux/docs"
 SUPPORT_URL="https://github.com/vibelinux"
 BUG_REPORT_URL="https://github.com/vibelinux/issues"
@@ -770,7 +770,7 @@ cat > /home/vibe/.config/autostart/pin-konsole.desktop << AUTOSTART2
 [Desktop Entry]
 Type=Application
 Name=Pin Konsole to Panel
-Exec=bash -c 'sleep 10 && kwriteconfig6 --file plasma-org.kde.plasma.desktop-appletsrc --group Containments --group 3 --group Applets --group 6 --group Configuration --group General --key launchers "file:///usr/share/applications/org.kde.konsole.desktop,preferred://browser,file:///usr/share/applications/org.kde.dolphin.desktop,file:///usr/share/applications/org.kde.systemsettings.desktop" && systemctl --user restart plasma-plasmashell.service' 
+Exec=bash -c 'sleep 10 && kwriteconfig6 --file plasma-org.kde.plasma.desktop-appletsrc --group Containments --group 3 --group Applets --group 6 --group Configuration --group General --key launchers "file:///usr/share/applications/org.kde.konsole.desktop,preferred://browser,file:///usr/share/applications/org.kde.dolphin.desktop" && systemctl --user restart plasma-plasmashell.service'
 OnlyShowIn=KDE
 X-KDE-autostart-phase=2
 X-KDE-autostart-after=plasma-desktop
@@ -1136,29 +1136,29 @@ exit 0
 WELCOMEEOF
 chmod +x /usr/local/bin/vibe-welcome
 
-# Autostart Welcome App — открывается только пока нет маркера (первый вход в GUI)
-mkdir -p /home/vibe/.config/autostart
-cat > /home/vibe/.config/autostart/vibe-welcome.desktop << EOF
-[Desktop Entry]
-Type=Application
-Name=VibeLinux Welcome
-Exec=bash -c '[[ -f /home/vibe/.vibe-welcome-done ]] || /usr/local/bin/vibe-welcome'
-Terminal=true
-X-GNOME-Autostart-enabled=true
-EOF
+# # Autostart Welcome App — открывается только пока нет маркера (первый вход в GUI)
+# mkdir -p /home/vibe/.config/autostart
+# cat > /home/vibe/.config/autostart/vibe-welcome.desktop << EOF
+# [Desktop Entry]
+# Type=Application
+# Name=VibeLinux Welcome
+# Exec=bash -c '[[ -f /home/vibe/.vibe-welcome-done ]] || /usr/local/bin/vibe-welcome'
+# Terminal=true
+# X-GNOME-Autostart-enabled=true
+# EOF
 
-# Welcome App shortcut on desktop
-mkdir -p /home/vibe/Desktop
-cat > /home/vibe/Desktop/VibeLinux-Welcome.desktop << EOF
-[Desktop Entry]
-Type=Application
-Name=VibeLinux Welcome
-Icon=utilities-terminal
-Exec=konsole --hold -e vibe-welcome
-Terminal=false
-Categories=System;
-EOF
-chmod 755 /home/vibe/Desktop/VibeLinux-Welcome.desktop
+# # Welcome App shortcut on desktop
+# mkdir -p /home/vibe/Desktop
+# cat > /home/vibe/Desktop/VibeLinux-Welcome.desktop << EOF
+# [Desktop Entry]
+# Type=Application
+# Name=VibeLinux Welcome
+# Icon=utilities-terminal
+# Exec=konsole --hold -e vibe-welcome
+# Terminal=false
+# Categories=System;
+# EOF
+# chmod 755 /home/vibe/Desktop/VibeLinux-Welcome.desktop
 
 # Fix permissions
 chown -R vibe:vibe /home/vibe
@@ -1326,10 +1326,10 @@ if [[ $NLSH_INSTALLED -eq 1 ]]; then
   # Bundle small AI model for offline use (Q2_K ~200MB for weak machines)
   NLSH_MODELS_DIR="/home/vibe/.config/nlsh/models"
   mkdir -p "$NLSH_MODELS_DIR"
-  
+
   MODEL_NAME="qwen2.5-0.5b-instruct-q2_k.gguf"
   MODEL_URL="https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q2_k.gguf"
-  
+
   if [[ -f /root/nlsh/models/$MODEL_NAME ]]; then
     cp /root/nlsh/models/$MODEL_NAME "$NLSH_MODELS_DIR/"
     chown vibe:vibe "$NLSH_MODELS_DIR/$MODEL_NAME"
@@ -1690,7 +1690,7 @@ for d in /usr/lib/modules/*/; do
   kver="${d%/}"
   kver="${kver##*/}"
   [ "$kver" = "extramodules" ] || [ "$kver" = "extramessages" ] && continue
-  
+
   if [ -f "${d}vmlinuz" ]; then
     # Определяем имя ядра из pkgbase
     if [ -f "${d}pkgbase" ]; then
@@ -1707,12 +1707,12 @@ for d in /usr/lib/modules/*/; do
         kernel_name="linux"
       fi
     fi
-    
+
     echo "Found kernel: $kernel_name (version: $kver)"
     if [ -z "$PRIMARY_KERNEL" ]; then
       PRIMARY_KERNEL="$kernel_name"
     fi
-    
+
     dest="/boot/vmlinuz-$kernel_name"
     rm -f "$dest"
     cp --sparse=never -f "${d}vmlinuz" "$dest"
@@ -1728,14 +1728,14 @@ if [ -n "$PRIMARY_KERNEL" ]; then
     rm -f "$KERNEL_DST"
     cp --sparse=never -f "/boot/vmlinuz-$PRIMARY_KERNEL" "$KERNEL_DST"
     chmod 644 "$KERNEL_DST"
-    
+
     if [ -f "/boot/initramfs-$PRIMARY_KERNEL.img" ]; then
       rm -f "$INITRD_DST"
       cp --sparse=never -f "/boot/initramfs-$PRIMARY_KERNEL.img" "$INITRD_DST"
       chmod 644 "$INITRD_DST"
       echo "  -> Copied initramfs to $INITRD_DST"
     fi
-    
+
     if [ -f "/boot/initramfs-$PRIMARY_KERNEL-fallback.img" ]; then
       rm -f "$INITRD_FALLBACK_DST"
       cp --sparse=never -f "/boot/initramfs-$PRIMARY_KERNEL-fallback.img" "$INITRD_FALLBACK_DST"

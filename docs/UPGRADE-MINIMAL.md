@@ -11,7 +11,7 @@
 sudo make upgrade
 
 # Или напрямую
-sudo bash ./scripts/minimal-upgrade.sh
+sudo bash ./scripts/legacy/minimal-upgrade.sh
 ```
 
 ## 📦 Что можно установить

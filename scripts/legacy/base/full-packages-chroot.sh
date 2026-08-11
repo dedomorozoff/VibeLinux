@@ -163,7 +163,7 @@ apt-get install -y \
 # === ДОПОЛНИТЕЛЬНЫЕ УТИЛИТЫ ===
 echo "[full-chroot] Установка дополнительных утилит..."
 apt-get install -y \
-    htop \
+    btop \
     neofetch \
     curl \
     wget \
@@ -180,7 +180,7 @@ apt-get install -y \
     iputils-ping \
     traceroute \
     speedtest-cli \
-   htop \
+   btop \
     ncdu \
     lsof \
     strace \

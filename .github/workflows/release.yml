@@ -71,8 +71,8 @@ jobs:
         env:
           BUILD_MODE: full
         run: |
-          chmod +x scripts/build-iso.sh
-          sudo BUILD_MODE=full ./scripts/build-iso.sh
+          chmod +x scripts/legacy/build-iso.sh
+          sudo BUILD_MODE=full ./scripts/legacy/build-iso.sh
 
       - name: Rename ISO with version
         run: |
@@ -114,7 +114,7 @@ jobs:
           **Утилиты:**
           - Firefox, Network Manager
           - Git, curl, wget, vim, nano
-          - neofetch, htop, tree, mc, tmux
+          - neofetch, btop, tree, mc, tmux
           
           **Драйверы:**
           - VirtualBox Guest Additions

@@ -7,12 +7,24 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 if [[ $EUID -ne 0 ]]; then
-  echo "Пожалуйста, запустите этот скрипт с sudo или от root (он вызывает apt и системные изменения)."
+  echo "Пожалуйста, запустите этот скрипт с sudo или от root (он устанавливает системные пакеты)."
   exit 1
 fi
 
-echo "[setup-dev-env] Запуск базовой установки пакетов..."
-bash "${ROOT_DIR}/scripts/base/base-packages.sh"
+echo "[setup-dev-env] Установка базовых системных пакетов..."
+if command -v pacman >/dev/null 2>&1; then
+  # Arch Linux: базовый CLI-набор ставится напрямую через pacman
+  pacman -Sy --noconfirm --needed \
+    base-devel git curl wget unzip zstd p7zip jq rsync tmux btop fastfetch \
+    zsh starship eza bat fd zoxide fzf ripgrep lazygit kitty \
+    python python-pip nodejs npm docker docker-compose
+elif command -v apt-get >/dev/null 2>&1; then
+  # Legacy (Ubuntu): базовый набор из legacy-скриптов
+  bash "${ROOT_DIR}/scripts/legacy/base/base-packages.sh"
+else
+  echo "[setup-dev-env] Неподдерживаемый пакетный менеджер (нужен pacman или apt-get)."
+  exit 1
+fi
 
 echo "[setup-dev-env] Настройка оболочки..."
 bash "${ROOT_DIR}/scripts/dev/setup-shell.sh"

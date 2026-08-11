@@ -8,7 +8,7 @@ set -euo pipefail
 # полноценного рабочего окружения на базе Wayland
 #
 # Использование:
-#   sudo PROFILE=standard bash scripts/desktop/install-hyprland.sh
+#   sudo PROFILE=standard bash scripts/legacy/desktop/install-hyprland.sh
 #
 # Переменные:
 #   PROFILE=standard|minimal (по умолчанию: standard)
@@ -320,7 +320,7 @@ mkdir -p "$USER_HOME/.config/dunst"
 mkdir -p "$USER_HOME/.config/kitty"
 
 # ============================================================================
-# Копирование конфигураций из scripts/desktop/configs/
+# Копирование конфигураций из scripts/legacy/desktop/configs/
 # ============================================================================
 
 CONFIG_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/configs"

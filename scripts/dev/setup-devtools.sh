@@ -10,11 +10,19 @@ fi
 
 USER_NAME="${1:-root}"
 
-echo "[setup-devtools] Установка Git..."
-apt-get update -y || true
-DEBIAN_FRONTEND=noninteractive apt-get install -y git 2>/dev/null || true
+echo "[setup-devtools] Установка системных пакетов (Git, lazygit, Docker)..."
+if command -v pacman >/dev/null 2>&1; then
+  pacman -Sy --noconfirm --needed git lazygit docker docker-compose
+elif command -v apt-get >/dev/null 2>&1; then
+  apt-get update -y || true
+  DEBIAN_FRONTEND=noninteractive apt-get install -y git 2>/dev/null || true
+  DEBIAN_FRONTEND=noninteractive apt-get install -y docker.io docker-compose-plugin 2>/dev/null || true
+else
+  echo "[setup-devtools] Неподдерживаемый пакетный менеджер (нужен pacman или apt-get)."
+  exit 1
+fi
 
-echo "[setup-devtools] Установка lazygit (GitHub release)..."
+echo "[setup-devtools] Установка lazygit (GitHub release, fallback)..."
 if ! command -v lazygit >/dev/null 2>&1; then
   LAZYGIT_VERSION=$(curl -sf "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[^"]*' 2>/dev/null || echo "")
   if [[ -n "$LAZYGIT_VERSION" ]]; then
@@ -27,8 +35,6 @@ if ! command -v lazygit >/dev/null 2>&1; then
   fi
 fi
 
-echo "[setup-devtools] Установка Docker и Docker Compose..."
-DEBIAN_FRONTEND=noninteractive apt-get install -y docker.io docker-compose-plugin 2>/dev/null || true
 
 echo "[setup-devtools] Добавление пользователя ${USER_NAME} в группу docker..."
 usermod -aG docker "$USER_NAME" 2>/dev/null || true

@@ -2,6 +2,8 @@
 
 **Дата обновления:** 6 марта 2026
 
+> **⚠️ Legacy:** этот документ описывает статус **legacy-альфа-сборки на Ubuntu 24.04** (пайплайн `scripts/legacy/build-iso.sh`). Актуальная основная сборка дистрибутива — **Arch Linux + KDE Plasma 6** (`make arch`, профиль `archiso-vibelinux/`).
+
 ---
 
 ### ✅ Что работает (Milestone: Первый запуск Live)
@@ -12,9 +14,9 @@
    - Загрузка в Live-режиме
 
 2. **Desktop Environment**
-   - MATE desktop запускается
-   - LightDM autologin работает (пользователь `vibecode`)
-   - Базовый набор приложений MATE
+   - KDE Plasma запускается
+   - SDDM autologin работает (пользователь `vibecode`)
+   - Базовый набор приложений KDE Plasma
    - Часы в панели (исправлено, требует тестирования)
 
 3. **Установщик**
@@ -47,7 +49,7 @@
 
 ### 🔧 Известные проблемы
 
-1. **Панель MATE**
+1. **Панель KDE Plasma**
    - ❌ Часы не отображаются в панели (исправлено в коммите, требует тестирования)
 
 2. **Live-сессия**
@@ -75,7 +77,7 @@
    - [ ] Проверить работу часов в панели после применения fix
    - [ ] Проверить сеть (Wi-Fi, Ethernet)
    - [ ] Проверить звук
-   - [ ] Проверить файловый менеджер (Caja)
+   - [ ] Проверить файловый менеджер (Dolphin)
    - [ ] Проверить терминал (Konsole)
    - [ ] Протестировать установщик
    - [ ] Проверить в VirtualBox и на реальном железе
@@ -95,7 +97,7 @@
 
 5. **Дополнительные утилиты** (1 день)
    - [ ] Добавить neofetch
-   - [ ] Добавить btop/htop
+   - [ ] Добавить btop
    - [ ] Добавить базовые сетевые утилиты (ping, traceroute, etc)
 
 6. **Оптимизация размера ISO** (1-2 дня)
@@ -141,17 +143,17 @@
 
 ```bash
 # Полная пересборка
-sudo BUILD_MODE=full ./scripts/build-iso.sh
+sudo BUILD_MODE=full ./scripts/legacy/build-iso.sh
 
 # Быстрая пересборка (сохраняет chroot)
-sudo KEEP_CHROOT=1 BUILD_MODE=full ./scripts/build-iso.sh
+sudo KEEP_CHROOT=1 BUILD_MODE=full ./scripts/legacy/build-iso.sh
 
 # Проверка зависимостей
-BUILD_MODE=dry-run ./scripts/build-iso.sh
+BUILD_MODE=dry-run ./scripts/legacy/build-iso.sh
 
 # Проверка содержимого образа (после сборки)
-chmod +x scripts/verify-build.sh
-sudo ./scripts/verify-build.sh build/chroot
+chmod +x scripts/legacy/verify-build.sh
+sudo ./scripts/legacy/verify-build.sh build/chroot
 
 # Тестирование в QEMU (после сборки)
 qemu-system-x86_64 -cdrom build/VibeCodeOS-alpha.iso -m 2048 -enable-kvm
@@ -165,7 +167,7 @@ qemu-system-x86_64 -cdrom build/VibeCodeOS-alpha.iso -m 2048 -enable-kvm
 
 2. **Логи сборки** находятся в stdout — рекомендуется перенаправлять в файл для анализа:
    ```bash
-   sudo BUILD_MODE=full ./scripts/build-iso.sh 2>&1 | tee build.log
+   sudo BUILD_MODE=full ./scripts/legacy/build-iso.sh 2>&1 | tee build.log
    ```
 
 3. **Отладка в chroot** — можно войти в chroot вручную для тестирования:
@@ -188,7 +190,7 @@ qemu-system-x86_64 -cdrom build/VibeCodeOS-alpha.iso -m 2048 -enable-kvm
 
 ### 🐛 Известные баги и workarounds
 
-1. **Часы в панели MATE**
+1. **Часы в панели KDE Plasma**
    - Проблема: Апплет часов не появляется автоматически
    - Решение: Добавлен скрипт автонастройки при первом входе
    - Статус: Требует тестирования

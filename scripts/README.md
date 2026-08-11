@@ -2,7 +2,7 @@
 
 Каталог `scripts/` содержит автоматизацию для:
 
-- сборки базовой системы и ISO‑образов,
+- сборки ISO‑образов (основная линия — Arch Linux + KDE Plasma 6, Ubuntu — legacy),
 - установки и настройки dev‑стека,
 - настройки AI‑стека,
 - утилитарных задач (очистка системы, установка тем и т.д.).
@@ -13,11 +13,13 @@
 
 | Каталог | Назначение |
 |---------|------------|
-| `base/` | Базовые пакеты, cleanup, системные настройки |
-| `desktop/` | Установка и настройка MATE и графического стека |
+| `build/` | Основная линия сборки: Arch Linux (`build-vibe-arch.sh`, `install-vibelinux-arch.sh`, `prepare-aur.sh`) |
+| `legacy/` | **Ubuntu-редакции** (Full / Minimal / Lite): сборка ISO, пакетные и DE-скрипты |
+| `base/` | Общие утилиты: `generate-build-script.sh`, `vibe-wizard.sh`, `vibe-config-template.json` |
 | `drivers/` | Установка проприетарных драйверов (NVIDIA) |
 | `dev/` | Языки, IDE, терминал, Docker, Git‑инструменты |
 | `ai/` | Ollama, GUI‑клиенты, терминальные и редакторные интеграции |
+| `archive/` | Мёртвый код (не поддерживается, для истории) |
 
 ---
 
@@ -26,17 +28,21 @@
 ### Сборка ISO (через Makefile)
 
 ```bash
-# Проверка зависимостей
-make check        # Для полной версии
-make check-mini   # Для минимальной версии
+# Основная сборка (Arch Linux + KDE Plasma 6)
+make arch
 
-# Сборка
-make full         # Полная версия (с GUI, dev и AI)
-make mini         # Минимальная версия (только CLI)
+# Legacy: Ubuntu-редакции
+make full         # Full (KDE Plasma + dev + AI)
+make mini         # Minimal (только CLI)
+make lite         # Lite (CLI + базовые инструменты)
 
-# Быстрая пересборка (сохраняет chroot)
+# Быстрая пересборка (сохраняет chroot, legacy Ubuntu)
 make full-keep
 make mini-keep
+
+# Проверка зависимостей (legacy Ubuntu)
+make check
+make check-mini
 
 # Очистка
 make clean
@@ -45,13 +51,16 @@ make clean
 ### Сборка ISO (вручную)
 
 ```bash
-# Полная версия
-sudo BUILD_MODE=full ./scripts/build-iso.sh
-sudo KEEP_CHROOT=1 BUILD_MODE=full ./scripts/build-iso.sh  # Быстрая пересборка
+# Основная: Arch Linux
+sudo bash scripts/build/build-vibe-arch.sh
 
-# Минимальная версия
-sudo BUILD_MODE=full ./scripts/build-minimal-iso.sh
-sudo KEEP_CHROOT=1 BUILD_MODE=full ./scripts/build-minimal-iso.sh
+# Legacy: Ubuntu Full
+sudo BUILD_MODE=full ./scripts/legacy/build-iso.sh
+sudo KEEP_CHROOT=1 BUILD_MODE=full ./scripts/legacy/build-iso.sh  # Быстрая пересборка
+
+# Legacy: Ubuntu Minimal
+sudo BUILD_MODE=full ./scripts/legacy/build-minimal-iso.sh
+sudo KEEP_CHROOT=1 BUILD_MODE=full ./scripts/legacy/build-minimal-iso.sh
 ```
 
 ### Установка на хост-систему
@@ -68,39 +77,33 @@ sudo ./scripts/ai/setup-ai-stack.sh
 
 ## 📦 Скрипты
 
-### Сборка ISO
+### Сборка ISO (`build/` — основная линия)
 
 | Скрипт | Назначение |
 |--------|------------|
-| `build-iso.sh` | Сборка полной версии (с GUI) |
-| `build-minimal-iso.sh` | Сборка минимальной версии (CLI) |
-| `verify-build.sh` | Проверка сборки |
+| `build-vibe-arch.sh` | **Arch Linux + KDE Plasma 6** (основная сборка) |
+| `install-vibelinux-arch.sh` | Установка VibeLinux на хост Arch |
+| `prepare-aur.sh` | Подготовка AUR |
 
-### Доустановка (Minimal → Full)
+### Legacy (`legacy/` — Ubuntu-редакции)
 
 | Скрипт | Назначение |
 |--------|------------|
-| `minimal-upgrade.sh` | **Мастер доустановки из установленной системы** |
-| | Доступен как `vibecode-upgrade` после установки |
+| `build-iso.sh` | Сборка Full (Ubuntu) |
+| `build-minimal-iso.sh` | Сборка Minimal (Ubuntu, CLI) |
+| `verify-build.sh` | Проверка содержимого собранного chroot |
+| `minimal-upgrade.sh` | **Мастер доустановки** (доступен как `vibecode-upgrade`) |
+| `base/` | Пакетные скрипты (apt): base/minimal/full-packages, cleanup, bootloader, distro-info |
+| `desktop/` | DE-скрипты: `install-kde.sh`, `configure-kde.sh`, `install-i3wm.sh`, `install-hyprland.sh`, `setup-installer.sh`, `apply-branding.sh`, `configs/` |
+| `build/` | `build-vibe-full-ubuntu.sh`, `build-vibe-lite-ubuntu.sh` |
 
 ### База (`base/`)
 
 | Скрипт | Назначение |
 |--------|------------|
-| `base-packages.sh` | Базовые утилиты (htop, curl, wget, git, build-essential) |
-| `minimal-packages.sh` | Минимальный набор для CLI-версии |
-| `setup-distro-info.sh` | Брендинг системы |
-| `setup-bootloader.sh` | GRUB и Plymouth |
-| `cleanup.sh` | Очистка системы |
-
-### Desktop (`desktop/`)
-
-| Скрипт | Назначение |
-|--------|------------|
-| `install-kde.sh` | Установка KDE Plasma Desktop |
-| `configure-kde.sh` | Настройка KDE Plasma |
-| `setup-installer.sh` | Установка Ubiquity (установщик) |
-| `apply-branding.sh` | Применение брендинга |
+| `generate-build-script.sh` | Генератор скрипта сборки из JSON-конфига |
+| `vibe-wizard.sh` | Пост-установочный мастер (GUI/TUI/CLI) |
+| `vibe-config-template.json` | Шаблон конфигурации для генератора |
 
 ### Dev-стек (`dev/`)
 
@@ -150,13 +153,13 @@ sudo ./scripts/ai/setup-ai-stack.sh
 
 | Скрипт | Назначение |
 |--------|------------|
-| `install-nvidia.sh` | Установка проприетарных драйверов NVIDIA |
+| `install-nvidia.sh` | Установка проприетарных драйверов NVIDIA (pacman/apt) |
 
 ---
 
 ## 📝 Примечания
 
-1. **Режимы сборки:**
+1. **Режимы сборки (legacy Ubuntu):**
    - `dry-run` — проверка зависимостей без реальной сборки
    - `full` — полноценная сборка ISO
 

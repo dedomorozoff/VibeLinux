@@ -23,15 +23,15 @@
 # Очистка предыдущей сборки (если есть)
 rm -rf build/
 
-# Сборка Full ISO с MATE и dev-стеком
-sudo BUILD_MODE=full ./scripts/build-iso.sh
+# Сборка Full ISO с KDE Plasma и dev-стеком
+sudo BUILD_MODE=full ./scripts/legacy/build-iso.sh
 ```
 
 ### 2. Быстрая сборка (с использованием существующего chroot)
 
 ```bash
 # Если chroot уже есть от предыдущей сборки
-sudo KEEP_CHROOT=1 BUILD_MODE=full ./scripts/build-iso.sh
+sudo KEEP_CHROOT=1 BUILD_MODE=full ./scripts/legacy/build-iso.sh
 ```
 
 ### 3. Сборка Minimal ISO
@@ -41,7 +41,7 @@ sudo KEEP_CHROOT=1 BUILD_MODE=full ./scripts/build-iso.sh
 rm -rf build-minimal/
 
 # Сборка Minimal ISO
-sudo BUILD_MODE=full ./scripts/build-minimal-iso.sh
+sudo BUILD_MODE=full ./scripts/legacy/build-minimal-iso.sh
 ```
 
 ---
@@ -162,7 +162,7 @@ sudo umount build/chroot/sys
 - [ ] GRUB меню отображается
 - [ ] Загрузка начинается без kernel panic
 - [ ] Видно сообщение "Starting VibeCode OS..." или Plymouth splash
-- [ ] Запускается LightDM (для Full версии) или появляется консоль (Minimal)
+- [ ] Запускается SDDM (для Full версии) или появляется консоль (Minimal)
 - [ ] Можно войти под пользователем `vibecode` / `vibecode`
 
 ---

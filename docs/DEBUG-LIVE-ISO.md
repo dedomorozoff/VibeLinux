@@ -190,7 +190,7 @@ exec /lib/systemd/systemd
 
 1. Пересоберите ISO:
    ```bash
-   sudo BUILD_MODE=full ./scripts/build-iso.sh
+   sudo BUILD_MODE=full ./scripts/legacy/build-iso.sh
    ```
 
 2. Протестируйте в VirtualBox/QEMU
@@ -202,5 +202,5 @@ exec /lib/systemd/systemd
 
 4. Для быстрой отладки используйте `KEEP_CHROOT=1`:
    ```bash
-   sudo KEEP_CHROOT=1 BUILD_MODE=full ./scripts/build-iso.sh
+   sudo KEEP_CHROOT=1 BUILD_MODE=full ./scripts/legacy/build-iso.sh
    ```

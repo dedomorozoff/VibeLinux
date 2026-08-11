@@ -109,13 +109,13 @@ case "${BUILD_MODE}" in
 
     # Базовая структура scripts/
     need_dir "${ROOT_DIR}/scripts"
-    need_file "${ROOT_DIR}/scripts/base/base-packages.sh"
-    need_file "${ROOT_DIR}/scripts/base/cleanup.sh"
-    need_file "${ROOT_DIR}/scripts/base/setup-distro-info.sh"
-    need_file "${ROOT_DIR}/scripts/base/setup-bootloader.sh"
-    need_file "${ROOT_DIR}/scripts/desktop/install-kde.sh"
-    need_file "${ROOT_DIR}/scripts/desktop/setup-installer.sh"
-    need_file "${ROOT_DIR}/scripts/desktop/apply-branding.sh"
+    need_file "${ROOT_DIR}/scripts/legacy/base/base-packages.sh"
+    need_file "${ROOT_DIR}/scripts/legacy/base/cleanup.sh"
+    need_file "${ROOT_DIR}/scripts/legacy/base/setup-distro-info.sh"
+    need_file "${ROOT_DIR}/scripts/legacy/base/setup-bootloader.sh"
+    need_file "${ROOT_DIR}/scripts/legacy/desktop/install-kde.sh"
+    need_file "${ROOT_DIR}/scripts/legacy/desktop/setup-installer.sh"
+    need_file "${ROOT_DIR}/scripts/legacy/desktop/apply-branding.sh"
     need_file "${ROOT_DIR}/scripts/drivers/install-nvidia.sh"
 
     # Брендинг
@@ -183,13 +183,13 @@ case "${BUILD_MODE}" in
 
     # Шаг 3: Установка базовых пакетов
     log "Шаг 3: Установка базовых пакетов"
-    cp "${ROOT_DIR}/scripts/base/base-packages.sh" "${CHROOT_DIR}/root/base-packages.sh"
-    cp "${ROOT_DIR}/scripts/base/cleanup.sh" "${CHROOT_DIR}/root/cleanup.sh"
-    cp "${ROOT_DIR}/scripts/base/setup-distro-info.sh" "${CHROOT_DIR}/root/setup-distro-info.sh"
-    cp "${ROOT_DIR}/scripts/base/setup-bootloader.sh" "${CHROOT_DIR}/root/setup-bootloader.sh"
-    cp "${ROOT_DIR}/scripts/desktop/install-kde.sh" "${CHROOT_DIR}/root/install-kde.sh"
-    cp "${ROOT_DIR}/scripts/desktop/setup-installer.sh" "${CHROOT_DIR}/root/setup-installer.sh"
-    cp "${ROOT_DIR}/scripts/desktop/apply-branding.sh" "${CHROOT_DIR}/root/apply-branding.sh"
+    cp "${ROOT_DIR}/scripts/legacy/base/base-packages.sh" "${CHROOT_DIR}/root/base-packages.sh"
+    cp "${ROOT_DIR}/scripts/legacy/base/cleanup.sh" "${CHROOT_DIR}/root/cleanup.sh"
+    cp "${ROOT_DIR}/scripts/legacy/base/setup-distro-info.sh" "${CHROOT_DIR}/root/setup-distro-info.sh"
+    cp "${ROOT_DIR}/scripts/legacy/base/setup-bootloader.sh" "${CHROOT_DIR}/root/setup-bootloader.sh"
+    cp "${ROOT_DIR}/scripts/legacy/desktop/install-kde.sh" "${CHROOT_DIR}/root/install-kde.sh"
+    cp "${ROOT_DIR}/scripts/legacy/desktop/setup-installer.sh" "${CHROOT_DIR}/root/setup-installer.sh"
+    cp "${ROOT_DIR}/scripts/legacy/desktop/apply-branding.sh" "${CHROOT_DIR}/root/apply-branding.sh"
     cp "${ROOT_DIR}/scripts/drivers/install-nvidia.sh" "${CHROOT_DIR}/root/install-nvidia.sh"
 
     need_file "${ROOT_DIR}/scripts/dev/chroot-configs/kitty.conf"
@@ -450,25 +450,25 @@ SDDMEOF
     mkdir -p "${CHROOT_DIR}/home/vibecode/.config"
     mkdir -p "${CHROOT_DIR}/home/vibecode/.local/share"
 
-    # Копирование конфигураций из scripts/desktop/configs/kde/
-    if [[ -d "${ROOT_DIR}/scripts/desktop/configs/kde" ]]; then
+    # Копирование конфигураций из scripts/legacy/desktop/configs/kde/
+    if [[ -d "${ROOT_DIR}/scripts/legacy/desktop/configs/kde" ]]; then
       log "Копирование конфигурации KDE Plasma..."
-      cp -r "${ROOT_DIR}/scripts/desktop/configs/kde/"* "${CHROOT_DIR}/home/vibecode/.config/"
+      cp -r "${ROOT_DIR}/scripts/legacy/desktop/configs/kde/"* "${CHROOT_DIR}/home/vibecode/.config/"
     fi
 
-    if [[ -d "${ROOT_DIR}/scripts/desktop/configs/i3status" ]]; then
+    if [[ -d "${ROOT_DIR}/scripts/legacy/desktop/configs/i3status" ]]; then
       log "Копирование конфигурации i3status..."
-      cp -r "${ROOT_DIR}/scripts/desktop/configs/i3status/"* "${CHROOT_DIR}/home/vibecode/.config/i3status/"
+      cp -r "${ROOT_DIR}/scripts/legacy/desktop/configs/i3status/"* "${CHROOT_DIR}/home/vibecode/.config/i3status/"
     fi
 
-    if [[ -d "${ROOT_DIR}/scripts/desktop/configs/picom" ]]; then
+    if [[ -d "${ROOT_DIR}/scripts/legacy/desktop/configs/picom" ]]; then
       log "Копирование конфигурации picom..."
-      cp -r "${ROOT_DIR}/scripts/desktop/configs/picom/"* "${CHROOT_DIR}/home/vibecode/.config/picom/"
+      cp -r "${ROOT_DIR}/scripts/legacy/desktop/configs/picom/"* "${CHROOT_DIR}/home/vibecode/.config/picom/"
     fi
 
-    if [[ -d "${ROOT_DIR}/scripts/desktop/configs/kitty" ]]; then
+    if [[ -d "${ROOT_DIR}/scripts/legacy/desktop/configs/kitty" ]]; then
       log "Копирование конфигурации Kitty..."
-      cp -r "${ROOT_DIR}/scripts/desktop/configs/kitty/"* "${CHROOT_DIR}/home/vibecode/.config/kitty/"
+      cp -r "${ROOT_DIR}/scripts/legacy/desktop/configs/kitty/"* "${CHROOT_DIR}/home/vibecode/.config/kitty/"
     fi
 
     # Устанавливаем права на файлы настроек

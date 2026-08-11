@@ -4,31 +4,33 @@
 
 ## 📁 Структура
 
-- `build-vibe-lite-ubuntu.sh` — **Lite-версия** (Ubuntu 24.04, минимальный набор: CLI + Neovim + базовые утилиты)
-- `build-vibe-full-ubuntu.sh` — **Full-версия** (Ubuntu 24.04, все редакторы, AI-агенты, языки, инструменты)
-- `build-vibe-arch.sh` — **Arch Linux** (rolling release, полный набор)
+- `scripts/legacy/build-vibe-lite-ubuntu.sh` — **Lite-версия (legacy)** (Ubuntu 24.04, минимальный набор: CLI + Neovim + базовые утилиты)
+- `scripts/legacy/build-vibe-full-ubuntu.sh` — **Full-версия (legacy)** (Ubuntu 24.04, все редакторы, AI-агенты, языки, инструменты)
+- `scripts/build/build-vibe-arch.sh` — **Arch Linux (основная)** (rolling release, полный набор)
+
+> ⚠️ **Ubuntu-сборки переведены в legacy** и лежат в `scripts/legacy/`. Основная линия — Arch Linux (`build-vibe-arch.sh`, профиль `archiso-vibelinux/`).
 
 ## 🚀 Использование
 
 ### Быстрый старт
 
 ```bash
-# Lite-сборка (быстрая, только базовое)
-sudo bash scripts/build/build-vibe-lite-ubuntu.sh
+# Lite-сборка (legacy, только базовое)
+sudo bash scripts/legacy/build-vibe-lite-ubuntu.sh
 
-# Full-сборка (все инструменты)
-sudo bash scripts/build/build-vibe-full-ubuntu.sh
+# Full-сборка (legacy, все инструменты)
+sudo bash scripts/legacy/build-vibe-full-ubuntu.sh
 
-# Arch Linux сборка
+# Arch Linux сборка (основная)
 sudo bash scripts/build/build-vibe-arch.sh
 ```
 
 ### Через Makefile
 
 ```bash
-make lite        # Lite-сборка
-make full-vibe   # Full-сборка
-make arch        # Arch Linux
+make lite        # Lite-сборка (legacy)
+make full-vibe   # Full-сборка (legacy)
+make arch        # Arch Linux (основная)
 ```
 
 ## 🔧 Требования

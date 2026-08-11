@@ -21,7 +21,7 @@ echo "[base-packages] Установка базовых утилит + VirtualBo
 DEBIAN_FRONTEND=noninteractive apt-get install -y\
   systemd \
   systemd-sysv \
-  htop \
+  btop \
   curl \
   wget \
   unzip \

@@ -94,7 +94,7 @@ case "${BUILD_MODE}" in
     need_cmd mcopy
     need_cmd mmd
 
-    [[ -f "${ROOT_DIR}/scripts/base/minimal-packages.sh" ]] || die "Не найден скрипт minimal-packages.sh"
+    [[ -f "${ROOT_DIR}/scripts/legacy/base/minimal-packages.sh" ]] || die "Не найден скрипт minimal-packages.sh"
     log "OK: dry-run проверки пройдены."
     ;;
 
@@ -132,15 +132,15 @@ case "${BUILD_MODE}" in
       mount -o bind /run "${CHROOT_DIR}/run"
 
       # Копируем только нужные скрипты
-      cp "${ROOT_DIR}/scripts/base/minimal-packages.sh" "${CHROOT_DIR}/root/"
-      cp "${ROOT_DIR}/scripts/base/cleanup.sh" "${CHROOT_DIR}/root/"
-      cp "${ROOT_DIR}/scripts/base/setup-distro-info.sh" "${CHROOT_DIR}/root/"
-      cp "${ROOT_DIR}/scripts/base/setup-bootloader.sh" "${CHROOT_DIR}/root/"
+      cp "${ROOT_DIR}/scripts/legacy/base/minimal-packages.sh" "${CHROOT_DIR}/root/"
+      cp "${ROOT_DIR}/scripts/legacy/base/cleanup.sh" "${CHROOT_DIR}/root/"
+      cp "${ROOT_DIR}/scripts/legacy/base/setup-distro-info.sh" "${CHROOT_DIR}/root/"
+      cp "${ROOT_DIR}/scripts/legacy/base/setup-bootloader.sh" "${CHROOT_DIR}/root/"
 
       # Копируем скрипт доустановки (minimal-upgrade.sh)
-      if [[ -f "${ROOT_DIR}/scripts/minimal-upgrade.sh" ]]; then
+      if [[ -f "${ROOT_DIR}/scripts/legacy/minimal-upgrade.sh" ]]; then
           log "Копирование minimal-upgrade.sh в chroot..."
-          cp "${ROOT_DIR}/scripts/minimal-upgrade.sh" "${CHROOT_DIR}/usr/local/bin/vibecode-upgrade"
+          cp "${ROOT_DIR}/scripts/legacy/minimal-upgrade.sh" "${CHROOT_DIR}/usr/local/bin/vibecode-upgrade"
           chmod +x "${CHROOT_DIR}/usr/local/bin/vibecode-upgrade"
       fi
 

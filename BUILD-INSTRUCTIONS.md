@@ -8,48 +8,48 @@ make check
 make check-mini
 
 # 2. Сборка
-make mini    # минимальная версия (CLI, Ubuntu)
-make full    # полная версия (GUI + dev + AI, Ubuntu)
-make arch    # Arch Linux (KDE Plasma + полный стек)
+make arch    # основная версия (Arch Linux, KDE Plasma 6 + полный стек)
+make full    # legacy (Ubuntu 24.04, KDE Plasma + dev)
+make mini    # legacy (Ubuntu, CLI-only)
 ```
 
 ---
 
 ## Редакции
 
-| Параметр | **Full (Ubuntu)** | **Minimal (Ubuntu)** | **Arch** |
-|----------|-------------------|----------------------|----------|
-| **База** | Ubuntu 24.04 LTS | Ubuntu 24.04 LTS | Arch Linux (rolling) |
-| **GUI** | MATE Desktop | Нет (CLI) | KDE Plasma |
-| **Установщик** | Ubiquity | Текстовый скрипт | Calamares |
-| **Dev-стек** | Полный | Базовый | Полный |
-| **AI-стек** | ✅ | ❌ | ✅ |
-| **Размер ISO** | ~3-4 ГБ | ~600-800 МБ | ~3-4 ГБ |
+| Параметр | **Arch (основная)** | **Full (Ubuntu, legacy)** | **Minimal (Ubuntu, legacy)** |
+|----------|---------------------|----------------------------|------------------------------|
+| **База** | Arch Linux (rolling) | Ubuntu 24.04 LTS | Ubuntu 24.04 LTS |
+| **GUI** | KDE Plasma 6 | KDE Plasma | Нет (CLI) |
+| **Установщик** | Calamares | Ubiquity | Текстовый скрипт |
+| **Dev-стек** | Полный | Полный | Базовый |
+| **AI-стек** | ✅ | ✅ | ❌ |
+| **Размер ISO** | ~3-4 ГБ | ~3-4 ГБ | ~600-800 МБ |
 
 ## Состав сборок
 
-### Minimal (scripts/build-minimal-iso.sh)
-**Скрипт:** `scripts/build-minimal-iso.sh`  
-**Chroot скрипт:** `scripts/base/minimal-packages-chroot.sh`
+### Minimal (scripts/legacy/build-minimal-iso.sh) — Ubuntu, legacy
+**Скрипт:** `scripts/legacy/build-minimal-iso.sh`  
+**Chroot скрипт:** `scripts/legacy/base/minimal-packages-chroot.sh`
 
 **Пакеты (согласно PACKAGES.md):**
 - Ядро: `linux-image-virtual`
 - Live: `casper`, `squashfs-tools`
 - Оболочка: `zsh`, `tmux`
 - Редакторы: `nano`, `vim-tiny`
-- Утилиты: `mc`, `htop`, `curl`, `wget`, `unzip`, `zip`, `git`
+- Утилиты: `mc`, `btop`, `curl`, `wget`, `unzip`, `zip`, `git`
 - Dev: `build-essential`
 - Сеть: `network-manager`, `iputils-ping`, `net-tools`, `traceroute`
 - Дополнительно: `tree`, `p7zip-full`, `neofetch`, `virtualbox-guest-utils`
 
 **Размер ISO:** ~600-800 МБ
 
-### Full (scripts/build-iso.sh)
-**Скрипт:** `scripts/build-iso.sh`  
-**Chroot скрипт:** `scripts/base/full-packages-chroot.sh`
+### Full (scripts/legacy/build-iso.sh) — Ubuntu, legacy
+**Скрипт:** `scripts/legacy/build-iso.sh`  
+**Chroot скрипт:** `scripts/legacy/base/full-packages-chroot.sh`
 
 **Компоненты:**
-- **MATE Desktop** + LightDM (autologin)
+- **KDE Plasma** + SDDM (autologin)
 - **Терминал:** Kitty, Zsh, Oh My Zsh, Starship
 - **CLI утилиты:** eza, bat, fd, rg, fzf, zoxide, btop
 - **Языки:** Python3, Node.js, Go, Rust, Java 17
@@ -92,15 +92,27 @@ make arch    # Arch Linux (KDE Plasma + полный стек)
 
 ```
 scripts/
-├── build-minimal-iso.sh    # Сборка Minimal ISO
-├── build-iso.sh            # Сборка Full ISO
+├── build/                        # Основная линия (Arch Linux)
+│   ├── build-vibe-arch.sh        # Arch Linux + KDE Plasma 6
+│   ├── install-vibelinux-arch.sh # Установка VibeLinux на хост Arch
+│   └── prepare-aur.sh            # Подготовка AUR
+├── legacy/                       # Ubuntu-редакции (legacy)
+│   ├── build-minimal-iso.sh      # Сборка Minimal ISO
+│   ├── build-iso.sh              # Сборка Full ISO
+│   ├── minimal-upgrade.sh        # Мастер доустановки (vibecode-upgrade)
+│   ├── base/                     # Ubuntu-специфичные пакетные скрипты
+│   └── desktop/                  # DE-скрипты (KDE, i3wm, Hyprland)
 └── base/
-    ├── minimal-packages-chroot.sh  # Настройка chroot для Minimal
-    └── full-packages-chroot.sh     # Настройка chroot для Full
+    ├── generate-build-script.sh  # Генератор скриптов из JSON
+    └── vibe-wizard.sh            # Пост-установочный мастер
 ```
 
 ## Как это работает
 
+**Основная сборка (Arch Linux)** — `archiso` (профиль `archiso-vibelinux/`):
+`pacstrap` → `customize_airootfs.sh` → `mksquashfs` → `xorriso`.
+
+**Legacy-сборки (Ubuntu):**
 1. **debootstrap** разворачивает базовую Ubuntu 24.04
 2. **chroot скрипт** устанавливает пакеты и настраивает систему
 3. **mkinitramfs** создаёт initrd с casper hook

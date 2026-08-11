@@ -8,7 +8,7 @@ set -euo pipefail
 # полноценного рабочего окружения на базе X11
 #
 # Использование:
-#   sudo PROFILE=standard bash scripts/desktop/install-hyprland.sh
+#   sudo PROFILE=standard bash scripts/legacy/desktop/install-hyprland.sh
 #
 # Переменные:
 #   PROFILE=standard|minimal (по умолчанию: standard)

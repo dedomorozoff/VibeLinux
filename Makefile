@@ -31,9 +31,9 @@ full:
 	@if [ "$(DETECT_DISTRO)" = "arch" ]; then \
 		sudo bash $(ПУТЬ)/scripts/build/build-vibe-arch.sh; \
 	elif [ "$(DETECT_DISTRO)" = "fedora" ]; then \
-		sudo BUILD_MODE=full $(ПУТЬ)/scripts/build-iso.sh; \
+		sudo BUILD_MODE=full $(ПУТЬ)/scripts/legacy/build-iso.sh; \
 	else \
-		sudo BUILD_MODE=full $(ПУТЬ)/scripts/build-iso.sh; \
+		sudo BUILD_MODE=full $(ПУТЬ)/scripts/legacy/build-iso.sh; \
 	fi
 
 # Полная сборка с сохранением chroot (быстрая пересборка)
@@ -42,7 +42,7 @@ full-keep:
 	@if [ "$(DETECT_DISTRO)" = "arch" ]; then \
 		sudo KEEP_CH_ROOT=1 bash $(ПУТЬ)/scripts/build/build-vibe-arch.sh; \
 	else \
-		sudo KEEP_CH_ROOT=1 BUILD_MODE=full $(ПУТЬ)/scripts/build-iso.sh; \
+		sudo KEEP_CH_ROOT=1 BUILD_MODE=full $(ПУТЬ)/scripts/legacy/build-iso.sh; \
 	fi
 
 # Минимальная сборка ISO (CLI only)
@@ -51,7 +51,7 @@ mini:
 	@if [ "$(DETECT_DISTRO)" = "arch" ]; then \
 		sudo bash $(ПУТЬ)/scripts/build/build-vibe-arch.sh; \
 	else \
-		sudo BUILD_MODE=full $(ПУТЬ)/scripts/build-minimal-iso.sh; \
+		sudo BUILD_MODE=full $(ПУТЬ)/scripts/legacy/build-minimal-iso.sh; \
 	fi
 
 # Минимальная сборка с сохранением chroot (быстрая пересборка)
@@ -60,18 +60,18 @@ mini-keep:
 	@if [ "$(DETECT_DISTRO)" = "arch" ]; then \
 		sudo KEEP_CH_ROOT=1 bash $(ПУТЬ)/scripts/build/build-vibe-arch.sh; \
 	else \
-		sudo KEEP_CH_ROOT=1 BUILD_MODE=full $(ПУТЬ)/scripts/build-minimal-iso.sh; \
+		sudo KEEP_CH_ROOT=1 BUILD_MODE=full $(ПУТЬ)/scripts/legacy/build-minimal-iso.sh; \
 	fi
 
 # Lite-сборка (быстрая, только базовые инструменты)
 lite:
-	@echo "🚀 Запуск Lite-сборки (Ubuntu 24.04, базовые инструменты)..."
-	sudo bash $(ПУТЬ)/scripts/build/build-vibe-lite-ubuntu.sh
+	@echo "🚀 Запуск Lite-сборки (Ubuntu 24.04, legacy, базовые инструменты)..."
+	sudo bash $(ПУТЬ)/scripts/legacy/build-vibe-lite-ubuntu.sh
 
 # Full-сборка (все редакторы, AI-агенты, языки)
 full-vibe:
-	@echo "🚀 Запуск Full-сборки (Ubuntu 24.04, все инструменты)..."
-	sudo bash $(ПУТЬ)/scripts/build/build-vibe-full-ubuntu.sh
+	@echo "🚀 Запуск Full-сборки (Ubuntu 24.04, legacy, все инструменты)..."
+	sudo bash $(ПУТЬ)/scripts/legacy/build-vibe-full-ubuntu.sh
 
 # Arch Linux сборка (rolling release)
 arch:
@@ -85,18 +85,18 @@ generate:
 
 # Проверка зависимостей для полной сборки
 check:
-	@echo "🔍 Проверка зависимостей для полной сборки..."
-	BUILD_MODE=dry-run $(ПУТЬ)/scripts/build-iso.sh
+	@echo "🔍 Проверка зависимостей для полной сборки (legacy)..."
+	BUILD_MODE=dry-run $(ПУТЬ)/scripts/legacy/build-iso.sh
 
 # Проверка зависимостей для минимальной сборки
 check-mini:
-	@echo "🔍 Проверка зависимостей для минимальной сборки..."
-	BUILD_MODE=dry-run $(ПУТЬ)/scripts/build-minimal-iso.sh
+	@echo "🔍 Проверка зависимостей для минимальной сборки (legacy)..."
+	BUILD_MODE=dry-run $(ПУТЬ)/scripts/legacy/build-minimal-iso.sh
 
 # Мастер доустановки компонентов (для Minimal → Full)
 upgrade:
-	@echo "🚀 Запуск мастера доустановки компонентов..."
-	sudo bash $(ПУТЬ)/scripts/minimal-upgrade.sh
+	@echo "🚀 Запуск мастера доустановки компонентов (legacy)..."
+	sudo bash $(ПУТЬ)/scripts/legacy/minimal-upgrade.sh
 
 # Запуск vibe-wizard (пост-установочный мастер)
 wizard:
@@ -125,8 +125,8 @@ help:
 	@echo "  make full-keep  - полная сборка с сохранением chroot"
 	@echo "  make mini       - минимальная сборка ISO (auto: определяет ОС)"
 	@echo "  make mini-keep  - минимальная сборка с сохранением chroot"
-	@echo "  make lite       - быстрая lite-сборка (Ubuntu)"
-	@echo "  make full-vibe  - полная сборка (Ubuntu, все инструменты)"
+	@echo "  make lite       - быстрая lite-сборка (Ubuntu, legacy)"
+	@echo "  make full-vibe  - полная сборка (Ubuntu, legacy, все инструменты)"
 	@echo "  make arch       - сборка Arch Linux"
 	@echo ""
 	@echo "Проверка и утилиты:"

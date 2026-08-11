@@ -22,27 +22,36 @@ if [[ -z "${USER_HOME}" ]]; then
 fi
 
 echo "[setup-langs] Установка зависимостей..."
-apt-get update -y || true
-DEBIAN_FRONTEND=noninteractive apt-get install -y \
-  build-essential \
-  curl \
-  git \
-  ca-certificates \
-  libssl-dev \
-  zlib1g-dev \
-  libbz2-dev \
-  libreadline-dev \
-  libsqlite3-dev \
-  wget \
-  llvm \
-  libncursesw5-dev \
-  xz-utils \
-  tk-dev \
-  libxml2-dev \
-  libxmlsec1-dev \
-  libffi-dev \
-  liblzma-dev \
-  || true
+if command -v pacman >/dev/null 2>&1; then
+  pacman -Sy --noconfirm --needed \
+    base-devel curl git wget ca-certificates openssl zlib bzip2 readline sqlite \
+    libffi ncurses xz tk llvm libxml2
+elif command -v apt-get >/dev/null 2>&1; then
+  apt-get update -y || true
+  DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    build-essential \
+    curl \
+    git \
+    ca-certificates \
+    libssl-dev \
+    zlib1g-dev \
+    libbz2-dev \
+    libreadline-dev \
+    libsqlite3-dev \
+    wget \
+    llvm \
+    libncursesw5-dev \
+    xz-utils \
+    tk-dev \
+    libxml2-dev \
+    libxmlsec1-dev \
+    libffi-dev \
+    liblzma-dev \
+    || true
+else
+  echo "[setup-langs] Неподдерживаемый пакетный менеджер (нужен pacman или apt-get)."
+  exit 1
+fi
 
 # Проверка доступности интернета
 check_network() {
@@ -122,7 +131,11 @@ if check_network; then
     ' || true
   fi
 else
-  apt-get install -y golang-go 2>/dev/null || true
+  if command -v pacman >/dev/null 2>&1; then
+    pacman -Sy --noconfirm --needed go
+  else
+    apt-get install -y golang-go 2>/dev/null || true
+  fi
 fi
 
 # Добавляем Go в PATH пользователя
@@ -132,21 +145,31 @@ fi
 
 # PHP
 echo "[setup-langs] Установка PHP..."
-apt-get install -y \
-  php \
-  php-cli \
-  php-common \
-  php-curl \
-  php-mbstring \
-  php-xml \
-  php-zip \
-  php-sqlite3 \
-  php-mysql \
-  php-pgsql \
-  php-json \
-  php-intl \
-  php-bcmath \
-  2>/dev/null || echo "[setup-langs] WARNING: PHP install failed"
+if command -v pacman >/dev/null 2>&1; then
+  pacman -Sy --noconfirm --needed \
+    php \
+    php-sqlite \
+    php-pgsql \
+    php-intl \
+    composer \
+    || echo "[setup-langs] WARNING: PHP install failed"
+elif command -v apt-get >/dev/null 2>&1; then
+  DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    php \
+    php-cli \
+    php-common \
+    php-curl \
+    php-mbstring \
+    php-xml \
+    php-zip \
+    php-sqlite3 \
+    php-mysql \
+    php-pgsql \
+    php-json \
+    php-intl \
+    php-bcmath \
+    2>/dev/null || echo "[setup-langs] WARNING: PHP install failed"
+fi
 
 # Composer (менеджер зависимостей PHP)
 if check_network; then

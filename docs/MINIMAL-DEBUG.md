@@ -41,7 +41,7 @@ linux /casper/vmlinuz boot=casper init=/lib/systemd/systemd noprompt quiet ---
 
 **Проблема:** В ISO не установлены пакеты `casper`, `live-config`.
 
-**Решение:** Убедитесь что в `scripts/base/minimal-packages.sh` есть:
+**Решение:** Убедитесь что в `scripts/legacy/base/minimal-packages.sh` есть:
 
 ```bash
 casper

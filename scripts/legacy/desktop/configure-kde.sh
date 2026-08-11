@@ -48,7 +48,7 @@ kwriteconfig5 --file plasmarc --group Panels --group Values --key Floating true 
 # Закрепляем Konsole в панели (icontasks)
 kwriteconfig5 --file plasma-org.kde.plasma.desktop-appletsrc \
   --group Containments --group 3 --group Applets --group 6 --group Configuration --group General \
-  --key launchers "file:///usr/share/applications/org.kde.konsole.desktop,preferred://browser,file:///usr/share/applications/org.kde.dolphin.desktop,file:///usr/share/applications/org.kde.systemsettings.desktop" 2>/dev/null || true
+  --key launchers "file:///usr/share/applications/org.kde.konsole.desktop,preferred://browser,file:///usr/share/applications/org.kde.dolphin.desktop" 2>/dev/null || true
 
 # Настраиваем часы
 kwriteconfig5 --file plasmashellrc --group General --key showDate 1 2>/dev/null || true

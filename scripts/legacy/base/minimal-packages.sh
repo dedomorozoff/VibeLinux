@@ -34,7 +34,7 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
   tmux \
   nano \
   vim-tiny \
-  htop \
+  btop \
   unzip \
   zstd \
   linux-generic \

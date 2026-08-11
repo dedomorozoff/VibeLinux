@@ -25,8 +25,8 @@ sudo apt install -y grub-common fonts-dejavu-core
 **2. Проверьте конфигурацию GRUB в образе:**
 
 Убедитесь, что скрипт сборки создаёт шрифты и тему:
-- `scripts/build-iso.sh` — создаёт шрифт и тему для Full версии
-- `scripts/build-minimal-iso.sh` — создаёт шрифт и тему для Minimal версии
+- `scripts/legacy/build-iso.sh` — создаёт шрифт и тему для Full версии
+- `scripts/legacy/build-minimal-iso.sh` — создаёт шрифт и тему для Minimal версии
 
 **3. Используйте безопасные параметры загрузки:**
 
@@ -118,7 +118,7 @@ fi
 git pull origin main
 ```
 
-Или вручную исправьте `scripts/base/setup-bootloader.sh`:
+Или вручную исправьте `scripts/legacy/base/setup-bootloader.sh`:
 ```bash
 # Найдите строку с plymouth-set-default-theme
 # Замените на:
@@ -152,7 +152,7 @@ Docker не может запуститься в chroot-среде (нет syste
 ### Решение
 Убедитесь, что скрипт запускается с `sudo`:
 ```bash
-sudo BUILD_MODE=full ./scripts/build-iso.sh
+sudo BUILD_MODE=full ./scripts/legacy/build-iso.sh
 ```
 
 ---

@@ -18,7 +18,8 @@
 1. **Core OS / Build‑агент**
    - Отвечает за:
      - скрипты сборки ISO (`scripts/base`, `scripts/build`),
-     - настройку базовой системы (Ubuntu 24.04, MATE),
+     - настройку основной системы (**Arch Linux + KDE Plasma 6**, профиль `archiso-vibelinux/`)
+       и legacy-редакций на Ubuntu 24.04 (Full / Minimal / Lite),
      - интеграцию с CI (GitHub Actions).
    - Приоритет: автоматизация (скрипты, Makefile), минимизация ручных шагов.
 

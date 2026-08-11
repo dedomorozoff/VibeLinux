@@ -121,12 +121,12 @@ pacman -Sy --noconfirm
 # ---------- Базовые пакеты ----------
 if [[ "${MINIMAL}" -eq 1 ]]; then
   log "Минимальный набор пакетов..."
-  pac base-devel git curl wget unzip zstd p7zip jq rsync tmux htop fastfetch \
+  pac base-devel git curl wget unzip zstd p7zip jq rsync tmux btop fastfetch \
       zsh starship eza bat fd zoxide fzf ripgrep lazygit kitty \
       python python-pip nodejs npm docker docker-compose
 else
   log "Установка базовых пакетов и CLI-утилит..."
-  pac base-devel git curl wget unzip zstd p7zip jq rsync mc tmux htop btop fastfetch \
+  pac base-devel git curl wget unzip zstd p7zip jq rsync mc tmux btop fastfetch \
       zsh starship eza bat fd zoxide fzf ripgrep lazygit kitty \
       xdg-user-dirs xdg-utils networkmanager firefox \
       noto-fonts noto-fonts-cjk noto-fonts-emoji noto-fonts-extra \

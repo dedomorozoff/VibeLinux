@@ -1,5 +1,9 @@
 # Интеграция из temp/custom-linux-iso
 
+> **⚠️ Исторический документ:** с момента этой интеграции структура `scripts/` изменилась —
+> Ubuntu-сборки (`build-vibe-lite-ubuntu.sh`, `build-vibe-full-ubuntu.sh`, `build-iso.sh` и др.)
+> переехали в `scripts/legacy/`. Основная линия — `scripts/build/build-vibe-arch.sh` (Arch Linux).
+
 ## Что было перенесено
 
 Из проекта `temp/custom-linux-iso` были перенесены и адаптированы следующие компоненты:

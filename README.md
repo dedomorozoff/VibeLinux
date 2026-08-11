@@ -33,10 +33,10 @@ make lite         # Ubuntu 24.04 Lite (CLI-only)
 
 ### ✨ Что включено
 
-#### Arch Linux / Full (Ubuntu)
+#### Arch Linux (основная) / Full (Ubuntu, legacy)
 
 **Базовая система:**
-- Arch Linux (rolling) или Ubuntu 24.04 LTS
+- Arch Linux (rolling) — основная редакция; Ubuntu 24.04 LTS — legacy
 - KDE Plasma Desktop — современное окружение
 - SDDM — дисплей-менеджер с autologin
 - Брендинг VibeLinux — темы, обои, шрифты
@@ -90,7 +90,7 @@ make lite         # Ubuntu 24.04 Lite (CLI-only)
 - Ubuntu 24.04 LTS, CLI-only
 - Zsh + Starship
 - Git, build-essential
-- htop, tmux, mc, curl, wget
+- btop, tmux, mc, curl, wget
 
 ---
 
@@ -146,10 +146,10 @@ sudo ./scripts/ai/install-ollama-models.sh
 ### 📦 Скрипты
 
 **Сборка ISO:**
-- `scripts/build/build-vibe-arch.sh` — Arch Linux
-- `scripts/build/build-vibe-full-ubuntu.sh` — Ubuntu Full
-- `scripts/build/build-vibe-lite-ubuntu.sh` — Ubuntu Lite
-- `scripts/build-iso.sh` — основной оркестратор (Ubuntu)
+- `scripts/build/build-vibe-arch.sh` — Arch Linux (основная)
+- `scripts/legacy/build-vibe-full-ubuntu.sh` — Ubuntu Full (legacy)
+- `scripts/legacy/build-vibe-lite-ubuntu.sh` — Ubuntu Lite (legacy)
+- `scripts/legacy/build-iso.sh` — оркестратор Ubuntu Full (legacy)
 
 **Dev-стек:**
 - `scripts/dev/setup-dev-env.sh` — полная установка
