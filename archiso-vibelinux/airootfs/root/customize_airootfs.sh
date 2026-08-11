@@ -1171,6 +1171,7 @@ if command -v rustup &>/dev/null; then
 fi
 
 # Quick Start Guide
+mkdir -p /home/vibe/Desktop
 cat > /home/vibe/Desktop/GET-STARTED.html << 'EOF'
 <!DOCTYPE html>
 <html lang="en">
