@@ -167,8 +167,8 @@ sudo BUILD_MODE=full ./scripts/legacy/build-iso.sh
 # Ubuntu/Debian
 sudo apt install -y debootstrap mksquashfs xorriso grub-pc-bin grub-efi-amd64-bin mtools
 
-# Или через Makefile
-make check
+# Или через Makefile (legacy Ubuntu)
+make legacy-check
 ```
 
 ---

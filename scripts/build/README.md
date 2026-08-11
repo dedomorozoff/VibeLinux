@@ -28,9 +28,9 @@ sudo bash scripts/build/build-vibe-arch.sh
 ### Через Makefile
 
 ```bash
-make lite        # Lite-сборка (legacy)
-make full-vibe   # Full-сборка (legacy)
-make arch        # Arch Linux (основная)
+make legacy-lite        # Lite-сборка (legacy)
+make legacy-full-vibe   # Full-сборка (legacy)
+make arch               # Arch Linux (основная)
 ```
 
 ## 🔧 Требования

@@ -1,79 +1,45 @@
 # Makefile для сборки VibeCode OS / VibeLinux
 #
-# Использование:
-#   make full          - полная сборка ISO (с GUI, dev и AI-стеком)
-#   make mini          - минимальная сборка ISO (только CLI)
-#   make full-keep     - полная сборка с сохранением chroot
-#   make mini-keep     - минимальная сборка с сохранением chroot
-#   make lite          - быстрая lite-сборка (Ubuntu, базовые инструменты)
-#   make arch          - сборка на базе Arch Linux (rolling release)
+# Основная линия (Arch Linux + KDE Plasma 6):
+#   make arch          - сборка ISO (профиль archiso-vibelinux)
 #   make generate      - генерация скрипта сборки из JSON-конфига
-#   make check         - проверка зависимостей (dry-run)
-#   make check-mini    - проверка зависимостей для mini (dry-run)
-#   make upgrade       - мастер доустановки компонентов (для Minimal)
-#   make wizard        - запуск vibe-wizard (пост-установочный мастер)
+#   make wizard        - пост-установочный мастер (live-сессия)
+#
+# Legacy (Ubuntu 24.04: Full / Minimal / Lite):
+#   make legacy-full       - полная сборка ISO
+#   make legacy-full-keep  - полная сборка с сохранением chroot
+#   make legacy-mini       - минимальная сборка ISO (CLI)
+#   make legacy-mini-keep  - минимальная сборка с сохранением chroot
+#   make legacy-lite       - быстрая Lite-сборка
+#   make legacy-full-vibe  - полная сборка (все инструменты)
+#   make legacy-check      - проверка зависимостей (dry-run)
+#   make legacy-check-mini - проверка зависимостей minimal (dry-run)
+#   make legacy-upgrade    - мастер доустановки (Minimal → Full)
+#
+# Утилиты:
 #   make clean         - очистка артефактов сборки
 #   make help          - справка по доступным командам
+#
+# Старые имена (full, mini, lite, check, ...) работают как алиасы legacy-целей.
 
-.PHONY: full mini full-keep mini-keep lite arch generate check check-mini upgrade wizard clean help
+.PHONY: arch generate wizard \
+        legacy-full legacy-full-keep legacy-mini legacy-mini-keep \
+        legacy-lite legacy-full-vibe legacy-check legacy-check-mini legacy-upgrade \
+        clean help \
+        full full-keep mini mini-keep lite full-vibe check check-mini upgrade
 
 # Основная цель по умолчанию
 all: help
 
-# Makefile для сборки VibeCode OS / VibeCode OS
 ПУТЬ := $(CURDIR)
 
 DETECT_DISTRO := $(shell if command -v pacman >/dev/null 2>&1; then echo "arch"; elif command -v dnf >/dev/null 2>&1; then echo "fedora"; else echo "ubuntu"; fi)
 
-# Полная сборка ISO (определяет ОС)
-full:
-	@echo "🚀 Запуск полной сборки ISO ($(DETECT_DISTRO) detected)..."
-	@if [ "$(DETECT_DISTRO)" = "arch" ]; then \
-		sudo bash $(ПУТЬ)/scripts/build/build-vibe-arch.sh; \
-	elif [ "$(DETECT_DISTRO)" = "fedora" ]; then \
-		sudo BUILD_MODE=full $(ПУТЬ)/scripts/legacy/build-iso.sh; \
-	else \
-		sudo BUILD_MODE=full $(ПУТЬ)/scripts/legacy/build-iso.sh; \
-	fi
+# ============================================================
+# Основная линия: Arch Linux + KDE Plasma 6
+# ============================================================
 
-# Полная сборка с сохранением chroot (быстрая пересборка)
-full-keep:
-	@echo "🔄 Запуск полной сборки с сохранением chroot ($(DETECT_DISTRO) detected)..."
-	@if [ "$(DETECT_DISTRO)" = "arch" ]; then \
-		sudo KEEP_CH_ROOT=1 bash $(ПУТЬ)/scripts/build/build-vibe-arch.sh; \
-	else \
-		sudo KEEP_CH_ROOT=1 BUILD_MODE=full $(ПУТЬ)/scripts/legacy/build-iso.sh; \
-	fi
-
-# Минимальная сборка ISO (CLI only)
-mini:
-	@echo "🚀 Запуск минимальной сборки ISO ($(DETECT_DISTRO) detected)..."
-	@if [ "$(DETECT_DISTRO)" = "arch" ]; then \
-		sudo bash $(ПУТЬ)/scripts/build/build-vibe-arch.sh; \
-	else \
-		sudo BUILD_MODE=full $(ПУТЬ)/scripts/legacy/build-minimal-iso.sh; \
-	fi
-
-# Минимальная сборка с сохранением chroot (быстрая пересборка)
-mini-keep:
-	@echo "🔄 Запуск минимальной сборки с сохранением chroot ($(DETECT_DISTRO) detected)..."
-	@if [ "$(DETECT_DISTRO)" = "arch" ]; then \
-		sudo KEEP_CH_ROOT=1 bash $(ПУТЬ)/scripts/build/build-vibe-arch.sh; \
-	else \
-		sudo KEEP_CH_ROOT=1 BUILD_MODE=full $(ПУТЬ)/scripts/legacy/build-minimal-iso.sh; \
-	fi
-
-# Lite-сборка (быстрая, только базовые инструменты)
-lite:
-	@echo "🚀 Запуск Lite-сборки (Ubuntu 24.04, legacy, базовые инструменты)..."
-	sudo bash $(ПУТЬ)/scripts/legacy/build-vibe-lite-ubuntu.sh
-
-# Full-сборка (все редакторы, AI-агенты, языки)
-full-vibe:
-	@echo "🚀 Запуск Full-сборки (Ubuntu 24.04, legacy, все инструменты)..."
-	sudo bash $(ПУТЬ)/scripts/legacy/build-vibe-full-ubuntu.sh
-
-# Arch Linux сборка (rolling release)
+# Сборка ISO Arch Linux (rolling release)
 arch:
 	@echo "🚀 Запуск сборки Arch Linux..."
 	sudo bash $(ПУТЬ)/scripts/build/build-vibe-arch.sh
@@ -82,21 +48,6 @@ arch:
 generate:
 	@echo "📝 Генерация скрипта сборки из конфигурации..."
 	@bash $(ПУТЬ)/scripts/base/generate-build-script.sh
-
-# Проверка зависимостей для полной сборки
-check:
-	@echo "🔍 Проверка зависимостей для полной сборки (legacy)..."
-	BUILD_MODE=dry-run $(ПУТЬ)/scripts/legacy/build-iso.sh
-
-# Проверка зависимостей для минимальной сборки
-check-mini:
-	@echo "🔍 Проверка зависимостей для минимальной сборки (legacy)..."
-	BUILD_MODE=dry-run $(ПУТЬ)/scripts/legacy/build-minimal-iso.sh
-
-# Мастер доустановки компонентов (для Minimal → Full)
-upgrade:
-	@echo "🚀 Запуск мастера доустановки компонентов (legacy)..."
-	sudo bash $(ПУТЬ)/scripts/legacy/minimal-upgrade.sh
 
 # Запуск vibe-wizard (пост-установочный мастер)
 wizard:
@@ -108,11 +59,77 @@ wizard:
 	@echo "Или напрямую:"
 	@echo "  sudo /usr/local/bin/vibe-wizard"
 
+# ============================================================
+# Legacy: Ubuntu-редакции (Full / Minimal / Lite)
+# ============================================================
+
+# Полная сборка ISO (Ubuntu 24.04)
+legacy-full:
+	@echo "🚀 Запуск полной сборки ISO (Ubuntu, legacy)..."
+	sudo BUILD_MODE=full $(ПУТЬ)/scripts/legacy/build-iso.sh
+
+# Полная сборка с сохранением chroot (быстрая пересборка)
+legacy-full-keep:
+	@echo "🔄 Запуск полной сборки с сохранением chroot (Ubuntu, legacy)..."
+	sudo KEEP_CH_ROOT=1 BUILD_MODE=full $(ПУТЬ)/scripts/legacy/build-iso.sh
+
+# Минимальная сборка ISO (CLI only)
+legacy-mini:
+	@echo "🚀 Запуск минимальной сборки ISO (Ubuntu, legacy)..."
+	sudo BUILD_MODE=full $(ПУТЬ)/scripts/legacy/build-minimal-iso.sh
+
+# Минимальная сборка с сохранением chroot (быстрая пересборка)
+legacy-mini-keep:
+	@echo "🔄 Запуск минимальной сборки с сохранением chroot (Ubuntu, legacy)..."
+	sudo KEEP_CH_ROOT=1 BUILD_MODE=full $(ПУТЬ)/scripts/legacy/build-minimal-iso.sh
+
+# Lite-сборка (быстрая, только базовые инструменты)
+legacy-lite:
+	@echo "🚀 Запуск Lite-сборки (Ubuntu 24.04, legacy, базовые инструменты)..."
+	sudo bash $(ПУТЬ)/scripts/legacy/build/build-vibe-lite-ubuntu.sh
+
+# Full-сборка (все редакторы, AI-агенты, языки)
+legacy-full-vibe:
+	@echo "🚀 Запуск Full-сборки (Ubuntu 24.04, legacy, все инструменты)..."
+	sudo bash $(ПУТЬ)/scripts/legacy/build/build-vibe-full-ubuntu.sh
+
+# Проверка зависимостей для полной сборки (dry-run)
+legacy-check:
+	@echo "🔍 Проверка зависимостей для полной сборки (Ubuntu, legacy)..."
+	BUILD_MODE=dry-run $(ПУТЬ)/scripts/legacy/build-iso.sh
+
+# Проверка зависимостей для минимальной сборки (dry-run)
+legacy-check-mini:
+	@echo "🔍 Проверка зависимостей для минимальной сборки (Ubuntu, legacy)..."
+	BUILD_MODE=dry-run $(ПУТЬ)/scripts/legacy/build-minimal-iso.sh
+
+# Мастер доустановки компонентов (для Minimal → Full)
+legacy-upgrade:
+	@echo "🚀 Запуск мастера доустановки компонентов (Ubuntu, legacy)..."
+	sudo bash $(ПУТЬ)/scripts/legacy/minimal-upgrade.sh
+
+# ============================================================
+# Старые имена (deprecated алиасы legacy-целей)
+# ============================================================
+full: legacy-full
+full-keep: legacy-full-keep
+mini: legacy-mini
+mini-keep: legacy-mini-keep
+lite: legacy-lite
+full-vibe: legacy-full-vibe
+check: legacy-check
+check-mini: legacy-check-mini
+upgrade: legacy-upgrade
+
+# ============================================================
+# Утилиты
+# ============================================================
+
 # Очистка артефактов сборки
 clean:
 	@echo "🧹 Очистка артефактов сборки..."
 	sudo rm -rf $(ПУТЬ)/build/ $(ПУТЬ)/build-minimal/ 2>/dev/null || true
-	sudo rm -rf /srv/vibe-iso 2>/dev/null || true
+	sudo rm -rf /srv/vibe-iso /srv/vibe-iso-work 2>/dev/null || true
 	rm -rf $(ПУТЬ)/out/ 2>/dev/null || true
 	@echo "✅ Очистка завершена"
 
@@ -120,20 +137,25 @@ clean:
 help:
 	@echo "VibeCode OS / VibeLinux — Сборка ISO-образов"
 	@echo ""
-	@echo "Основные цели:"
-	@echo "  make full        - полная сборка ISO (auto: определяет ОС хоста)"
-	@echo "  make full-keep  - полная сборка с сохранением chroot"
-	@echo "  make mini       - минимальная сборка ISO (auto: определяет ОС)"
-	@echo "  make mini-keep  - минимальная сборка с сохранением chroot"
-	@echo "  make lite       - быстрая lite-сборка (Ubuntu, legacy)"
-	@echo "  make full-vibe  - полная сборка (Ubuntu, legacy, все инструменты)"
-	@echo "  make arch       - сборка Arch Linux"
+	@echo "Основная линия (Arch Linux + KDE Plasma 6):"
+	@echo "  make arch       - сборка ISO"
+	@echo "  make generate   - генерация скрипта сборки из JSON-конфига"
+	@echo "  make wizard     - пост-установочный мастер (live-сессия)"
 	@echo ""
-	@echo "Проверка и утилиты:"
-	@echo "  make check      - проверка зависимостей (dry-run)"
-	@echo "  make upgrade    - мастер доустановки компонентов"
-	@echo "  make wizard     - пост-установочный мастер"
-	@echo "  make clean     - очистка артефактов"
-	@echo "  make help      - эта справка"
+	@echo "Legacy (Ubuntu 24.04: Full / Minimal / Lite):"
+	@echo "  make legacy-full       - полная сборка ISO"
+	@echo "  make legacy-full-keep  - полная сборка с сохранением chroot"
+	@echo "  make legacy-mini       - минимальная сборка ISO (CLI)"
+	@echo "  make legacy-mini-keep  - минимальная сборка с сохранением chroot"
+	@echo "  make legacy-lite       - быстрая Lite-сборка"
+	@echo "  make legacy-full-vibe  - полная сборка (все инструменты)"
+	@echo "  make legacy-check      - проверка зависимостей (dry-run)"
+	@echo "  make legacy-check-mini - проверка зависимостей minimal (dry-run)"
+	@echo "  make legacy-upgrade    - мастер доустановки (Minimal → Full)"
 	@echo ""
+	@echo "Утилиты:"
+	@echo "  make clean       - очистка артефактов (build/, out/, /srv/vibe-iso-work)"
+	@echo "  make help        - эта справка"
+	@echo ""
+	@echo "Старые имена (full, mini, lite, check, upgrade, ...) работают как алиасы."
 	@echo "Текущая ОС: $(DETECT_DISTRO)"

@@ -3,14 +3,14 @@
 ## Быстрый старт
 
 ```bash
-# 1. Проверка зависимостей
-make check
-make check-mini
+# 1. Проверка зависимостей (legacy Ubuntu)
+make legacy-check
+make legacy-check-mini
 
 # 2. Сборка
-make arch    # основная версия (Arch Linux, KDE Plasma 6 + полный стек)
-make full    # legacy (Ubuntu 24.04, KDE Plasma + dev)
-make mini    # legacy (Ubuntu, CLI-only)
+make arch           # основная версия (Arch Linux, KDE Plasma 6 + полный стек)
+make legacy-full    # legacy (Ubuntu 24.04, KDE Plasma + dev)
+make legacy-mini    # legacy (Ubuntu, CLI-only)
 ```
 
 ---

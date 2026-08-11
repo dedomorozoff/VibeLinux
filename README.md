@@ -11,9 +11,9 @@
 Или собрать самостоятельно:
 
 ```bash
-make arch         # Arch Linux (KDE Plasma + полный стек)
-make full         # Ubuntu 24.04 Full (KDE Plasma + dev)
-make lite         # Ubuntu 24.04 Lite (CLI-only)
+make arch              # Arch Linux (KDE Plasma + полный стек)
+make legacy-full       # Ubuntu 24.04 Full (KDE Plasma + dev, legacy)
+make legacy-lite       # Ubuntu 24.04 Lite (CLI-only, legacy)
 ```
 
 ---
@@ -99,15 +99,15 @@ make lite         # Ubuntu 24.04 Lite (CLI-only)
 #### Сборка ISO
 
 ```bash
-# Arch Linux
+# Arch Linux (основная линия)
 make arch
 
-# Ubuntu
-make full
-make lite
+# Ubuntu (legacy)
+make legacy-full
+make legacy-lite
 
-# С сохранением chroot (для ускорения повторной сборки)
-make full-keep
+# С сохранением chroot (для ускорения повторной сборки, legacy)
+make legacy-full-keep
 ```
 
 #### Установка на хост-систему

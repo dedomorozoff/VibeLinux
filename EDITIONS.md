@@ -233,13 +233,13 @@ sudo vibecode-upgrade
 
 ```bash
 # Проверка
-make check-mini
+make legacy-check-mini
 
 # Сборка
-make mini
+make legacy-mini
 
 # Быстрая пересборка
-make mini-keep
+make legacy-mini-keep
 ```
 
 **Скрипт:** `scripts/legacy/build-minimal-iso.sh`
@@ -248,13 +248,13 @@ make mini-keep
 
 ```bash
 # Проверка
-make check
+make legacy-check
 
 # Сборка
-make full
+make legacy-full
 
 # Быстрая пересборка
-make full-keep
+make legacy-full-keep
 ```
 
 **Скрипт:** `scripts/legacy/build-iso.sh`

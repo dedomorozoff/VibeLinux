@@ -32,17 +32,17 @@
 make arch
 
 # Legacy: Ubuntu-редакции
-make full         # Full (KDE Plasma + dev + AI)
-make mini         # Minimal (только CLI)
-make lite         # Lite (CLI + базовые инструменты)
+make legacy-full        # Full (KDE Plasma + dev + AI)
+make legacy-mini        # Minimal (только CLI)
+make legacy-lite        # Lite (CLI + базовые инструменты)
 
 # Быстрая пересборка (сохраняет chroot, legacy Ubuntu)
-make full-keep
-make mini-keep
+make legacy-full-keep
+make legacy-mini-keep
 
 # Проверка зависимостей (legacy Ubuntu)
-make check
-make check-mini
+make legacy-check
+make legacy-check-mini
 
 # Очистка
 make clean
@@ -164,7 +164,7 @@ sudo ./scripts/ai/setup-ai-stack.sh
    - `full` — полноценная сборка ISO
 
 2. **Оптимизация повторной сборки:**
-   - Используйте `KEEP_CHROOT=1` или `make full-keep` / `make mini-keep`
+   - Используйте `KEEP_CHROOT=1` или `make legacy-full-keep` / `make legacy-mini-keep`
    - Это сохраняет chroot-окружение и пропускает этап bootstrap
 
 3. **Тестирование:**

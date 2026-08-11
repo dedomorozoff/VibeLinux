@@ -8,7 +8,7 @@
 
 ```bash
 # Через Makefile (рекомендуется)
-sudo make upgrade
+sudo make legacy-upgrade
 
 # Или напрямую
 sudo bash ./scripts/legacy/minimal-upgrade.sh
@@ -108,7 +108,7 @@ sudo bash ./scripts/legacy/minimal-upgrade.sh
 
 ```bash
 # Запустите мастер и выберите "A" для установки всего
-sudo make upgrade
+sudo make legacy-upgrade
 ```
 
 ## 💡 Советы
