@@ -108,6 +108,9 @@ make legacy-lite
 
 # С сохранением chroot (для ускорения повторной сборки, legacy)
 make legacy-full-keep
+
+# FreeBSD (экспериментальная редакция VibeBSD, сборка на FreeBSD-хосте)
+make bsd
 ```
 
 #### Установка на хост-систему
@@ -140,6 +143,7 @@ sudo ./scripts/ai/install-ollama-models.sh
 - [docs/BUILD-ISO.md](docs/BUILD-ISO.md) — процесс сборки ISO
 - [docs/DEVSTACK.md](docs/DEVSTACK.md) — dev-стек
 - [docs/AI-STACK.md](docs/AI-STACK.md) — AI-стек
+- [docs/VIBEBSD.md](docs/VIBEBSD.md) — экспериментальная FreeBSD-редакция
 
 ---
 

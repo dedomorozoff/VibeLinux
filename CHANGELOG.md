@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+### Added
+- **VibeBSD (экспериментальная FreeBSD-редакция):** `freebsd-vibebsd/`
+  - Пакетные списки base/desktop/dev/ai для FreeBSD pkg (проверены по FreshPorts)
+  - Пайплайн сборки ISO на Poudriere (jail → кастомизация → `poudriere image -t iso`)
+  - Кастомизация: брендинг, пользователь `vibebsd` (SDDM autologin), rc.conf (dbus/sddm/ollama)
+  - Конфиги Zsh/Starship/Kitty, адаптированные под FreeBSD (`/usr/local`, Podman-алиасы)
+  - Пост-установочный AI-стек без Docker (`uv`, Open WebUI, ComfyUI) — `scripts/setup-ai.sh`
+  - Makefile-цели: `make bsd`, `bsd-setup`, `bsd-customize`, `bsd-build`
+  - Документация: `freebsd-vibebsd/README.md`, `docs/VIBEBSD.md`, раздел в `roadmap.md`
+
 ### Changed
 - **Основная редакция — Arch Linux + KDE Plasma 6:**
   - Профиль `archiso-vibelinux/` (`make arch`, `scripts/build/build-vibe-arch.sh`)

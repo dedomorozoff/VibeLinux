@@ -133,3 +133,22 @@
     4.  **Template-проекты:** Подготовка и поддержка стартовых репозиториев (Python/FastAPI, Node/Next.js, Rust-CLI) и интеграция ссылок на них в Welcome App и документацию.
     5.  **Локализация и доступность:** Развитие многоязычной поддержки (RU/EN) в Welcome App и доках, добавление high-contrast тем и улучшений для accessibility.
     6.  **Планирование v1.1/v2.0:** Сбор пожеланий от сообщества и планирование следующего релиза.
+
+---
+
+### **Экспериментальная редакция: VibeBSD (FreeBSD) | Статус: 🔬 прототип**
+
+*   **Цель:** Проверить порт концепции VibeCode OS на FreeBSD 15 (KDE Plasma 6) — как альтернативу для тех, кому важны стабильность, ZFS и BSD-лицензии.
+*   **Что реализовано (`freebsd-vibebsd/`):**
+    - ✅ Пакетные списки: `base` / `desktop` / `dev` / `ai` (проверены по FreshPorts: `plasma6-plasma`, `ollama`, `zed-editor`, `podman`)
+    - ✅ Пайплайн сборки на **Poudriere**: jail → кастомизация rootfs → `poudriere image -t iso`
+    - ✅ Кастомизация: брендинг, пользователь `vibebsd` (SDDM autologin), rc.conf (dbus/sddm/ollama), конфиги Zsh/Starship/Kitty
+    - ✅ Makefile-цели: `make bsd`, `bsd-setup`, `bsd-customize`, `bsd-build`
+    - ✅ Пост-установочный AI-стек без Docker: `uv` + transformers/langchain/llama-index/torch, Open WebUI, ComfyUI
+*   **Задачи (backlog):**
+    1.  Собрать первый ISO на реальном FreeBSD-хосте, smoke-тест в bhyve/VirtualBox
+    2.  Сборка в CI (GitHub Actions `freebsd-latest` runner)
+    3.  Установщик: live-образ → кастомный сценарий на базе `bsdinstall` (аналог Calamares)
+    4.  Podman-интеграция: `linux_enable` + `ocijail`, перенос docker-compose-сценариев (Open WebUI)
+    5.  NVIDIA: Vulkan-бэкенд Ollama, драйверы
+*   **Ограничения:** нет Docker (Podman/LL), поддержка свежего железа хуже Linux, Ollama — amd64.

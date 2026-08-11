@@ -25,6 +25,7 @@
 .PHONY: arch generate wizard \
         legacy-full legacy-full-keep legacy-mini legacy-mini-keep \
         legacy-lite legacy-full-vibe legacy-check legacy-check-mini legacy-upgrade \
+        bsd bsd-setup bsd-customize bsd-build \
         clean help \
         full full-keep mini mini-keep lite full-vibe check check-mini upgrade
 
@@ -109,6 +110,32 @@ legacy-upgrade:
 	sudo bash $(ПУТЬ)/scripts/legacy/minimal-upgrade.sh
 
 # ============================================================
+# FreeBSD: VibeBSD (экспериментальная редакция)
+# ============================================================
+
+# Полная сборка: setup → customize → ISO
+bsd:
+	@echo "🚀 VibeBSD: полная сборка (setup + customize + ISO)..."
+	sudo sh $(ПУТЬ)/freebsd-vibebsd/scripts/00-setup-poudriere.sh
+	sudo sh $(ПУТЬ)/freebsd-vibebsd/scripts/10-customize-rootfs.sh
+	sudo sh $(ПУТЬ)/freebsd-vibebsd/scripts/20-build-iso.sh
+
+# Установка Poudriere + создание jail/портов
+bsd-setup:
+	@echo "🧱 VibeBSD: установка Poudriere + jail..."
+	sudo sh $(ПУТЬ)/freebsd-vibebsd/scripts/00-setup-poudriere.sh
+
+# Кастомизация rootfs (брендинг, пользователь, конфиги)
+bsd-customize:
+	@echo "🎨 VibeBSD: кастомизация rootfs..."
+	sudo sh $(ПУТЬ)/freebsd-vibebsd/scripts/10-customize-rootfs.sh
+
+# Сборка загрузочного ISO
+bsd-build:
+	@echo "📀 VibeBSD: сборка ISO..."
+	sudo sh $(ПУТЬ)/freebsd-vibebsd/scripts/20-build-iso.sh
+
+# ============================================================
 # Старые имена (deprecated алиасы legacy-целей)
 # ============================================================
 full: legacy-full
@@ -152,6 +179,12 @@ help:
 	@echo "  make legacy-check      - проверка зависимостей (dry-run)"
 	@echo "  make legacy-check-mini - проверка зависимостей minimal (dry-run)"
 	@echo "  make legacy-upgrade    - мастер доустановки (Minimal → Full)"
+	@echo ""
+	@echo "FreeBSD (экспериментальная редакция VibeBSD):"
+	@echo "  make bsd              - полная сборка (setup + customize + ISO)"
+	@echo "  make bsd-setup        - Poudriere + jail"
+	@echo "  make bsd-customize    - кастомизация rootfs"
+	@echo "  make bsd-build        - сборка ISO"
 	@echo ""
 	@echo "Утилиты:"
 	@echo "  make clean       - очистка артефактов (build/, out/, /srv/vibe-iso-work)"

@@ -1,0 +1,109 @@
+# VibeBSD - Zsh Configuration (FreeBSD)
+
+# Set default editor
+export EDITOR=nvim
+export VISUAL=zed
+
+# XDG Base Directory
+export XDG_CONFIG_HOME="$HOME/.config"
+export XDG_DATA_HOME="$HOME/.local/share"
+export XDG_CACHE_HOME="$HOME/.cache"
+
+# Path additions (FreeBSD: /usr/local, pipx, cargo)
+export PATH="$HOME/.local/bin:$HOME/.local/share/pipx/bin:$PATH"
+export PATH="$HOME/.cargo/bin:$PATH"
+export PATH="$HOME/go/bin:$PATH"
+
+# Oh My Zsh configuration
+export ZSH="/usr/local/share/oh-my-zsh"
+export ZSH_THEME="robbyrussell"
+
+# Plugins (docker/kubectl недоступны — заменены на podman/jails)
+plugins=(
+  git
+  rust
+  python
+  golang
+  node
+  npm
+)
+
+# Disable auto-update
+DISABLE_AUTO_UPDATE="true"
+DISABLE_UPDATE_PROMPT="true"
+
+# History
+HISTSIZE=10000
+SAVEHIST=10000
+HISTFILE=~/.zsh_history
+setopt SHARE_HISTORY
+setopt HIST_IGNORE_DUPS
+setopt HIST_IGNORE_SPACE
+setopt APPEND_HISTORY
+
+# Auto-completion
+autoload -Uz compinit
+compinit
+
+# Starship prompt
+if command -v starship >/dev/null 2>&1; then
+  eval "$(starship init zsh)"
+fi
+
+# Zoxide
+if command -v zoxide >/dev/null 2>&1; then
+  eval "$(zoxide init zsh)"
+fi
+
+# FZF (FreeBSD: /usr/local/share/fzf)
+[ -f /usr/local/share/fzf/key-bindings.zsh ] && source /usr/local/share/fzf/key-bindings.zsh
+[ -f /usr/local/share/fzf/completion.zsh ] && source /usr/local/share/fzf/completion.zsh
+
+# Welcome Message
+if [ -f /usr/local/share/vibebsd/logos/ascii-logo.txt ]; then
+  cat /usr/local/share/vibebsd/logos/ascii-logo.txt
+fi
+
+# Aliases
+alias ls='eza --icons --group-directories-first'
+alias ll='eza -lah --icons --group-directories-first'
+alias la='eza -A --icons --group-directories-first'
+alias lt='eza --tree --icons'
+alias cat='bat --paging=never'
+alias find='fd'
+alias grep='rg'
+alias top='btop'
+alias cd='z'
+
+# Podman (замена Docker)
+alias d='podman'
+alias dps='podman ps'
+alias dpa='podman ps -a'
+alias di='podman images'
+
+# Git
+alias g='git'
+alias gs='git status'
+alias ga='git add'
+alias gc='git commit'
+alias gp='git push'
+alias gl='git log --oneline --graph --decorate'
+
+# LazyGit
+if command -v lazygit >/dev/null 2>&1; then
+  alias lg='lazygit'
+fi
+
+# Node version manager
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+# Rust
+[ -f "$HOME/.cargo/env" ] && source "$HOME/.cargo/env"
+
+# Go
+export GOPATH="$HOME/go"
+export PATH="$GOPATH/bin:$PATH"
+
+# VibeBSD
+export VIBEBSD_HOME="/usr/local/share/vibebsd"

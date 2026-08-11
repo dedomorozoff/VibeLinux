@@ -1,0 +1,31 @@
+# VibeBSD — dev-стек
+
+# Shell
+zsh
+oh-my-zsh
+starship
+
+# Редакторы
+neovim
+vim
+zed-editor
+
+# Инструменты разработки
+git
+lazygit
+fzf
+bat
+fd-find
+ripgrep
+zoxide
+eza
+
+# Языки и менеджеры версий
+python
+node
+rust
+go
+pyenv
+nvm
+gmake
+pkgconf
