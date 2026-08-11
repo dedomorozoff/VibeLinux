@@ -20,6 +20,13 @@ if ! command -v ollama >/dev/null 2>&1; then
   exit 1
 fi
 
+# Live-сессия (archiso): корень — overlay в RAM, модели (2-4 ГБ) не помещаются.
+if [[ -d /run/archiso/bootmnt ]]; then
+  echo "[install-ollama-models] Live-сессия: корень работает в RAM, модели сюда не помещаются."
+  echo "[install-ollama-models] Установите VibeLinux на диск и запустите этот скрипт там."
+  exit 1
+fi
+
 for model in "${MODELS[@]}"; do
   echo "[install-ollama-models] Загрузка модели: ${model}..."
   if ollama pull "${model}"; then

@@ -72,7 +72,7 @@ make legacy-mini    # legacy (Ubuntu, CLI-only)
 - **CLI утилиты:** eza, bat, fd, rg, fzf, zoxide, btop
 - **Языки:** Python + pyenv, Node.js + nvm, Rust + rustup, Go, Java (SDKMAN!), PHP
 - **Редакторы:** VS Code, Zed, Neovim + AstroNvim, Kate
-- **AI:** Ollama, opencode, qwen-code, Python AI-библиотеки (torch, transformers, llama-index)
+- **AI:** opencode, qwen-code, claude-code, codex, kilo, mimo, continue, aider (предустановлены), Ollama (post-install через `install-ollama`), Python AI-библиотеки (post-install через `setup-ai-stack.sh`)
 - **Графика:** Pinta, Spectacle, Flameshot
 - **API:** Bruno
 - **БД:** sqlite3 + sqliteman

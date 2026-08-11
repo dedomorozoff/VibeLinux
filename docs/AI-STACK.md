@@ -11,13 +11,15 @@
 **Ollama**
 - Основной способ запуска локальных LLM
 - Systemd-сервис для автозапуска
-- Скрипт: `scripts/ai/install-ollama.sh`
+- **Не входит в live-ISO** (пакет ~500 МБ): ставится post-install на установленной системе — `sudo install-ollama` или `scripts/ai/install-ollama.sh`
+- Скрипт для других систем: `scripts/ai/install-ollama.sh`
 
 **Модели**
 - llama3.2 — универсальная модель
 - codellama — для программирования
 - qwen2.5-coder — современная кодинг-модель
-- Установка: `scripts/ai/install-ollama-models.sh`
+- Модели **не входят в ISO** (2–4 ГБ каждая) — скачиваются post-install: `ai-setup` или `scripts/ai/install-ollama-models.sh`
+- В live-сессии корень — RAM-оверлей, поэтому ollama и модели ставятся **после установки на диск**.
 
 **Open WebUI**
 - Веб-интерфейс для Ollama
@@ -37,13 +39,14 @@
 - Мощный AI-инструмент для парного программирования в терминале.
 - Позволяет редактировать код, создавать коммиты и файлы, просто общаясь с AI.
 - Интегрируется с Git и локальными/облачными LLM.
-- Устанавливается post-install через `scripts/ai/install-aider.sh`, запуск: `aider`.
+- **Предустановлен в образ VibeLinux Arch** (`aider`); на других системах ставится через `scripts/ai/install-aider.sh`.
 
-**Современные agentic CLI (опционально)**
-- **Codex CLI** — `scripts/ai/install-codex-cli.sh`
-- **Claude Code** — `scripts/ai/install-claude-code.sh`
-- **Qwen Code** — `scripts/ai/install-qwen-code.sh`
-- Рекомендуется держать их как опциональный слой поверх локального Ollama/Aider, а не тянуть в базовый ISO по умолчанию.
+**Современные agentic CLI**
+- **Codex CLI** — `codex` (OpenAI)
+- **Claude Code** — `claude` (Anthropic)
+- **Qwen Code** — `qwen` (Alibaba)
+- **Kilo Code / MiMo Code / Continue** — `kilo`, `mimo`, `cn`
+- **В образе VibeLinux Arch все перечисленные CLI предустановлены** на этапе сборки (запечены в squashfs), поэтому работают и в live-сессии, и на установленной системе без прав root и без доустановки. Скрипты в `scripts/ai/install-*.sh` остаются для других систем (Ubuntu legacy, bare-metal).
 
 ---
 

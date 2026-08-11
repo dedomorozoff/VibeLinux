@@ -33,6 +33,9 @@ build/
 # Временные директории
 temp/
 soft/
+
+# Сгенерированная копия scripts/ai в профиле (создаётся build-vibe-arch.sh)
+archiso-vibelinux/airootfs/opt/
 !soft/nlsh/nlsh.desktop
 !soft/nlsh/nlsh.svg
 

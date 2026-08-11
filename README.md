@@ -57,18 +57,15 @@ make legacy-lite       # Ubuntu 24.04 Lite (CLI-only, legacy)
 - **Git** + **lazygit** — TUI для Git
 - **Docker** + **Docker Compose** — контейнеризация
 
-**AI-стек (в ISO):**
-- **Ollama** — локальные LLM (автозапуск)
-- **opencode** — AI-агент для кодинга
-- **qwen-code** — Qwen AI-агент
+**AI-стек (в ISO, предустановлен — работает и в live, и на установленной системе):**
+- **opencode**, **qwen-code**, **Claude Code**, **Codex**, **Kilo**, **MiMo**, **Continue**, **aider** — все CLI-агенты запечены в образ
 - **nlsh** — Natural Language Shell (AI-ассистент в терминале)
 
-**AI-стек (post-install):**
-- `setup-python-ai-stack.sh` — PyTorch, Transformers, LangChain, LlamaIndex
-- `install-open-webui.sh` — веб-интерфейс для моделей
-- `setup-comfyui.sh` — генерация изображений (Stable Diffusion)
-- `install-aider.sh` — AI-парное программирование
-- `install-claude-code.sh`, `install-cursor.sh` — проприетарные AI-агенты
+**Ollama и тяжёлый AI-стек (post-install, после установки на диск):**
+- `sudo install-ollama` — рантайм локальных LLM (в live-ISO не входит: пакет ~500 МБ)
+- `sudo ai-setup` — базовые Ollama-модели
+- `sudo /opt/vibecode/scripts/ai/setup-ai-stack.sh` — PyTorch, Transformers, LangChain, LlamaIndex, Open WebUI, ComfyUI
+- В live-сессии корень — RAM-оверлей, поэтому тяжёлые компоненты ставятся только после установки на диск
 
 **Графические приложения:**
 - **Pinta** — графический редактор
@@ -119,19 +116,24 @@ make bsd
 # Dev-стек
 sudo ./scripts/dev/setup-dev-env.sh
 
-# AI-стек (post-install)
+# AI-стек (post-install; в образе VibeLinux Arch CLI-агенты уже предустановлены,
+# ollama ставится отдельно — install-ollama.sh)
+sudo ./scripts/ai/install-ollama.sh
 sudo ./scripts/ai/setup-ai-stack.sh
 sudo ./scripts/ai/install-ollama-models.sh
 ```
 
 #### Использование AI
 
-- **Ollama:** `ollama run qwen2.5-coder`
+- **Ollama** (после `install-ollama`): `ollama run qwen2.5-coder`
 - **opencode:** `opencode`
 - **qwen-code:** `qwen`
+- **Claude Code:** `claude`
+- **Codex:** `codex`
+- **aider:** `aider`
 - **nlsh:** `nlsh repl`
 - **ai-chat:** `ai-chat`
-- **Open WebUI:** http://localhost:3000
+- **Open WebUI:** http://localhost:3000 (после `setup-ai-stack.sh`)
 
 ---
 

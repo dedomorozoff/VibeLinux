@@ -94,6 +94,20 @@ else
     warn "nlsh not found in soft/nlsh/ — skipping"
 fi
 
+# 3c) Copy AI/helper scripts to /opt/vibecode/scripts (post-install helpers).
+# В live-сессии доустановка AI-инструментов невозможна (оверлей в RAM),
+# поэтому тяжёлый AI-стек (WebUI / ComfyUI / Python-venv / модели)
+# ставится ПОСЛЕ установки на диск: sudo /opt/vibecode/scripts/ai/setup-ai-stack.sh
+SCRIPTS_DIR="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+if [[ -d "$SCRIPTS_DIR/ai" ]]; then
+    log "Copying scripts/ai to airootfs/opt/vibecode/scripts/..."
+    mkdir -p "$PROFILE_DIR/airootfs/opt/vibecode/scripts"
+    cp -r "$SCRIPTS_DIR/ai" "$PROFILE_DIR/airootfs/opt/vibecode/scripts/"
+    log "AI scripts copied to airootfs/opt/vibecode/scripts/"
+else
+    warn "scripts/ai not found — skipping /opt/vibecode copy"
+fi
+
 log "Using profile: $PROFILE_DIR"
 log "Work dir: $WORKDIR"
 log "Output dir: $OUTDIR"

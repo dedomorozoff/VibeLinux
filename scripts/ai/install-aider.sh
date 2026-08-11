@@ -39,7 +39,12 @@ if ! command -v pipx >/dev/null 2>&1; then
 fi
 
 echo "Установка aider-chat через pipx..."
-pipx install aider-chat
+if [[ $EUID -eq 0 ]]; then
+    # Глобально (/usr/local/bin) — доступно всем пользователям системы.
+    pipx install --global aider-chat
+else
+    pipx install aider-chat
+fi
 
 # Добавляем алиас или проверяем доступность
 if command -v aider &> /dev/null; then

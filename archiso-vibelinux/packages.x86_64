@@ -103,7 +103,13 @@ neovim
 flatpak
 
 # AI tools
+# opencode — AI coding agent (пакет в официальных репозиториях)
 opencode
+# ollama НЕ включается в live-ISO: пакет тяжёлый (~500 МБ) и всё равно требует
+# диск под модели. Ставится post-install на установленную систему:
+#   sudo ai-install → выбрать Ollama, или sudo pacman -S ollama
+# pipx — для глобальной установки Python-CLI (aider и др.) на этапе сборки
+pipx
 
 # NVIDIA drivers (open kernel module — nvidia-open)
 nvidia-open

@@ -164,6 +164,8 @@ systemctl enable docker || true
 systemctl enable sddm || true
 systemctl enable vboxservice || true
 systemctl enable nvidia-persistenced || true
+# Ollama НЕ в образе: ставится post-install (ai-install → Ollama),
+# там же включается её systemd-сервис (см. /usr/local/bin/install-ollama).
 
 # NVIDIA: modprobe config for DRM modeset (fallback if kernel cmdline missing)
 mkdir -p /etc/modprobe.d
@@ -387,28 +389,79 @@ x-scheme-handler/terminal=kitty.desktop
 EOF
 fi
 
-# AI Stack scripts
-# Fix npm permissions for vibe user
+# === AI AGENTS: ПРЕДУСТАНОВКА В ОБРАЗ ===
+# Ключевая идея: все CLI-агенты запекаются в squashfs на этапе сборки.
+# В live-сессии не нужно ничего доустанавливать (нет root-запроса и нет
+# проблемы с местом — оверлей в RAM). Установленные агенты доступны и
+# в live-сессии, и на установленной системе.
 mkdir -p /home/vibe/.npm
 chown -R vibe:vibe /home/vibe/.npm
 
-# qwen-code (AI coding agent via npm) — ставим как root, потом фиксим права
-npm install -g @qwen-code/qwen-code 2>&1 | tail -5 || echo "WARNING: qwen-code install failed"
+NPM_AGENTS=(
+  "@qwen-code/qwen-code:qwen"
+  "@anthropic-ai/claude-code:claude"
+  "@openai/codex:codex"
+  "@kilocode/cli:kilo"
+  "@mimo-ai/cli:mimo"
+  "@continuedev/cli:cn"
+)
+for entry in "${NPM_AGENTS[@]}"; do
+  pkg="${entry%%:*}"; bin="${entry##*:}"
+  if command -v "$bin" >/dev/null 2>&1; then
+    echo "OK: $bin уже установлен"
+  else
+    echo "Installing $pkg (→ $bin)..."
+    npm install -g "$pkg" 2>&1 | tail -3 || echo "WARNING: $pkg install failed"
+  fi
+done
 chown -R vibe:vibe /home/vibe/.npm
 
-# Python AI venv устанавливается post-install через:
-#   sudo /opt/vibecode/scripts/ai/setup-python-ai-stack.sh
+# aider — AI pair programming (pipx --global → /usr/local/bin)
+if command -v aider >/dev/null 2>&1; then
+  echo "OK: aider уже установлен"
+elif pipx install --global aider-chat 2>&1 | tail -5; then
+  echo "OK: aider установлен глобально через pipx"
+else
+  # Fallback для старых pipx (< 1.7): ставим в ~/.local/bin и пробрасываем в /usr/local/bin
+  echo "WARNING: pipx --global не сработал, пробуем fallback..."
+  if pipx install aider-chat 2>&1 | tail -5 && [[ -x /root/.local/bin/aider ]]; then
+    ln -sf /root/.local/bin/aider /usr/local/bin/aider
+    echo "OK: aider установлен (fallback)"
+  else
+    echo "WARNING: aider install failed"
+  fi
+fi
+
+# Скрипты пост-установочного AI-стека (скопированы в /opt/vibecode на этапе сборки)
+if [[ -d /opt/vibecode/scripts/ai ]]; then
+  chmod -R +x /opt/vibecode/scripts/ai 2>/dev/null || true
+  echo "OK: /opt/vibecode/scripts/ai готов (setup-ai-stack.sh для post-install)"
+fi
+
+# Тяжёлый AI-стек (Python venv / WebUI / ComfyUI) устанавливается ПОСЛЕ установки на диск:
+#   sudo /opt/vibecode/scripts/ai/setup-ai-stack.sh
 
 cat > /usr/local/bin/ai-setup << 'AISETUPEOF'
 #!/usr/bin/env bash
+set -euo pipefail
+
+# Проверка live-сессии: archiso держит корень в RAM (overlay), модели туда не влезут.
+if [[ -d /run/archiso/bootmnt ]]; then
+  echo "Live-сессия: корень — overlay в RAM, ollama и модели сюда не помещаются."
+  echo "Установите VibeLinux на диск (Install VibeLinux), затем:"
+  echo "  sudo install-ollama   # рантайм локальных LLM"
+  echo "  ai-setup              # базовые модели"
+  exit 0
+fi
+
 echo "Downloading base Ollama models..."
 echo
 for model in qwen2.5-coder:7b llama3.2:3b codellama:7b; do
   echo "-> $model"
-  ollama pull "$model" 2>&1 | tail -1
+  ollama pull "$model" 2>&1 | tail -1 || true
   echo
 done
-echo "Done!"
+echo "Done! Модели лежат в /var/lib/ollama/models"
 AISETUPEOF
 chmod +x /usr/local/bin/ai-setup
 
@@ -420,6 +473,12 @@ chmod +x /usr/local/bin/ai-setup
 cat > /usr/local/bin/install-cursor << 'CURSOREOF'
 #!/usr/bin/env bash
 set -euo pipefail
+
+if [[ -d /run/archiso/bootmnt ]]; then
+  echo "Live-сессия: корень — RAM-оверлей, установка в /usr невозможна."
+  echo "Установите VibeLinux на диск и запустите install-cursor там."
+  exit 1
+fi
 
 echo "Installing Cursor Agent CLI..."
 if curl -fsSL https://cursor.com/install | bash; then
@@ -436,6 +495,13 @@ chmod +x /usr/local/bin/install-cursor
 cat > /usr/local/bin/install-kiro << 'KIROEOF'
 #!/usr/bin/env bash
 set -euo pipefail
+
+if [[ -d /run/archiso/bootmnt ]]; then
+  echo "Live-сессия: корень — RAM-оверлей, установка в /usr невозможна."
+  echo "Установите VibeLinux на диск и запустите install-kiro там."
+  exit 1
+fi
+
 echo "Installing Amazon Kiro CLI..."
 if curl -fsSL https://cli.kiro.dev/install | bash; then
   echo "Kiro installed! Run: kiro"
@@ -480,6 +546,13 @@ chmod +x /usr/local/bin/install-mimo
 cat > /usr/local/bin/install-ollama << 'OLLAMAEOF'
 #!/usr/bin/env bash
 set -euo pipefail
+
+if [[ -d /run/archiso/bootmnt ]]; then
+  echo "Live-сессия: корень — RAM-оверлей, ollama (~500 МБ) сюда не поместится."
+  echo "Установите VibeLinux на диск и запустите install-ollama там."
+  exit 1
+fi
+
 echo "Installing Ollama..."
 if command -v ollama >/dev/null 2>&1; then
   echo "Ollama is already installed: $(ollama --version 2>/dev/null || echo unknown version)"
@@ -589,10 +662,16 @@ echo 'Add to opencode config: "mcpServers": { "filesystem": { "command": "npx", 
 MCPEOF
 chmod +x /usr/local/bin/install-mcp-servers
 
-# Unified AI installer script
+# Unified AI installer — live-сессия осведомлён о месте (overlay в RAM).
+# CLI-агенты предустановлены в образ, поэтому менеджер в основном
+# показывает статус и направляет к post-install установкам на диск.
 cat > /usr/local/bin/ai-install << 'INSTALLEOF'
 #!/usr/bin/env bash
 set -euo pipefail
+
+is_live() {
+  [[ -d /run/archiso/bootmnt ]]
+}
 
 is_installed() {
   command -v "$1" >/dev/null 2>&1
@@ -600,55 +679,76 @@ is_installed() {
 
 status() {
   if is_installed "$1"; then
-    printf "installed"
+    printf "установлен"
   else
-    printf "not installed"
+    printf "не установлен"
   fi
+}
+
+live_blocked() {
+  if is_live; then
+    echo "В live-сессии корень — overlay в RAM, ставить в /usr некуда."
+    echo "Установите VibeLinux на диск и запустите эту команду там."
+    return 0
+  fi
+  return 1
 }
 
 echo "VibeLinux — AI Tool Installer"
 echo "=============================="
 echo ""
-echo "  [1] opencode      — Open source AI coding agent ($(status opencode))"
-echo "  [2] qwen-code     — Qwen AI coding agent ($(status qwen))"
-echo "  [3] Cursor Agent  — Cursor terminal agent ($(status agent))"
-echo "  [4] Kiro          — Amazon's AI coding assistant ($(status kiro))"
-echo "  [5] Claude Code   — Anthropic terminal AI ($(status claude))"
-echo "  [6] Codex         — OpenAI terminal AI ($(status codex))"
-echo "  [7] Kilo Code     — Open source AI coding agent ($(status kilo))"
-echo "  [8] MiMo Code     — Xiaomi terminal AI ($(status mimo))"
-echo "  [9] Continue.dev  — AI coding CLI ($(status cn))"
-echo "  [10] MCP servers  — Model Context Protocol (filesystem, github)"
-echo "  [11] Ollama       — Local LLM runtime ($(status ollama))"
+if is_live; then
+  FREE=$(df -h / 2>/dev/null | awk 'NR==2{print $4}')
+  echo "Live-сессия: / — RAM-оверлей, свободно: ${FREE:-?}. Доустановка тяжёлых компонентов невозможна."
+  echo "Все CLI-агенты уже предустановлены и работают."
+  echo ""
+fi
+
+echo "── Предустановленные AI-агенты (работают сразу) ──"
+echo "  opencode      — Open source AI coding agent ($(status opencode))"
+echo "  qwen-code     — Qwen AI coding agent ($(status qwen))"
+echo "  Claude Code   — Anthropic terminal AI ($(status claude))"
+echo "  Codex         — OpenAI terminal AI ($(status codex))"
+echo "  Kilo Code     — Open source AI coding agent ($(status kilo))"
+echo "  MiMo Code     — Xiaomi terminal AI ($(status mimo))"
+echo "  Continue.dev  — AI coding CLI ($(status cn))"
+echo "  Aider         — AI pair programming ($(status aider))"
 echo ""
-read -rp "Install [1-11]: " choice
+echo "── Дополнительные действия ──"
+echo "  [1] Cursor Agent — Cursor terminal agent ($(status agent))"
+echo "  [2] Kiro          — Amazon's AI coding assistant ($(status kiro))"
+echo "  [3] MCP servers   — Model Context Protocol (filesystem, github)"
+echo "  [4] Ollama        — Local LLM runtime ($(status ollama))"
+echo "  [5] AI модели     — базовые Ollama-модели (ai-setup)"
+echo "  [6] AI stack      — WebUI + Python-стек + ComfyUI (setup-ai-stack)"
+echo ""
+if is_live; then
+  echo "Дальше: установите VibeLinux на диск (Install VibeLinux), затем:"
+else
+  echo "Post-install:"
+fi
+echo "  sudo install-ollama                                 # рантайм локальных LLM"
+echo "  sudo ai-setup                                       # базовые Ollama-модели"
+echo "  sudo /opt/vibecode/scripts/ai/setup-ai-stack.sh     # WebUI + Python-стек + ComfyUI"
+echo ""
+read -rp "Выберите [1-6] или Enter для выхода: " choice
 case "$choice" in
-  1)
-    if is_installed opencode; then
-      echo "opencode is already installed. Run: opencode"
+  1) live_blocked || install-cursor ;;
+  2) live_blocked || install-kiro ;;
+  3) install-mcp-servers ;;
+  4) live_blocked || install-ollama ;;
+  5) ai-setup ;;
+  6)
+    if is_live; then
+      echo "setup-ai-stack ставит тяжёлые компоненты (WebUI/ComfyUI/Python-стек)."
+      echo "В live-сессии нет места — запустите после установки на диск."
+    elif [[ -x /opt/vibecode/scripts/ai/setup-ai-stack.sh ]]; then
+      sudo /opt/vibecode/scripts/ai/setup-ai-stack.sh
     else
-      echo "opencode is not installed in this image."
+      echo "setup-ai-stack.sh не найден в образе."
     fi
     ;;
-  2)
-    if is_installed qwen; then
-      echo "qwen-code is already installed. Run: qwen"
-    elif command -v npm >/dev/null 2>&1; then
-      npm install -g @qwen-code/qwen-code
-    else
-      echo "npm not found. Install Node.js first."
-    fi
-    ;;
-  3) install-cursor ;;
-  4) install-kiro ;;
-  5) install-claude-code ;;
-  6) install-codex ;;
-  7) install-kilo ;;
-  8) install-mimo ;;
-  9) install-continue ;;
-  10) install-mcp-servers ;;
-  11) install-ollama ;;
-  *) echo "Nothing to install." ;;
+  *) echo "Happy coding!" ;;
 esac
 INSTALLEOF
 chmod +x /usr/local/bin/ai-install
@@ -1119,8 +1219,14 @@ echo "  Welcome to VibeLinux!"
 echo "  Linux for vibe coding and AI development"
 echo "  ========================================="
 echo ""
-echo "  [1] Install AI tools (ollama, claude-code, aider)"
-echo "  [2] Download AI models (ai-setup)"
+echo "  AI-агенты уже предустановлены: opencode, qwen, claude, codex, aider"
+echo "  Ollama (локальные LLM) ставится после установки на диск: sudo install-ollama"
+echo ""
+if [[ -d /run/archiso/bootmnt ]]; then
+  echo "  (Live-сессия: корень в RAM, тяжёлый AI-стек ставится после установки на диск)"
+fi
+echo "  [1] AI-инструменты (статус, MCP, доп. установки — ai-install)"
+echo "  [2] AI-модели (ai-setup — после установки на диск)"
 echo "  [3] System info (fastfetch)"
 echo "  [4] Skip"
 echo ""
@@ -1224,13 +1330,20 @@ cat > /home/vibe/Desktop/GET-STARTED.html << 'EOF'
   <li><strong>Kate</strong> — KDE text editor</li>
 </ul>
 
-<h2>AI Tools</h2>
+<h2>AI Tools (предустановлены)</h2>
 <ul>
   <li><strong>opencode</strong> — <code>opencode</code> (AI coding agent)</li>
   <li><strong>qwen-code</strong> — <code>qwen</code> (Alibaba coding agent)</li>
-  <li><strong>Ollama</strong> — install: <code>ai-install</code> → [10]</li>
+  <li><strong>Claude Code</strong> — <code>claude</code> (Anthropic)</li>
+  <li><strong>Codex</strong> — <code>codex</code> (OpenAI)</li>
+  <li><strong>Kilo / MiMo / Continue</strong> — <code>kilo</code>, <code>mimo</code>, <code>cn</code></li>
+  <li><strong>Aider</strong> — <code>aider</code> (AI pair programming)</li>
   <li><strong>nlsh</strong> — offline AI shell (model included)</li>
 </ul>
+<p><em>Ollama и тяжёлый AI-стек (WebUI/ComfyUI/Python-venv) ставятся после установки на диск:</em></p>
+<pre><span class="cmd">sudo install-ollama</span>
+<span class="cmd">sudo ai-setup</span>
+<span class="cmd">sudo /opt/vibecode/scripts/ai/setup-ai-stack.sh</span></pre>
 
 <h2>Quick Commands</h2>
 <pre><span class="cmd">fastfetch</span> <span class="sep">—</span> system info
@@ -1239,15 +1352,17 @@ cat > /home/vibe/Desktop/GET-STARTED.html << 'EOF'
 <span class="cmd">bat</span> file  <span class="sep">—</span> cat with syntax highlighting
 <span class="cmd">lazygit</span>  <span class="sep">—</span> git TUI
 <span class="cmd">opencode</span> <span class="sep">—</span> AI coding agent
-<span class="cmd">qwen</span>     <span class="sep">—</span> AI coding agent
-<span class="cmd">ai-setup</span> <span class="sep">—</span> download AI models</pre>
+<span class="cmd">claude</span>   <span class="sep">—</span> Claude Code (Anthropic)
+<span class="cmd">codex</span>    <span class="sep">—</span> OpenAI Codex CLI
+<span class="cmd">aider</span>    <span class="sep">—</span> AI pair programming
+<span class="cmd">ai-setup</span> <span class="sep">—</span> download AI models (post-install)</pre>
 
 <h2>First Steps</h2>
 <ol>
   <li>Open <strong>Konsole</strong> (or Kitty)</li>
-  <li>Run <code>ai-install</code> to add AI tools (Ollama, Claude Code, …)</li>
-  <li>Run <code>opencode</code> for AI pair programming</li>
-  <li>Run <code>ai-setup</code> to download more models</li>
+  <li>Run <code>opencode</code> / <code>claude</code> / <code>codex</code> / <code>aider</code> — all pre-installed</li>
+  <li>Install VibeLinux to disk, then run <code>install-ollama</code> + <code>ai-setup</code> for local LLM models</li>
+  <li>Run <code>sudo /opt/vibecode/scripts/ai/setup-ai-stack.sh</code> for WebUI/ComfyUI/Python-стек</li>
   <li>Open <strong>Zed</strong> and start coding</li>
 </ol>
 
@@ -1918,8 +2033,8 @@ services:
     action: enable
   - name: docker
     action: enable
-  - name: ollama
-    action: enable
+  # ollama не включён — она не входит в ISO и ставится post-install
+  # (install-ollama сам включает systemd-сервис)
   - name: vibe-welcome
     action: enable
 EOF
@@ -2138,6 +2253,10 @@ echo ""
 
 # 4. Советы
 echo "── Полезные команды ──"
+echo "  AI-агенты (уже стоят):     opencode, qwen, claude, codex, aider"
+echo "  Ollama (после установки):  sudo install-ollama"
+echo "  AI-модели (после установки): sudo ai-setup"
+echo "  AI stack (после установки): sudo /opt/vibecode/scripts/ai/setup-ai-stack.sh"
 echo "  Установить пакет:          sudo pacman -S <package>"
 echo "  Обновить все пакеты:       sudo pacman -Syu"
 echo "  Discover (GUI магазин):    discover"

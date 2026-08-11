@@ -8,6 +8,13 @@ if [[ $EUID -ne 0 ]]; then
   exit 1
 fi
 
+# Live-сессия (archiso): корень — overlay в RAM, ollama (~500 МБ) не поместится.
+if [[ -d /run/archiso/bootmnt ]]; then
+  echo "[install-ollama] Live-сессия: корень работает в RAM, ollama сюда не поместится."
+  echo "[install-ollama] Установите VibeLinux на диск и запустите этот скрипт там."
+  exit 1
+fi
+
 echo "[install-ollama] Установка зависимостей..."
 if command -v pacman >/dev/null 2>&1; then
   pacman -Sy --noconfirm --needed curl ca-certificates

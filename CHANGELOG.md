@@ -3,6 +3,15 @@
 ## [Unreleased]
 
 ### Added
+- **Arch ISO — AI-агенты предустановлены в образ** (решает проблему «AI не ставится в live-сессии»):
+  - Все CLI-агенты запечены в squashfs на этапе сборки: opencode (pacman), qwen-code, Claude Code, Codex, Kilo, MiMo, Continue (npm global), aider (pipx --global) — работают и в live, и на установленной системе, без root и без доустановки
+  - `ollama` **намеренно не входит в ISO** (пакет ~500 МБ и всё равно нужен диск под модели) — ставится post-install: `install-ollama` / `ai-install`; systemd-сервис включается этим скриптом
+  - `pipx` добавлен в `packages.x86_64`
+  - Скрипты `scripts/ai/*` копируются в образ на `/opt/vibecode/scripts/ai` (`build-vibe-arch.sh`) — после установки на диск доступен `sudo /opt/vibecode/scripts/ai/setup-ai-stack.sh`
+- **Live-сессия осведомлена о RAM-оверлее:**
+  - `ai-install` показывает статус предустановленных агентов, свободное место на `/` и направляет тяжёлые установки (ollama / WebUI / ComfyUI / Python-стек) на установленную систему
+  - `install-ollama`, `ai-setup`, `setup-ai-stack.sh`, `install-ollama-models.sh` блокируются в live-сессии (корень — RAM) с понятным объяснением
+  - `install-cursor` / `install-kiro` получили live-guard
 - **VibeBSD (экспериментальная FreeBSD-редакция):** `freebsd-vibebsd/`
   - Пакетные списки base/desktop/dev/ai для FreeBSD pkg (проверены по FreshPorts)
   - Пайплайн сборки ISO на Poudriere (jail → кастомизация → `poudriere image -t iso`)
