@@ -414,7 +414,32 @@ for entry in "${NPM_AGENTS[@]}"; do
     npm install -g "$pkg" 2>&1 | tail -3 || echo "WARNING: $pkg install failed"
   fi
 done
+
+# Claude Code: запускаем postinstall вручную (нативный бинарник)
+CLAUDE_GLOBAL="$(npm root -g)/@anthropic-ai/claude-code"
+if [[ -f "$CLAUDE_GLOBAL/install.cjs" ]]; then
+  echo "Running claude-code postinstall..."
+  node "$CLAUDE_GLOBAL/install.cjs" || echo "WARNING: claude-code postinstall failed"
+fi
 chown -R vibe:vibe /home/vibe/.npm
+
+# Обёртки для агентов: кэш и tmp в /tmp (tmpfs), чтобы не забивать overlay
+for agent_bin in claude kilo mimo qwen codex opencode; do
+  REAL_BIN="$(type -p "$agent_bin" 2>/dev/null || true)"
+  if [[ -z "$REAL_BIN" || -f "${REAL_BIN}.real" ]]; then
+    continue
+  fi
+  mv "$REAL_BIN" "${REAL_BIN}.real"
+  cat > "$REAL_BIN" << WRAPPEREOF
+#!/usr/bin/env bash
+export TMPDIR=/tmp
+export XDG_CACHE_HOME=/tmp/\${USER:-root}/.cache
+export XDG_CONFIG_HOME=/tmp/\${USER:-root}/.config
+mkdir -p "\$XDG_CACHE_HOME" "\$XDG_CONFIG_HOME"
+exec "${REAL_BIN}.real" "\$@"
+WRAPPEREOF
+  chmod +x "$REAL_BIN"
+done
 
 # aider — AI pair programming (pipx --global → /usr/local/bin)
 if command -v aider >/dev/null 2>&1; then
@@ -583,6 +608,12 @@ if ! command -v npm >/dev/null 2>&1; then
   exit 1
 fi
 if npm install -g @anthropic-ai/claude-code; then
+  # Run postinstall for native binary
+  CLAUDE_GLOBAL="$(npm root -g)/@anthropic-ai/claude-code"
+  if [[ -f "$CLAUDE_GLOBAL/install.cjs" ]]; then
+    echo "Running postinstall..."
+    node "$CLAUDE_GLOBAL/install.cjs" || echo "WARNING: postinstall failed"
+  fi
   echo "Claude Code installed! Run: claude"
 else
   echo "Failed to install Claude Code. Check: https://claude.ai/code"

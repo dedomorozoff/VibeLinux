@@ -34,6 +34,13 @@ fi
 echo "[install-claude-code] Установка @anthropic-ai/claude-code..."
 npm install -g @anthropic-ai/claude-code
 
+# Постустановка нативного бинарника (npm может не вызвать postinstall)
+CLAUDE_GLOBAL="$(npm root -g)/@anthropic-ai/claude-code"
+if [[ -f "$CLAUDE_GLOBAL/install.cjs" ]]; then
+  echo "[install-claude-code] Запуск postinstall для нативного бинарника..."
+  node "$CLAUDE_GLOBAL/install.cjs" || echo "WARNING: claude-code postinstall failed"
+fi
+
 cat <<'EOF'
 [install-claude-code] Готово.
 
