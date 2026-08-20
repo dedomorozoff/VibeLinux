@@ -144,7 +144,7 @@ else
 
   if [[ "${INSTALL_AI}" -eq 1 ]]; then
     log "Установка AI-инструментов (ollama, opencode)..."
-    pac ollama opencode python-virtualenv pipx
+    pac ollama opencode python-virtualenv python-pipx
   fi
 fi
 
