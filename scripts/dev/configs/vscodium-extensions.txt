@@ -70,7 +70,6 @@ catppuccin.catppuccin-vsc
 # AI Tools
 kilo-code.kilo-code
 continue.continue
-aider-ai.aider-chat
 github.copilot
 github.copilot-chat
 

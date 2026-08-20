@@ -58,7 +58,7 @@ make legacy-lite       # Ubuntu 24.04 Lite (CLI-only, legacy)
 - **Docker** + **Docker Compose** — контейнеризация
 
 **AI-стек (в ISO, предустановлен — работает и в live, и на установленной системе):**
-- **opencode**, **qwen-code**, **Claude Code**, **Codex**, **Kilo**, **MiMo**, **Continue**, **aider** — все CLI-агенты запечены в образ
+- **opencode**, **qwen-code**, **Claude Code**, **Codex**, **Kilo**, **MiMo**, **Continue**, **Crush**, **Kimi** — все CLI-агенты запечены в образ
 - **nlsh** — Natural Language Shell (AI-ассистент в терминале)
 
 **Ollama и тяжёлый AI-стек (post-install, после установки на диск):**
@@ -130,8 +130,7 @@ sudo ./scripts/ai/install-ollama-models.sh
 - **qwen-code:** `qwen`
 - **Claude Code:** `claude`
 - **Codex:** `codex`
-- **aider:** `aider`
-- **nlsh:** `nlsh repl`
+- **nlsh:** `nlsh`
 - **ai-chat:** `ai-chat`
 - **Open WebUI:** http://localhost:3000 (после `setup-ai-stack.sh`)
 
@@ -171,7 +170,6 @@ sudo ./scripts/ai/install-ollama-models.sh
 - `scripts/ai/setup-python-ai-stack.sh` — Python AI libs
 - `scripts/ai/setup-comfyui.sh` — ComfyUI
 - `scripts/ai/install-open-webui.sh`
-- `scripts/ai/install-aider.sh`
 
 **Драйверы:**
 - `scripts/drivers/install-nvidia.sh`

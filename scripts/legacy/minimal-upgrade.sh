@@ -357,12 +357,6 @@ AIEOF
         chmod +x /usr/local/bin/ai-chat
     fi
 
-    # Aider
-    if ! command -v aider &>/dev/null; then
-        echo -e "${CYAN}Установка Aider...${NC}"
-        pip3 install aider-chat || true
-    fi
-
     # Python AI-библиотеки
     echo -e "${CYAN}Установка Python AI-библиотек...${NC}"
     pip3 install langchain langchain-community llama-index transformers accelerate ollama 2>/dev/null || true

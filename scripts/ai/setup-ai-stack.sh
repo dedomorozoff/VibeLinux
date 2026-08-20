@@ -49,13 +49,8 @@ bash "${SCRIPT_DIR}/setup-comfyui.sh"
 
 # 5. Terminal AI (ai-chat)
 echo ""
-echo "[5/6] Установка ai-chat..."
+echo "[5/5] Установка ai-chat..."
 bash "${SCRIPT_DIR}/install-terminal-ai.sh"
-
-# 6. Aider (Advanced AI coding agent)
-echo ""
-echo "[6/6] Установка Aider..."
-bash "${SCRIPT_DIR}/install-aider.sh"
 
 echo ""
 echo "╔════════════════════════════════════════╗"
@@ -66,7 +61,6 @@ echo "Быстрый старт:"
 echo "  • Open WebUI:    http://localhost:3000"
 echo "  • ComfyUI:       sudo bash scripts/ai/start-sd.sh"
 echo "  • Terminal AI:   ai-chat"
-echo "  • Advanced AI:   aider"
 echo "  • Python AI:     ai-env (активация окружения)"
 echo "  • Agents (opt):  install-codex-cli.sh / install-claude-code.sh / install-qwen-code.sh"
 echo ""

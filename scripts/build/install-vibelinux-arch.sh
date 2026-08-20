@@ -293,11 +293,6 @@ if [[ "${INSTALL_AI}" -eq 1 ]] && [[ "${MINIMAL}" -eq 0 ]]; then
     chown "${TARGET_USER}:${TARGET_USER}" "${USER_HOME}/.zshrc" 2>/dev/null || true
   fi
 
-  if command -v pipx >/dev/null 2>&1 && ! command -v aider >/dev/null 2>&1; then
-    log "Установка aider (AI pair programming)..."
-    run_as_user 'pipx install aider-chat && pipx ensurepath' 2>/dev/null || true
-  fi
-
   if command -v npm >/dev/null 2>&1 && ! command -v qwen >/dev/null 2>&1; then
     log "Установка qwen-code (AI coding agent)..."
     run_as_user 'npm install -g @qwen-code/qwen-code' 2>/dev/null || true
@@ -380,7 +375,6 @@ log "  ai-chat     — чат с локальной LLM (после ai-setup)"
 log "  ai-setup    — скачать модели Ollama"
 log "  opencode    — AI coding agent"
 log "  qwen        — Qwen AI coding agent"
-log "  aider       — AI парное программирование"
 log "  ai-env      — активация Python AI-окружения (~/.venv-ai)"
 log "  Open WebUI  — http://localhost:3000"
 log ""
@@ -388,7 +382,6 @@ log "Настройки:"
 log "  ./scripts/ai/install-ollama-models.sh — модели Ollama"
 log "  ./scripts/ai/install-open-webui.sh    — Open WebUI"
 log "  ./scripts/ai/setup-python-ai-stack.sh — Python AI-стек"
-log "  ./scripts/ai/install-aider.sh         — aider"
 log "  ./scripts/ai/install-qwen-code.sh     — qwen-code"
 log ""
 log "Перезапустите терминал или выполните: source ~/.zshrc"

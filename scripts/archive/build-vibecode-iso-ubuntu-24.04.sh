@@ -196,9 +196,6 @@ if [[ "__HAS_HELIX__" == "1" ]]; then
   if command -v cargo >/dev/null 2>&1; then runuser -u "$USERNAME" -- bash -lc 'cargo install --locked helix'; fi
 fi
 
-if [[ "__HAS_AIDER__" == "1" ]]; then
-  pip3 install --break-system-packages --ignore-installed aider-chat
-fi
 if [[ "__HAS_OLLAMA__" == "1" ]]; then
   curl -fsSL https://ollama.com/install.sh | sh
   systemctl enable ollama || true
@@ -230,7 +227,7 @@ CONFIG=/etc/vibe/config.json
 echo "Vibe post-install wizard"
 echo "Config: $CONFIG"
 if command -v whiptail >/dev/null 2>&1; then
-  SEL=$(whiptail --title "Vibe Wizard" --checklist "Выберите компоненты" 20 78 8     "zed" "Zed editor" ON     "cursor" "Cursor editor" ON     "vscode" "VS Code" ON     "neovim" "Neovim" ON     "continue" "Continue AI" ON     "aider" "Aider agent" ON     "ollama" "Ollama local LLM" ON     "docker" "Docker" ON 3>&1 1>&2 2>&3) || true
+  SEL=$(whiptail --title "Vibe Wizard" --checklist "Выберите компоненты" 20 78 8     "zed" "Zed editor" ON     "cursor" "Cursor editor" ON     "vscode" "VS Code" ON     "neovim" "Neovim" ON     "continue" "Continue AI" ON     "ollama" "Ollama local LLM" ON     "docker" "Docker" ON 3>&1 1>&2 2>&3) || true
   echo "Selected: $SEL" > /tmp/vibe-wizard.log
 fi
 echo "Готово. При желании установите выбранные компоненты вручную или через скрипт."
@@ -261,7 +258,7 @@ cat > "$ROOTFS/etc/vibe/config.json" << JSON
 {
   "distro": "ubuntu-24.04",
   "editors": ["zed", "cursor", "vscode", "neovim", "helix"],
-  "agents": ["continue", "aider", "cline", "opencode", "gpt-engineer"],
+  "agents": ["continue", "cline", "opencode", "gpt-engineer"],
   "runtimes": ["node-lts", "python", "rust-stable", "bun", "go", "deno"],
   "tools": ["git", "gh", "tmux", "fzf", "ripgrep", "jq", "docker", "podman"],
   "nvidia": true,

@@ -77,6 +77,14 @@ sudo ./setup-ai-stack.sh
 - Qwen Code
 - Системные зависимости ставятся через `pacman` или `apt-get`
 
+**install-crush.sh**
+- Crush (Charm — AI coding agent с LSP + MCP)
+- Системные зависимости ставятся через `pacman` или `apt-get`
+
+**install-kimi.sh**
+- Kimi Code CLI (Moonshot AI)
+- Системные зависимости ставятся через `pacman` или `apt-get`
+
 **install-terminal-ai.sh**
 - Дополнительные терминальные AI-утилиты
 - Работает в Arch и Debian/Ubuntu (`pacman` или `apt-get`)

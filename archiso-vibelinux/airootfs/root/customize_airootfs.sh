@@ -404,6 +404,8 @@ NPM_AGENTS=(
   "@kilocode/cli:kilo"
   "@mimo-ai/cli:mimo"
   "@continuedev/cli:cn"
+  "@charmland/crush:crush"
+  "@moonshot-ai/kimi-code:kimi"
 )
 for entry in "${NPM_AGENTS[@]}"; do
   pkg="${entry%%:*}"; bin="${entry##*:}"
@@ -424,7 +426,7 @@ fi
 chown -R vibe:vibe /home/vibe/.npm
 
 # Обёртки для агентов: кэш и tmp в /tmp (tmpfs), чтобы не забивать overlay
-for agent_bin in claude kilo mimo qwen codex opencode; do
+for agent_bin in claude kilo mimo qwen codex opencode nlsh crush kimi; do
   REAL_BIN="$(type -p "$agent_bin" 2>/dev/null || true)"
   if [[ -z "$REAL_BIN" || -f "${REAL_BIN}.real" ]]; then
     continue
@@ -440,22 +442,6 @@ exec "${REAL_BIN}.real" "\$@"
 WRAPPEREOF
   chmod +x "$REAL_BIN"
 done
-
-# aider — AI pair programming (pipx --global → /usr/local/bin)
-if command -v aider >/dev/null 2>&1; then
-  echo "OK: aider уже установлен"
-elif pipx install --global aider-chat 2>&1 | tail -5; then
-  echo "OK: aider установлен глобально через pipx"
-else
-  # Fallback для старых pipx (< 1.7): ставим в ~/.local/bin и пробрасываем в /usr/local/bin
-  echo "WARNING: pipx --global не сработал, пробуем fallback..."
-  if pipx install aider-chat 2>&1 | tail -5 && [[ -x /root/.local/bin/aider ]]; then
-    ln -sf /root/.local/bin/aider /usr/local/bin/aider
-    echo "OK: aider установлен (fallback)"
-  else
-    echo "WARNING: aider install failed"
-  fi
-fi
 
 # Скрипты пост-установочного AI-стека (скопированы в /opt/vibecode на этапе сборки)
 if [[ -d /opt/vibecode/scripts/ai ]]; then
@@ -566,6 +552,36 @@ else
 fi
 MIMOEOF
 chmod +x /usr/local/bin/install-mimo
+
+# Crush CLI installer
+cat > /usr/local/bin/install-crush << 'CRUSHEOF'
+#!/usr/bin/env bash
+set -euo pipefail
+echo "Installing Crush..."
+if command -v npm >/dev/null 2>&1; then
+  npm install -g @charmland/crush
+  echo "Crush installed! Run: crush"
+else
+  echo "npm not found. Install Node.js first."
+  exit 1
+fi
+CRUSHEOF
+chmod +x /usr/local/bin/install-crush
+
+# Kimi Code CLI installer
+cat > /usr/local/bin/install-kimi << 'KIMIEOF'
+#!/usr/bin/env bash
+set -euo pipefail
+echo "Installing Kimi Code CLI..."
+if command -v npm >/dev/null 2>&1; then
+  npm install -g @moonshot-ai/kimi-code
+  echo "Kimi Code installed! Run: kimi"
+else
+  echo "npm not found. Install Node.js first."
+  exit 1
+fi
+KIMIEOF
+chmod +x /usr/local/bin/install-kimi
 
 # Ollama installer (post-install, Arch)
 cat > /usr/local/bin/install-ollama << 'OLLAMAEOF'
@@ -743,7 +759,6 @@ echo "  Codex         — OpenAI terminal AI ($(status codex))"
 echo "  Kilo Code     — Open source AI coding agent ($(status kilo))"
 echo "  MiMo Code     — Xiaomi terminal AI ($(status mimo))"
 echo "  Continue.dev  — AI coding CLI ($(status cn))"
-echo "  Aider         — AI pair programming ($(status aider))"
 echo ""
 echo "── Дополнительные действия ──"
 echo "  [1] Cursor Agent — Cursor terminal agent ($(status agent))"
@@ -1250,7 +1265,7 @@ echo "  Welcome to VibeLinux!"
 echo "  Linux for vibe coding and AI development"
 echo "  ========================================="
 echo ""
-echo "  AI-агенты уже предустановлены: opencode, qwen, claude, codex, aider"
+echo "  AI-агенты уже предустановлены: opencode, qwen, claude, codex, crush, kimi"
 echo "  Ollama (локальные LLM) ставится после установки на диск: sudo install-ollama"
 echo ""
 if [[ -d /run/archiso/bootmnt ]]; then
@@ -1367,8 +1382,7 @@ cat > /home/vibe/Desktop/GET-STARTED.html << 'EOF'
   <li><strong>qwen-code</strong> — <code>qwen</code> (Alibaba coding agent)</li>
   <li><strong>Claude Code</strong> — <code>claude</code> (Anthropic)</li>
   <li><strong>Codex</strong> — <code>codex</code> (OpenAI)</li>
-  <li><strong>Kilo / MiMo / Continue</strong> — <code>kilo</code>, <code>mimo</code>, <code>cn</code></li>
-  <li><strong>Aider</strong> — <code>aider</code> (AI pair programming)</li>
+  <li><strong>Kilo / MiMo / Continue / Crush / Kimi</strong> — <code>kilo</code>, <code>mimo</code>, <code>cn</code>, <code>crush</code>, <code>kimi</code></li>
   <li><strong>nlsh</strong> — offline AI shell (model included)</li>
 </ul>
 <p><em>Ollama и тяжёлый AI-стек (WebUI/ComfyUI/Python-venv) ставятся после установки на диск:</em></p>
@@ -1385,13 +1399,12 @@ cat > /home/vibe/Desktop/GET-STARTED.html << 'EOF'
 <span class="cmd">opencode</span> <span class="sep">—</span> AI coding agent
 <span class="cmd">claude</span>   <span class="sep">—</span> Claude Code (Anthropic)
 <span class="cmd">codex</span>    <span class="sep">—</span> OpenAI Codex CLI
-<span class="cmd">aider</span>    <span class="sep">—</span> AI pair programming
 <span class="cmd">ai-setup</span> <span class="sep">—</span> download AI models (post-install)</pre>
 
 <h2>First Steps</h2>
 <ol>
   <li>Open <strong>Konsole</strong> (or Kitty)</li>
-  <li>Run <code>opencode</code> / <code>claude</code> / <code>codex</code> / <code>aider</code> — all pre-installed</li>
+  <li>Run <code>opencode</code> / <code>claude</code> / <code>codex</code> — all pre-installed</li>
   <li>Install VibeLinux to disk, then run <code>install-ollama</code> + <code>ai-setup</code> for local LLM models</li>
   <li>Run <code>sudo /opt/vibecode/scripts/ai/setup-ai-stack.sh</code> for WebUI/ComfyUI/Python-стек</li>
   <li>Open <strong>Zed</strong> and start coding</li>
@@ -1414,16 +1427,47 @@ Categories=Development;
 EOF
 chmod 755 /home/vibe/Desktop/OpenCode.desktop
 
-cat > /home/vibe/Desktop/Qwen-Code.desktop << EOF
+# AI Agents Launcher — выбор из установленных CLI-агентов
+cat > /usr/local/bin/ai-launcher << 'LAUNCHEOF'
+#!/usr/bin/env bash
+# Показывает меню установленных AI-агентов и запускает выбранный
+declare -A AGENTS
+for bin in opencode claude codex qwen kilo mimo nlsh crush kimi; do
+  path="$(type -p "$bin" 2>/dev/null || true)"
+  if [[ -n "$path" ]]; then
+    AGENTS["$bin"]="$path"
+  fi
+done
+
+if [[ ${#AGENTS[@]} -eq 0 ]]; then
+  kdialog --error "AI-агенты не найдены. Запустите ai-install для установки."
+  exit 1
+fi
+
+if [[ ${#AGENTS[@]} -eq 1 ]]; then
+  exec konsole --hold -e "${!AGENTS[@]}"
+fi
+
+ITEMS=()
+for name in "${!AGENTS[@]}"; do
+  ITEMS+=("$name" "")
+done
+
+CHOICE=$(kdialog --title "AI Agents" --menu "Выберите AI-агента:" "${ITEMS[@]}")
+[[ -n "$CHOICE" ]] && exec konsole --hold -e "$CHOICE"
+LAUNCHEOF
+chmod +x /usr/local/bin/ai-launcher
+
+cat > /home/vibe/Desktop/AI-Launcher.desktop << EOF
 [Desktop Entry]
 Type=Application
-Name=Qwen Code
+Name=AI Agents
 Icon=utilities-terminal
-Exec=konsole --hold -e qwen
+Exec=ai-launcher
 Terminal=false
 Categories=Development;
 EOF
-chmod 755 /home/vibe/Desktop/Qwen-Code.desktop
+chmod 755 /home/vibe/Desktop/AI-Launcher.desktop
 
 cat > /home/vibe/Desktop/Install-AI-Tools.desktop << EOF
 [Desktop Entry]
@@ -1514,7 +1558,7 @@ Type=Application
 Name=nlsh — AI Shell Assistant
 GenericName=Natural Language Shell
 Comment=AI-ассистент для управления системой через естественный язык
-Exec=konsole --hold -e nlsh repl
+Exec=konsole --hold -e nlsh
 Icon=nlsh
 Terminal=false
 Categories=Development;Utility;AI;
@@ -1542,7 +1586,7 @@ done
 mkdir -p /home/vibe/.config
 cat > /home/vibe/.config/kickoffrc << 'EOF'
 [General]
-favorites=preferred://browser,org.kde.dolphin.desktop,org.kde.konsole.desktop,OpenCode.desktop,Qwen-Code.desktop,Install-AI-Tools.desktop,VibeLinux-Welcome.desktop
+favorites=preferred://browser,org.kde.dolphin.desktop,org.kde.konsole.desktop,OpenCode.desktop,AI-Launcher.desktop,Install-AI-Tools.desktop,VibeLinux-Welcome.desktop
 EOF
 chown vibe:vibe /home/vibe/.config/kickoffrc
 
@@ -2284,7 +2328,7 @@ echo ""
 
 # 4. Советы
 echo "── Полезные команды ──"
-echo "  AI-агенты (уже стоят):     opencode, qwen, claude, codex, aider"
+echo "  AI-агенты (уже стоят):     opencode, qwen, claude, codex, crush, kimi"
 echo "  Ollama (после установки):  sudo install-ollama"
 echo "  AI-модели (после установки): sudo ai-setup"
 echo "  AI stack (после установки): sudo /opt/vibecode/scripts/ai/setup-ai-stack.sh"

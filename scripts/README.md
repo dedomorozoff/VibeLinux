@@ -141,12 +141,13 @@ sudo ./scripts/ai/setup-ai-stack.sh
 | `setup-comfyui.sh` | ComfyUI (генерация изображений) |
 | `start-sd.sh` | Запуск ComfyUI |
 | `ai-chat` | Терминальный AI-чат |
-| `install-aider.sh` | Aider (AI-парное программирование) |
 | `install-openai-cli.sh` | OpenAI CLI (опционально) |
 | `install-github-copilot-cli.sh` | GitHub Copilot CLI (опционально) |
 | `install-codex-cli.sh` | OpenAI Codex CLI (опционально) |
 | `install-claude-code.sh` | Claude Code (опционально) |
 | `install-qwen-code.sh` | Qwen Code (опционально) |
+| `install-crush.sh` | Crush — AI coding agent (опционально) |
+| `install-kimi.sh` | Kimi Code CLI (опционально) |
 | `install-terminal-ai.sh` | Терминальные AI-утилиты |
 
 ### Драйверы (`drivers/`)

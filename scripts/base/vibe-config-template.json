@@ -4,7 +4,7 @@
   "user": "vibe",
   "hostname": "vibelinux",
   "editors": ["zed", "vscode", "neovim", "helix"],
-  "agents": ["aider", "ollama", "continue", "cline"],
+  "agents": ["ollama", "continue", "cline"],
   "runtimes": ["node-lts", "python", "rust-stable", "bun", "go", "deno"],
   "tools": ["git", "gh", "tmux", "fzf", "ripgrep", "jq", "docker", "podman"],
   "nvidia": true,

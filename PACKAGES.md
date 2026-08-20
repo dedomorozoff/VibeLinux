@@ -44,7 +44,7 @@
 - **CLI-утилиты:** eza, bat, fd, rg, fzf, zoxide, btop
 - **Языки:** Python (pyenv), Node.js (nvm), Rust (rustup), Go, Java (SDKMAN!), PHP
 - **Редакторы:** VS Code, Zed, Neovim (AstroNvim), Kate
-- **AI-стек:** opencode, qwen-code, claude-code, codex, kilo, mimo, continue, aider (предустановлены), nlsh, Ollama (post-install), Python AI-библиотеки (post-install)
+- **AI-стек:** opencode, qwen-code, claude-code, codex, kilo, mimo, continue, crush, kimi (предустановлены), nlsh, Ollama (post-install), Python AI-библиотеки (post-install)
 - **Инструменты:** Git, lazygit, Docker + docker-compose
 - **Графика:** Pinta, Spectacle, Flameshot; **API:** Bruno; **БД:** sqlite3 + sqliteman
 - **Браузер:** Firefox; **AUR:** yay, zed-editor-bin, visual-studio-code-bin, bruno-bin, calamares
@@ -149,7 +149,6 @@
 | **Ollama** | Запуск локальных LLM |
 | **Open WebUI** | Веб-интерфейс для Ollama (порт 3000) |
 | **ai-chat** | Терминальный AI-чат (Ollama) |
-| **aider** | AI-парное программирование (pre-installed) |
 | **opencode** | Open-source AI coding agent (TUI) |
 | **qwen-code** | Qwen AI coding agent (npm global) |
 | **nlsh** | Natural Language Shell (offline AI assistant) |
@@ -360,7 +359,7 @@
 | **Терминал и оболочка** | Kitty, Zsh, Oh My Zsh, Starship, eza, bat, fd, ripgrep, fzf, zoxide, btop |
 | **Языки** | Python, Node.js/npm/nvm, Rust/rustup, Go, Java (SDKMAN!), PHP, pyenv |
 | **Редакторы** | VS Code, Zed, Neovim + AstroNvim, Kate |
-| **AI-стек** | opencode, qwen-code, claude-code, codex, kilo, mimo, continue, aider — **все CLI-агенты предустановлены в ISO**; Ollama — post-install (`install-ollama`); Python AI-библиотеки post-install (`setup-ai-stack.sh`) |
+| **AI-стек** | opencode, qwen-code, claude-code, codex, kilo, mimo, continue, crush, kimi — **все CLI-агенты предустановлены в ISO**; Ollama — post-install (`install-ollama`); Python AI-библиотеки post-install (`setup-ai-stack.sh`) |
 | **Графические приложения** | Pinta, Bruno, Spectacle, Ark, Flameshot |
 | **Базы данных** | sqlite3, sqliteman (GUI) |
 | **Контейнеры** | Docker, docker-compose |

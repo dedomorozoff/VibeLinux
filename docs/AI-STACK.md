@@ -35,17 +35,13 @@
 - Интерактивный режим с командами /exit, /clear, /models.
 - Установлен в `/usr/local/bin/ai-chat`.
 
-**Aider**
-- Мощный AI-инструмент для парного программирования в терминале.
-- Позволяет редактировать код, создавать коммиты и файлы, просто общаясь с AI.
-- Интегрируется с Git и локальными/облачными LLM.
-- **Предустановлен в образ VibeLinux Arch** (`aider`); на других системах ставится через `scripts/ai/install-aider.sh`.
-
 **Современные agentic CLI**
 - **Codex CLI** — `codex` (OpenAI)
 - **Claude Code** — `claude` (Anthropic)
 - **Qwen Code** — `qwen` (Alibaba)
 - **Kilo Code / MiMo Code / Continue** — `kilo`, `mimo`, `cn`
+- **Crush** — `crush` (Charm, LSP + MCP, multi-model)
+- **Kimi Code CLI** — `kimi` (Moonshot AI)
 - **В образе VibeLinux Arch все перечисленные CLI предустановлены** на этапе сборки (запечены в squashfs), поэтому работают и в live-сессии, и на установленной системе без прав root и без доустановки. Скрипты в `scripts/ai/install-*.sh` остаются для других систем (Ubuntu legacy, bare-metal).
 
 ---
@@ -142,7 +138,6 @@ sudo ./scripts/ai/install-ollama-models.sh
 - Open WebUI: http://localhost:3000
 - Terminal AI: `ai-chat`
 - Python AI: `ai-env` (активация окружения `~/.venv-ai`)
-- AI pair programming: `aider`
 - ComfyUI: `sudo bash scripts/ai/start-sd.sh` → http://localhost:8188
 
 ### **Требования по ресурсам**
