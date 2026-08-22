@@ -36,6 +36,11 @@ soft/
 
 # Сгенерированная копия scripts/ai в профиле (создаётся build-vibe-arch.sh)
 archiso-vibelinux/airootfs/opt/
+# AUR package cache (seeds from /srv/vibe-aur-cache, created by build-vibe-arch.sh)
+archiso-vibelinux/airootfs/root/aur-cache/
+# nlsh artifacts copied into profile by build-vibe-arch.sh (canonical: soft/nlsh/)
+archiso-vibelinux/airootfs/root/nlsh/*.pkg.tar.zst
+archiso-vibelinux/airootfs/root/nlsh/nlsh
 !soft/nlsh/nlsh.desktop
 !soft/nlsh/nlsh.svg
 

@@ -75,6 +75,10 @@ SOFT_DIR="$(cd "$(dirname "$(readlink -f "$0")")/../../soft" 2>/dev/null && pwd 
 if [[ -d "$SOFT_DIR/nlsh" ]]; then
     log "Copying nlsh to airootfs..."
     mkdir -p "$PROFILE_DIR/airootfs/root/nlsh"
+    # Вычищаем старые пакеты/бинарники, чтобы в профиле не копилось мусор
+    # и ls не подсовывал устаревшие версии
+    rm -f "$PROFILE_DIR"/airootfs/root/nlsh/*.pkg.tar.zst \
+          "$PROFILE_DIR/airootfs/root/nlsh/nlsh"
     if compgen -G "$SOFT_DIR/nlsh/*.pkg.tar.zst" >/dev/null; then
         cp "$SOFT_DIR"/nlsh/*.pkg.tar.zst "$PROFILE_DIR/airootfs/root/nlsh/"
         log "Pre-built nlsh package copied to airootfs/root/nlsh/"
@@ -108,6 +112,18 @@ else
     warn "scripts/ai not found — skipping /opt/vibecode copy"
 fi
 
+# 3d) Seed AUR package cache (calamares/yay-bin): host → profile airootfs.
+#     customize_airootfs.sh ставит из кэша без компиляции; свежесобранное
+#     складывает обратно в /root/aur-cache, откуда мы забираем после сборки.
+AUR_CACHE_DIR="${AUR_CACHE_DIR:-/srv/vibe-aur-cache}"
+mkdir -p "$AUR_CACHE_DIR" "$PROFILE_DIR/airootfs/root/aur-cache"
+if compgen -G "$AUR_CACHE_DIR/*.pkg.tar.zst" >/dev/null; then
+    cp -u "$AUR_CACHE_DIR"/*.pkg.tar.zst "$PROFILE_DIR/airootfs/root/aur-cache/"
+    log "AUR cache seeded: $(ls "$AUR_CACHE_DIR"/*.pkg.tar.zst 2>/dev/null | wc -l) pkg(s)"
+else
+    log "AUR cache empty — calamares/yay-bin будут собраны и закэшированы"
+fi
+
 log "Using profile: $PROFILE_DIR"
 log "Work dir: $WORKDIR"
 log "Output dir: $OUTDIR"
@@ -130,6 +146,16 @@ elif [[ -d "$WORKDIR" ]]; then
         -delete
     rm -f "$WORKDIR"/build._build_buildmode_iso \
           "$WORKDIR"/iso._build_iso_image
+fi
+
+# 4a) Unmount leftover chroot mounts from previously interrupted builds.
+#     Если proc/sys/dev остались смонтированы в airootfs, mksquashfs начнёт
+#     «сжимать» псевдо-файлы ядра (например /proc/kcore) и зависнет.
+if grep -qs "$WORKDIR" /proc/mounts; then
+    log "Unmounting leftover chroot mounts in $WORKDIR..."
+    awk -v w="$WORKDIR" 'index($2, w) == 1 {print $2}' /proc/mounts | sort -r | while read -r m; do
+        umount -l "$m" 2>/dev/null || true
+    done
 fi
 
 # 4b) Pre-populate /boot/vmlinuz-linux before mkarchiso runs pacstrap.
@@ -171,6 +197,11 @@ fi
 # 6) Verify result
 ISO_FILE=$(ls -t "$OUTDIR"/vibelinux-*.iso 2>/dev/null | head -1)
 if [[ -f "$ISO_FILE" ]]; then
+    # Harvest freshly built AUR packages back to host cache
+    if compgen -G "$WORKDIR/x86_64/airootfs/root/aur-cache/*.pkg.tar.zst" >/dev/null; then
+        cp -u "$WORKDIR/x86_64/airootfs/root/aur-cache/"*.pkg.tar.zst "$AUR_CACHE_DIR/"
+        log "AUR cache updated: $(ls "$AUR_CACHE_DIR"/*.pkg.tar.zst | wc -l) pkg(s)"
+    fi
     log "Done! ISO at: $ISO_FILE"
     log "Size: $(du -h "$ISO_FILE" | cut -f1)"
     xorriso -indev "$ISO_FILE" -report_el_torito plain 2>&1 | head -20

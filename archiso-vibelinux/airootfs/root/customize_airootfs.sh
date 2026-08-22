@@ -1315,11 +1315,15 @@ chmod +x /usr/local/bin/vibe-welcome
 # Fix permissions
 chown -R vibe:vibe /home/vibe
 
-# Rust: ставим toolchain один раз при сборке, а не при каждом запуске терминала
+# Rust: ставим toolchain один раз при сборке, а не при каждом запуске терминала.
+# Профиль minimal — без rust-docs (908 МБ) и rust-src; при желании:
+#   rustup component add rust-docs
 if command -v rustup &>/dev/null; then
-  runuser -u vibe -- bash -c 'rustup default stable' && \
+  runuser -u vibe -- bash -c 'rustup set profile minimal && rustup default stable' && \
     touch /home/vibe/.vibe-rustup-ready || \
     echo "WARN: rustup toolchain не установлен (нет сети?) — можно: runuser -u vibe -- bash -c \"rustup default stable\""
+  # Обрезаем доки у ранее установленных тулчейнов (полный профиль тянет ~900 МБ)
+  rm -rf /home/vibe/.rustup/toolchains/*/share/doc
 fi
 
 # Quick Start Guide
@@ -1427,33 +1431,61 @@ Categories=Development;
 EOF
 chmod 755 /home/vibe/Desktop/OpenCode.desktop
 
-# AI Agents Launcher — выбор из установленных CLI-агентов
+# AI Agents Launcher — выбор из установленных CLI-агентов (GUI / TTY)
 cat > /usr/local/bin/ai-launcher << 'LAUNCHEOF'
 #!/usr/bin/env bash
-# Показывает меню установленных AI-агентов и запускает выбранный
-declare -A AGENTS
-for bin in opencode claude codex qwen kilo mimo nlsh crush kimi; do
-  path="$(type -p "$bin" 2>/dev/null || true)"
-  if [[ -n "$path" ]]; then
-    AGENTS["$bin"]="$path"
+# Показывает меню установленных AI-агентов и запускает выбранный.
+# GUI: kdialog; без графики — меню в терминале (select).
+AGENTS=(
+  "opencode:OpenCode"
+  "claude:Claude Code"
+  "codex:Codex CLI"
+  "qwen:Qwen Code"
+  "kilo:Kilo Code"
+  "mimo:Mimo"
+  "crush:Crush"
+  "kimi:Kimi CLI"
+  "nlsh:nlsh"
+)
+
+FOUND=()
+for entry in "${AGENTS[@]}"; do
+  bin="${entry%%:*}"; label="${entry#*:}"
+  if type -p "$bin" >/dev/null 2>&1; then
+    FOUND+=("$bin" "$label")
   fi
 done
 
-if [[ ${#AGENTS[@]} -eq 0 ]]; then
-  kdialog --error "AI-агенты не найдены. Запустите ai-install для установки."
+if [[ ${#FOUND[@]} -eq 0 ]]; then
+  echo "AI-агенты не найдены. Запустите ai-install для установки." >&2
+  if command -v kdialog &>/dev/null && [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]]; then
+    kdialog --error "AI-агенты не найдены. Запустите ai-install для установки."
+  fi
   exit 1
 fi
 
-if [[ ${#AGENTS[@]} -eq 1 ]]; then
-  exec konsole --hold -e "${!AGENTS[@]}"
+if [[ ${#FOUND[@]} -eq 2 ]]; then
+  exec konsole --hold -e "${FOUND[0]}"
 fi
 
-ITEMS=()
-for name in "${!AGENTS[@]}"; do
-  ITEMS+=("$name" "")
-done
+CHOICE=""
+if command -v kdialog &>/dev/null && [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]]; then
+  CHOICE=$(kdialog --title "AI Agents" --menu "Выберите AI-агента:" "${FOUND[@]}") || exit 0
+else
+  OPTIONS=()
+  i=0
+  while [[ $i -lt ${#FOUND[@]} ]]; do
+    OPTIONS+=("${FOUND[$i]} — ${FOUND[$((i+1))]}")
+    i=$((i+2))
+  done
+  PS3=$'\nВыберите агента (номер): '
+  select opt in "${OPTIONS[@]}" "Выход"; do
+    [[ -z "$opt" || "$opt" == "Выход" ]] && exit 0
+    CHOICE="${opt%% — *}"
+    break
+  done
+fi
 
-CHOICE=$(kdialog --title "AI Agents" --menu "Выберите AI-агента:" "${ITEMS[@]}")
 [[ -n "$CHOICE" ]] && exec konsole --hold -e "$CHOICE"
 LAUNCHEOF
 chmod +x /usr/local/bin/ai-launcher
@@ -1489,12 +1521,16 @@ fi
 # nlsh — Natural Language Shell (AI Shell Assistant)
 echo "Installing nlsh..."
 NLSH_INSTALLED=0
-NLSH_PKG="$(ls /root/nlsh/nlsh-*.pkg.tar.zst 2>/dev/null | head -1 || true)"
+# Берём самый свежий пакет по mtime (в /root/nlsh может лежать несколько)
+NLSH_PKG="$(ls -t /root/nlsh/nlsh-*.pkg.tar.zst 2>/dev/null | head -1 || true)"
 if [[ -n "$NLSH_PKG" ]]; then
   # Pre-built Arch package — installs /usr/bin/nlsh
   # Post-transaction hooks (PackageKit/DBus) can fail inside the chroot;
   # tolerate that and verify the binary instead of the pacman exit code.
   NLSH_TGT=/usr/bin/nlsh
+  # Сносим предыдущую инсталляцию (иначе даунгрейд/битая база мешают -U)
+  pacman -Rdd --noconfirm nlsh >/dev/null 2>&1 || true
+  rm -f "$NLSH_TGT" "$NLSH_TGT.real"
   pacman -U --noconfirm "$NLSH_PKG" >/dev/null 2>&1 || true
   if [[ ! -x "$NLSH_TGT" ]]; then
     # pacman -U может упасть в chroot из-за нехватки места (как far2l);
@@ -1608,7 +1644,17 @@ chown builder:builder /tmp/aur-build
 
 aur_build() {
   local pkg=$1 dir=$2
-  echo "Building $pkg from AUR..."
+  # 1) Кэш pre-built пакетов (заполняется build-vibe-arch.sh из /srv/vibe-aur-cache)
+  local cached
+  cached=$(ls /root/aur-cache/${pkg}-*.pkg.tar.zst 2>/dev/null | head -1)
+  if [[ -n "$cached" && -f "$cached" ]]; then
+    echo "Installing $pkg from cache..."
+    pacman -U --noconfirm "$cached" 2>/dev/null || bsdtar -xpf "$cached" -C /
+    echo "$pkg installed from cache"
+    return 0
+  fi
+  # 2) Иначе собираем из AUR
+  echo "Building $pkg from AUR (в первый раз — потом возьмётся из кэша)..."
   runuser -u builder -- bash -c "
     cd /tmp/aur-build
     rm -rf $dir
@@ -1620,6 +1666,8 @@ aur_build() {
   pkg_file=$(ls /tmp/aur-build/$dir/*.pkg.tar.zst 2>/dev/null | head -1)
   if [[ -n "$pkg_file" && -f "$pkg_file" ]]; then
     pacman -U --noconfirm "$pkg_file" 2>/dev/null || bsdtar -xpf "$pkg_file" -C /
+    mkdir -p /root/aur-cache
+    cp "$pkg_file" /root/aur-cache/
     echo "$pkg installed"
   fi
 }
@@ -2365,5 +2413,14 @@ if [[ -f /usr/bin/discover ]]; then
 fi
 
 chown -R vibe:vibe /home/vibe
+
+# ── Slim ISO: чистим мусор перед сжатием squashfs ─────────────────────
+# Кэш npm после глобальных установок агентов (~650 МБ)
+rm -rf /root/.npm /home/vibe/.npm /home/builder/.npm
+# Локали: оставляем только ru/en (+ сам файл locale.alias)
+find /usr/share/locale -mindepth 1 -maxdepth 1 \
+  ! -name 'ru*' ! -name 'en*' ! -name 'locale.alias' -exec rm -rf {} +
+# Офлайн-доки (актуальны онлайн: man.archlinux.org, docs.rs)
+rm -rf /usr/share/doc/* /usr/share/gtk-doc 2>/dev/null || true
 
 echo "=== Done ==="

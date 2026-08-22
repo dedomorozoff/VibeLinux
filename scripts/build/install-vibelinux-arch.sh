@@ -262,8 +262,8 @@ if [[ "${INSTALL_DEV}" -eq 1 ]] && [[ "${MINIMAL}" -eq 0 ]]; then
   systemctl start docker 2>/dev/null || true
 
   if command -v rustup >/dev/null 2>&1; then
-    log "Установка стабильного Rust toolchain..."
-    run_as_user 'rustup default stable' 2>/dev/null || true
+    log "Установка стабильного Rust toolchain (minimal profile)..."
+    run_as_user 'rustup set profile minimal && rustup default stable' 2>/dev/null || true
   fi
 fi
 
