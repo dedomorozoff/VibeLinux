@@ -26,6 +26,7 @@ plasma-systemmonitor
 kdeconnect
 dolphin
 konsole
+kdialog
 sddm
 xorg-server
 wayland

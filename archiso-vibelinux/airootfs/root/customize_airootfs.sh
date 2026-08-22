@@ -404,7 +404,6 @@ NPM_AGENTS=(
   "@kilocode/cli:kilo"
   "@mimo-ai/cli:mimo"
   "@continuedev/cli:cn"
-  "@charmland/crush:crush"
   "@moonshot-ai/kimi-code:kimi"
 )
 for entry in "${NPM_AGENTS[@]}"; do
@@ -424,6 +423,33 @@ if [[ -f "$CLAUDE_GLOBAL/install.cjs" ]]; then
   node "$CLAUDE_GLOBAL/install.cjs" || echo "WARNING: claude-code postinstall failed"
 fi
 chown -R vibe:vibe /home/vibe/.npm
+
+# Crush — нативный бинарник из GitHub-релизов. npm-пакет @charmland/crush
+# при первом запуске качает бинарник в /usr/lib/node_modules и у обычного
+# пользователя падает с EACCES, поэтому ставим напрямую.
+if ! command -v crush >/dev/null 2>&1; then
+  CRUSH_AA=""
+  case "$(uname -m)" in
+    x86_64) CRUSH_AA="x86_64" ;;
+    aarch64|arm64) CRUSH_AA="arm64" ;;
+  esac
+  if [[ -n "$CRUSH_AA" ]]; then
+    CRUSH_VER="$(curl -fsSL --retry 3 https://api.github.com/repos/charmbracelet/crush/releases/latest 2>/dev/null | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -1 || true)"
+    if [[ -n "$CRUSH_VER" ]]; then
+      CRUSH_TMP="$(mktemp -d)"
+      if curl -fsSL --retry 3 "https://github.com/charmbracelet/crush/releases/download/${CRUSH_VER}/crush_${CRUSH_VER#v}_Linux_${CRUSH_AA}.tar.gz" -o "$CRUSH_TMP/crush.tar.gz"; then
+        tar -xzf "$CRUSH_TMP/crush.tar.gz" -C "$CRUSH_TMP"
+        install -Dm 755 "$CRUSH_TMP/crush_${CRUSH_VER#v}_Linux_${CRUSH_AA}/crush" /usr/local/bin/crush \
+          && echo "OK: crush ${CRUSH_VER} установлен из GitHub-релиза"
+      else
+        echo "WARNING: crush download failed"
+      fi
+      rm -rf "$CRUSH_TMP"
+    else
+      echo "WARNING: не удалось получить версию crush"
+    fi
+  fi
+fi
 
 # Обёртки для агентов: кэш и tmp в /tmp (tmpfs), чтобы не забивать overlay
 for agent_bin in claude kilo mimo qwen codex opencode nlsh crush kimi; do
@@ -553,18 +579,25 @@ fi
 MIMOEOF
 chmod +x /usr/local/bin/install-mimo
 
-# Crush CLI installer
+# Crush CLI installer — нативный бинарник из GitHub-релизов
 cat > /usr/local/bin/install-crush << 'CRUSHEOF'
 #!/usr/bin/env bash
 set -euo pipefail
 echo "Installing Crush..."
-if command -v npm >/dev/null 2>&1; then
-  npm install -g @charmland/crush
-  echo "Crush installed! Run: crush"
-else
-  echo "npm not found. Install Node.js first."
-  exit 1
-fi
+CRUSH_AA=""
+case "$(uname -m)" in
+  x86_64) CRUSH_AA="x86_64" ;;
+  aarch64|arm64) CRUSH_AA="arm64" ;;
+  *) echo "Unsupported arch: $(uname -m)"; exit 1 ;;
+esac
+CRUSH_VER="$(curl -fsSL --retry 3 https://api.github.com/repos/charmbracelet/crush/releases/latest | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -1)"
+[[ -n "$CRUSH_VER" ]] || { echo "Failed to resolve latest release"; exit 1; }
+CRUSH_TMP="$(mktemp -d)"
+trap 'rm -rf "$CRUSH_TMP"' EXIT
+curl -fsSL --retry 3 "https://github.com/charmbracelet/crush/releases/download/${CRUSH_VER}/crush_${CRUSH_VER#v}_Linux_${CRUSH_AA}.tar.gz" -o "$CRUSH_TMP/crush.tar.gz"
+tar -xzf "$CRUSH_TMP/crush.tar.gz" -C "$CRUSH_TMP"
+install -Dm 755 "$CRUSH_TMP/crush_${CRUSH_VER#v}_Linux_${CRUSH_AA}/crush" /usr/local/bin/crush
+echo "Crush ${CRUSH_VER} installed! Run: crush"
 CRUSHEOF
 chmod +x /usr/local/bin/install-crush
 
@@ -1072,7 +1105,6 @@ Font=JetBrainsMono Nerd Font,12,-1,5,50,0,0,0,0,0,Regular
 
 [General]
 Name=VibeLinux
-Parent=FALLBACK
 
 [Scrolling]
 ScrollBarPosition=2
@@ -1434,8 +1466,8 @@ chmod 755 /home/vibe/Desktop/OpenCode.desktop
 # AI Agents Launcher — выбор из установленных CLI-агентов (GUI / TTY)
 cat > /usr/local/bin/ai-launcher << 'LAUNCHEOF'
 #!/usr/bin/env bash
-# Показывает меню установленных AI-агентов и запускает выбранный.
-# GUI: kdialog; без графики — меню в терминале (select).
+# Меню установленных AI-агентов: выбор → запуск. После выхода агента
+# возвращается в меню; завершение — пункт «Выход» или Ctrl+D.
 AGENTS=(
   "opencode:OpenCode"
   "claude:Claude Code"
@@ -1457,36 +1489,63 @@ for entry in "${AGENTS[@]}"; do
 done
 
 if [[ ${#FOUND[@]} -eq 0 ]]; then
-  echo "AI-агенты не найдены. Запустите ai-install для установки." >&2
+  MSG="AI-агенты не найдены. Запустите ai-install для установки."
   if command -v kdialog &>/dev/null && [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]]; then
-    kdialog --error "AI-агенты не найдены. Запустите ai-install для установки."
+    kdialog --error "$MSG"
+  elif [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" && ! -t 0 ]] && command -v konsole &>/dev/null; then
+    exec konsole --hold -e "$0"
+  else
+    echo "$MSG" >&2
   fi
   exit 1
 fi
 
-if [[ ${#FOUND[@]} -eq 2 ]]; then
-  exec konsole --hold -e "${FOUND[0]}"
+run_agent() {
+  echo "── $1 ── (выход из агента вернёт в меню)"
+  "$1"
+  local rc=$?
+  echo "── $1 завершён (код $rc) ──"
+}
+
+if [[ ! -t 0 ]]; then
+  # Запуск с ярлыка (stdin не TTY)
+  if command -v kdialog &>/dev/null && [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]]; then
+    CHOICE="$(kdialog --title "AI Agents" --menu "Выберите AI-агента:" "${FOUND[@]}")" || exit 0
+    # Агент открывается сразу; после его выхода в этом же окне появится меню
+    exec konsole -e env AI_LAUNCHER_PRESELECT="$CHOICE" "$0"
+  elif command -v konsole &>/dev/null && [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]]; then
+    # Без kdialog — просто интерактивное меню в новом окне konsole
+    exec konsole -e "$0"
+  else
+    echo "Нет графической сессии — запустите ai-launcher в терминале." >&2
+    exit 1
+  fi
 fi
 
-CHOICE=""
-if command -v kdialog &>/dev/null && [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]]; then
-  CHOICE=$(kdialog --title "AI Agents" --menu "Выберите AI-агента:" "${FOUND[@]}") || exit 0
-else
-  OPTIONS=()
-  i=0
-  while [[ $i -lt ${#FOUND[@]} ]]; do
-    OPTIONS+=("${FOUND[$i]} — ${FOUND[$((i+1))]}")
-    i=$((i+2))
-  done
+# Предвыбранный агент (из kdialog-ярлыка): запускаем, дальше — обычное меню
+PRE="${AI_LAUNCHER_PRESELECT:-}"
+if [[ -n "$PRE" ]] && type -p "$PRE" >/dev/null 2>&1; then
+  run_agent "$PRE"
+fi
+
+OPTIONS=()
+i=0
+while [[ $i -lt ${#FOUND[@]} ]]; do
+  OPTIONS+=("${FOUND[$i]} — ${FOUND[$((i+1))]}")
+  i=$((i+2))
+done
+
+while true; do
+  BODY_RUN=0
   PS3=$'\nВыберите агента (номер): '
   select opt in "${OPTIONS[@]}" "Выход"; do
+    BODY_RUN=1
     [[ -z "$opt" || "$opt" == "Выход" ]] && exit 0
-    CHOICE="${opt%% — *}"
-    break
+    run_agent "${opt%% — *}"
+    break            # перерисовать меню
   done
-fi
-
-[[ -n "$CHOICE" ]] && exec konsole --hold -e "$CHOICE"
+  [[ $BODY_RUN -eq 0 ]] && exit 0   # EOF/Ctrl+D вместо номера — выходим
+done
 LAUNCHEOF
 chmod +x /usr/local/bin/ai-launcher
 
@@ -1495,7 +1554,7 @@ cat > /home/vibe/Desktop/AI-Launcher.desktop << EOF
 Type=Application
 Name=AI Agents
 Icon=utilities-terminal
-Exec=ai-launcher
+Exec=/usr/local/bin/ai-launcher
 Terminal=false
 Categories=Development;
 EOF

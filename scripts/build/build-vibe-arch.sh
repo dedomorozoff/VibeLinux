@@ -68,34 +68,50 @@ if [[ -d "$BRANDING_DIR" ]]; then
     fi
 fi
 
-# 3b) Copy nlsh to airootfs
-# Prefer a pre-built Arch package (soft/nlsh/*.pkg.tar.zst) — no need to
-# build nlsh for Arch. Falls back to a loose binary if present.
+# 3b) Fetch nlsh into airootfs.
+# Primary source — pre-built Arch package from GitHub releases
+# (https://github.com/dedomorozoff/nlsh), always the latest stable version.
+# Local soft/nlsh/*.pkg.tar.zst kept as an offline fallback; icon/desktop
+# assets are still taken from soft/nlsh (they are not shipped in releases).
+NLSH_RELEASES_API="https://api.github.com/repos/dedomorozoff/nlsh/releases/latest"
+NLSH_DST="$PROFILE_DIR/airootfs/root/nlsh"
 SOFT_DIR="$(cd "$(dirname "$(readlink -f "$0")")/../../soft" 2>/dev/null && pwd || true)"
-if [[ -d "$SOFT_DIR/nlsh" ]]; then
-    log "Copying nlsh to airootfs..."
-    mkdir -p "$PROFILE_DIR/airootfs/root/nlsh"
-    # Вычищаем старые пакеты/бинарники, чтобы в профиле не копилось мусор
-    # и ls не подсовывал устаревшие версии
-    rm -f "$PROFILE_DIR"/airootfs/root/nlsh/*.pkg.tar.zst \
-          "$PROFILE_DIR/airootfs/root/nlsh/nlsh"
-    if compgen -G "$SOFT_DIR/nlsh/*.pkg.tar.zst" >/dev/null; then
-        cp "$SOFT_DIR"/nlsh/*.pkg.tar.zst "$PROFILE_DIR/airootfs/root/nlsh/"
-        log "Pre-built nlsh package copied to airootfs/root/nlsh/"
+log "Fetching nlsh into airootfs..."
+mkdir -p "$NLSH_DST"
+# Вычищаем старые пакеты/бинарники, чтобы в профиле не копилось мусор
+# и ls не подсовывал устаревшие версии
+rm -f "$NLSH_DST"/*.pkg.tar.zst "$NLSH_DST/nlsh"
+
+NLSH_OK=0
+NLSH_JSON="$(curl -fsSL --retry 3 "$NLSH_RELEASES_API" 2>/dev/null || true)"
+NLSH_URL="$(grep -o 'https://[^"]*x86_64\.pkg\.tar\.zst' <<<"$NLSH_JSON" | head -1 || true)"
+if [[ -n "$NLSH_URL" ]]; then
+    if curl -fsSL --retry 3 "$NLSH_URL" -o "$NLSH_DST/$(basename "$NLSH_URL")"; then
+        NLSH_OK=1
+        log "nlsh downloaded from GitHub releases: $(basename "$NLSH_URL")"
+    else
+        warn "nlsh download failed: $NLSH_URL"
     fi
-    if [[ -f "$SOFT_DIR/nlsh/nlsh" ]]; then
-        cp "$SOFT_DIR/nlsh/nlsh" "$PROFILE_DIR/airootfs/root/nlsh/"
-        chmod +x "$PROFILE_DIR/airootfs/root/nlsh/nlsh"
-    fi
-    if [[ -f "$SOFT_DIR/nlsh/nlsh.svg" ]]; then
-        cp "$SOFT_DIR/nlsh/nlsh.svg" "$PROFILE_DIR/airootfs/root/nlsh/"
-    fi
-    if [[ -f "$SOFT_DIR/nlsh/nlsh.desktop" ]]; then
-        cp "$SOFT_DIR/nlsh/nlsh.desktop" "$PROFILE_DIR/airootfs/root/nlsh/"
-    fi
-    log "nlsh copied to airootfs/root/nlsh/"
 else
-    warn "nlsh not found in soft/nlsh/ — skipping"
+    warn "nlsh release info unavailable (network?) — trying local fallback"
+fi
+
+if [[ $NLSH_OK -eq 0 && -d "$SOFT_DIR/nlsh" ]] && compgen -G "$SOFT_DIR/nlsh/*.pkg.tar.zst" >/dev/null; then
+    cp "$SOFT_DIR"/nlsh/*.pkg.tar.zst "$NLSH_DST/"
+    NLSH_OK=1
+    log "Using local pre-built nlsh package from soft/nlsh/"
+fi
+
+# Иконка и .desktop в релизы не входят — берём из soft/nlsh, если есть
+if [[ -d "$SOFT_DIR/nlsh" ]]; then
+    [[ -f "$SOFT_DIR/nlsh/nlsh.svg" ]] && cp "$SOFT_DIR/nlsh/nlsh.svg" "$NLSH_DST/"
+    [[ -f "$SOFT_DIR/nlsh/nlsh.desktop" ]] && cp "$SOFT_DIR/nlsh/nlsh.desktop" "$NLSH_DST/"
+fi
+
+if [[ $NLSH_OK -eq 1 ]]; then
+    log "nlsh ready in airootfs/root/nlsh/"
+else
+    warn "nlsh package unavailable (no network and none in soft/nlsh/) — skipping"
 fi
 
 # 3c) Copy AI/helper scripts to /opt/vibecode/scripts (post-install helpers).

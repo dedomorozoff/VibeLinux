@@ -4,7 +4,7 @@
 
 ### Added
 - **Arch ISO — AI-агенты предустановлены в образ** (решает проблему «AI не ставится в live-сессии»):
-  - Все CLI-агенты запечены в squashfs на этапе сборки: opencode (pacman), qwen-code, Claude Code, Codex, Kilo, MiMo, Continue, Crush, Kimi (npm global) — работают и в live, и на установленной системе, без root и без доустановки
+  - Все CLI-агенты запечены в squashfs на этапе сборки: opencode (pacman), qwen-code, Claude Code, Codex, Kilo, MiMo, Continue, Kimi (npm global), Crush (нативный бинарник из GitHub-релизов) — работают и в live, и на установленной системе, без root и без доустановки
   - `ollama` **намеренно не входит в ISO** (пакет ~500 МБ и всё равно нужен диск под модели) — ставится post-install: `install-ollama` / `ai-install`; systemd-сервис включается этим скриптом
   - `pipx` добавлен в `packages.x86_64`
   - Скрипты `scripts/ai/*` копируются в образ на `/opt/vibecode/scripts/ai` (`build-vibe-arch.sh`) — после установки на диск доступен `sudo /opt/vibecode/scripts/ai/setup-ai-stack.sh`
@@ -26,12 +26,40 @@
   - Профиль `archiso-vibelinux/` (`make arch`, `scripts/build/build-vibe-arch.sh`)
   - Ubuntu-редакции (Full / Minimal / Lite) переведены в статус legacy
   - Обновлена документация: `AGENTS.md`, `PROJECT_OVERVIEW.md`, `BUILD-INSTRUCTIONS.md`, `EDITIONS.md`, `PACKAGES.md`, `docs/`
-- **nlsh (Arch ISO):** Сборка использует предсобранный пакет `soft/nlsh/*.pkg.tar.zst`
-  - Не нужно собирать nlsh под Arch — `build-vibe-arch.sh` копирует пакет в airootfs,
-    а `customize_airootfs.sh` ставит его через `pacman -U`
-  - Фолбэк на «сырой» бинарник `soft/nlsh/nlsh` сохранён
+- **nlsh берётся из GitHub-релизов** (`github.com/dedomorozoff/nlsh`, `releases/latest`)
+  - Arch: `build-vibe-arch.sh` скачивает свежий `.pkg.tar.zst` (v0.2.5+) в airootfs,
+    `customize_airootfs.sh` ставит его через `pacman -U` (логика не изменилась)
+  - Ubuntu (legacy Full ISO): `.deb` из релиза ставится через `dpkg -i` в chroot
+  - Офлайн-фолбэки сохранены: локальный пакет/бинарник из `soft/nlsh/`
+    (иконка и .desktop по-прежнему только оттуда — в релизах их нет)
 
 ### Fixed
+- **AI Launcher не запускался с рабочего стола (работал только из терминала):**
+  - Причина: в ISO отсутствовал `kdialog` — лаунчер проваливался в терминальное
+    select-меню, а при запуске с ярлыка stdin = /dev/null, select молча читал EOF
+    и скрипт выходил, не показав ничего
+  - `kdialog` добавлен в `packages.x86_64`
+  - Лаунчер стал устойчивым: если диалога нет, а stdin — не TTY,
+    он перезапускает сам себя в `konsole --hold` (меню видно в любом случае);
+    «агенты не найдены» тоже показываются в терминале, а не пропадают
+  - `Exec` в `AI-Launcher.desktop` переведён на абсолютный путь
+    `/usr/local/bin/ai-launcher`
+- **AI Launcher:** меню стало циклическим — после выхода агента возвращается
+  к выбору, а не завершается (выход — «Выход» или Ctrl+D)
+  - Агент запускается прямо в текущем терминале, без вложенного `konsole`
+    (исчезает и предупреждение профиля из этого пути)
+  - Запуск с ярлыка: kdialog-выбор → `konsole` с сразу запущенным агентом,
+    после его выхода в том же окне открывается меню
+  - Обработан EOF/Ctrl+D в меню (раньше был бы busy-loop на пустом stdin)
+- **Konsole:** убран `Parent=FALLBACK` из `VibeLinux.profile` — Konsole писала
+  «Profile "VibeLinux" has an invalid parent "FALLBACK"» при каждом запуске
+- **Crush (EACCES):** отказались от npm-пакета `@charmland/crush` — при первом
+  запуске он качает нативный бинарник в глобальный node_modules
+  (`/usr/lib/node_modules`), и у обычного пользователя падает
+  «permission denied, mkdir .../bin»
+  - Теперь crush ставится напрямую из GitHub-релизов
+    (`charmbracelet/crush`, статический Go-бинарник, node не нужен):
+    в ISO на этапе сборки и в `scripts/ai/install-crush.sh` (post-install)
 - **Arch ISO (mkinitcpio):** Убран хук `autodetect` из `mkinitcpio.conf` во всех местах
   - Помимо `airootfs/etc/mkinitcpio.conf`, исправлен heredoc, который
     `customize_airootfs.sh` принудительно перезаписывал с `autodetect`

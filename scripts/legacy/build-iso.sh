@@ -349,10 +349,40 @@ case "${BUILD_MODE}" in
 
     # === Установка nlsh (Natural Language Shell) ===
     log "Установка nlsh (AI Shell Assistant)..."
-    if [[ -f "${ROOT_DIR}/soft/nlsh/nlsh" ]]; then
-      cp "${ROOT_DIR}/soft/nlsh/nlsh" "${CHROOT_DIR}/usr/local/bin/nlsh"
-      chmod +x "${CHROOT_DIR}/usr/local/bin/nlsh"
-      log "nlsh бинарник скопирован в /usr/local/bin/nlsh"
+    # Источник — .deb из GitHub-релизов (dedomorozoff/nlsh), всегда последняя
+    # стабильная версия. Фолбэки: «сырой» бинарник из релиза, затем локальный
+    # soft/nlsh/nlsh.
+    NLSH_RELEASES_API="https://api.github.com/repos/dedomorozoff/nlsh/releases/latest"
+    NLSH_INSTALLED=0
+    NLSH_JSON="$(curl -fsSL --retry 3 "$NLSH_RELEASES_API" 2>/dev/null || true)"
+    NLSH_DEB_URL="$(grep -o 'https://[^"]*amd64\.deb' <<<"$NLSH_JSON" | head -1 || true)"
+    NLSH_BIN_URL="$(grep -o 'https://[^"]*nlsh-linux-amd64' <<<"$NLSH_JSON" | head -1 || true)"
+
+    if [[ -n "$NLSH_DEB_URL" ]]; then
+      curl -fsSL --retry 3 "$NLSH_DEB_URL" -o "${CHROOT_DIR}/tmp/nlsh.deb" || true
+      if [[ -s "${CHROOT_DIR}/tmp/nlsh.deb" ]]; then
+        chroot "${CHROOT_DIR}" dpkg -i /tmp/nlsh.deb >/dev/null 2>&1 || true
+      fi
+      rm -f "${CHROOT_DIR}/tmp/nlsh.deb"
+      # Проверяем результат по факту (dpkg может упасть в chroot по мелочи)
+      [[ -x "${CHROOT_DIR}/usr/bin/nlsh" ]] && NLSH_INSTALLED=1
+    fi
+
+    if [[ $NLSH_INSTALLED -eq 0 ]]; then
+      log "Установка nlsh из .deb не удалась — пробую «сырой» бинарник..."
+      if [[ -n "$NLSH_BIN_URL" ]]; then
+        curl -fsSL --retry 3 "$NLSH_BIN_URL" -o "${CHROOT_DIR}/usr/local/bin/nlsh" || true
+      elif [[ -f "${ROOT_DIR}/soft/nlsh/nlsh" ]]; then
+        cp "${ROOT_DIR}/soft/nlsh/nlsh" "${CHROOT_DIR}/usr/local/bin/nlsh"
+      fi
+      if [[ -f "${CHROOT_DIR}/usr/local/bin/nlsh" ]]; then
+        chmod +x "${CHROOT_DIR}/usr/local/bin/nlsh"
+        NLSH_INSTALLED=1
+      fi
+    fi
+
+    if [[ $NLSH_INSTALLED -eq 1 ]]; then
+      log "nlsh установлен"
 
       if [[ -f "${ROOT_DIR}/soft/nlsh/nlsh.svg" ]]; then
         cp "${ROOT_DIR}/soft/nlsh/nlsh.svg" "${CHROOT_DIR}/usr/share/pixmaps/nlsh.svg"
@@ -399,7 +429,7 @@ NLSCONF
 
       log "nlsh model bundled and config created"
     else
-      log "WARNING: nlsh бинарник не найден в soft/nlsh/"
+      log "WARNING: nlsh не установлен (релиз недоступен, локального бинарника в soft/nlsh/ нет)"
     fi
 
     # Настройка autologin для live сессии
