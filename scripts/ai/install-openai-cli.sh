@@ -13,7 +13,7 @@ install_python_stack() {
     pacman -Sy --noconfirm --needed python python-pip ca-certificates
   elif command -v apt-get >/dev/null 2>&1; then
     apt-get update -y
-    DEBIAN_FRONTEND=noninteractive apt-get install -y python3 python3-pip ca-certificates
+    DEBIAN_FRONTEND=noninteractive apt-get install -y python3 python3-pip ca-certificates || true
   else
     echo "[install-openai-cli] Неподдерживаемый пакетный менеджер (нужен pacman или apt-get)."
     exit 1
@@ -24,8 +24,10 @@ echo "[install-openai-cli] Установка зависимостей..."
 install_python_stack
 
 echo "[install-openai-cli] Установка пакета openai..."
-python3 -m pip install --upgrade pip setuptools wheel
-python3 -m pip install --upgrade openai
+# --ignore-installed: debian'овские пакеты (pip, typing_extensions и др.) не имеют
+# RECORD и не дают себя обновить/заменить
+python3 -m pip install --upgrade --ignore-installed pip setuptools wheel
+python3 -m pip install --ignore-installed openai
 
 cat <<'EOF'
 [install-openai-cli] Готово.

@@ -13,7 +13,7 @@ install_node_stack() {
     pacman -Sy --noconfirm --needed nodejs npm ca-certificates
   elif command -v apt-get >/dev/null 2>&1; then
     apt-get update -y
-    DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs npm ca-certificates
+    DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs npm ca-certificates || true
   else
     echo "[install-qwen-code] Неподдерживаемый пакетный менеджер (нужен pacman или apt-get)."
     exit 1

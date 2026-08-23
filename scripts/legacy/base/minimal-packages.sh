@@ -36,11 +36,35 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
   vim-tiny \
   btop \
   unzip \
+  zip \
   zstd \
+  git \
+  build-essential \
+  tree \
+  mc \
+  net-tools \
+  less \
+  bash-completion \
+  vim \
+  neovim \
+  jq \
+  python3 \
+  python3-pip \
+  python3-venv \
   linux-generic \
-  linux-modules-extra-generic \
   initramfs-tools \
   linux-firmware
+
+# Node.js: если уже стоит (например, NodeSource из шага AI) — не трогаем,
+# дистрибутивный npm конфликтует с NodeSource-сборкой nodejs.
+if ! command -v node >/dev/null 2>&1; then
+  echo "[minimal-packages] Установка дистрибутивного Node.js и npm..."
+  DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    nodejs \
+    npm
+else
+  echo "[minimal-packages] Node.js уже установлен ($(node -v)), npm пропускаем"
+fi
 
 # VirtualBox guest tools не должны ломать сборку ISO, если пакет недоступен
 # или его postinst ведёт себя нестабильно в chroot.

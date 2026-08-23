@@ -95,6 +95,10 @@ case "${BUILD_MODE}" in
     need_cmd mmd
 
     [[ -f "${ROOT_DIR}/scripts/legacy/base/minimal-packages.sh" ]] || die "Не найден скрипт minimal-packages.sh"
+    if [[ "${WITH_AI_AGENTS:-1}" == "1" ]]; then
+      [[ -f "${ROOT_DIR}/scripts/legacy/base/minimal-ai-agents.sh" ]] || die "Не найден скрипт minimal-ai-agents.sh"
+      [[ -f "${ROOT_DIR}/scripts/ai/install-claude-code.sh" ]] || die "Не найдены скрипты scripts/ai/"
+    fi
     log "OK: dry-run проверки пройдены."
     ;;
 
@@ -159,6 +163,19 @@ case "${BUILD_MODE}" in
       # Шаг 3: Установка пакетов
       log "Шаг 3: Установка пакетов и настройка..."
       chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/minimal-packages.sh"
+
+      # Шаг 3b: AI CLI агенты (толерантно: сбой агента не ломает сборку)
+      if [[ "${WITH_AI_AGENTS:-1}" == "1" ]]; then
+        log "Шаг 3b: Установка AI CLI агентов..."
+        mkdir -p "${CHROOT_DIR}/opt/vibecode/scripts"
+        cp -r "${ROOT_DIR}/scripts/ai" "${CHROOT_DIR}/opt/vibecode/scripts/"
+        cp "${ROOT_DIR}/scripts/legacy/base/minimal-ai-agents.sh" "${CHROOT_DIR}/root/"
+        chmod +x "${CHROOT_DIR}/root/minimal-ai-agents.sh"
+        chroot "${CHROOT_DIR}" /bin/bash -c "/root/minimal-ai-agents.sh" || \
+          log "WARNING: шаг установки AI-агентов завершился с ошибкой, продолжаем"
+      else
+        log "Шаг 3b: WITH_AI_AGENTS=0 — пропускаем установку AI CLI агентов"
+      fi
 
       # === КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Пересоздание initrd с casper для live-образа ===
       log "Пересоздание initrd с casper для live-образа..."
