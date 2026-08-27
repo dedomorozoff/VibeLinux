@@ -2,8 +2,8 @@
 
 Этот документ описывает различия между редакциями VibeCode OS.
 
-**Основная редакция — Arch Linux + KDE Plasma 6.**
-Ubuntu-редакции (Full / Minimal) поддерживаются в статусе legacy.
+**Основная линия — Arch Linux (rolling): полная (KDE Plasma 6) и минимальная (CLI) редакции.**
+Ubuntu-редакции (Full / Lite) поддерживаются в статусе legacy.
 
 ---
 
@@ -42,7 +42,7 @@ Ubuntu-редакции (Full / Minimal) поддерживаются в ста�
 - CLI-утилиты (eza, bat, fd, rg, fzf, zoxide, btop)
 - Языки: Python (pyenv), Node.js (nvm), Rust (rustup), Go, Java (SDKMAN!), PHP
 - Редакторы: VS Code, Zed, Neovim (AstroNvim), Kate
-- AI-стек: opencode, qwen-code, claude-code, codex, kilo, mimo, continue, crush, kimi (предустановлены), nlsh, Ollama (post-install), Python AI-библиотеки (post-install)
+- AI-стек: opencode, qwen-code, claude-code, codex, kilo, mimo, continue, crush, kimi (предустановлены), dmsh, Ollama (post-install), Python AI-библиотеки (post-install)
 - Инструменты: Git, lazygit, Docker + docker-compose
 - Графика: Pinta, Spectacle, Flameshot; API: Bruno; БД: sqlite3 + sqliteman
 - Браузер: Firefox; AUR-пакеты: yay, zed-editor-bin, visual-studio-code-bin, bruno-bin, calamares
@@ -59,21 +59,21 @@ make arch
 
 ---
 
-### VibeCode OS Minimal (Ubuntu, legacy)
-**Минимальная консольная система**
+### VibeCode OS Minimal (Arch Linux)
+**Минимальная консольная система на Arch Linux**
 
 ```
 ┌─────────────────────────────────────────────┐
 │  VibeCode OS Minimal                        │
 │  ─────────────────────────                  │
-│  • Текстовый установщик                     │
+│  • Текстовый установщик (archinstall)       │
 │  • Только CLI (без GUI)                     │
 │  • Базовые утилиты (btop, mc, git, zsh)     │
-│  • MC (Midnight Commander)                  │
+│  • Arch Linux (rolling release)             │
 │  • Скрипт доустановки vibecode-upgrade      │
 │                                              │
-│  Размер ISO: ~500 МБ - 1 ГБ                 │
-│  Размер после установки: ~2-3 ГБ            │
+│  Размер ISO: ~400-600 МБ                    │
+│  Размер после установки: ~1-2 ГБ            │
 └─────────────────────────────────────────────┘
 ```
 
@@ -84,12 +84,12 @@ make arch
 - Виртуальные машины с ограниченными ресурсами
 
 **Состав:**
-- Ubuntu 24.04 LTS (база)
-- Ядро: linux-image-generic, linux-headers-generic
-- Консольные утилиты: btop, mc, nano, vim-tiny, tmux, zsh
-- Сеть: curl, wget, git, NetworkManager
-- Архиваторы: unzip, zip, p7zip-full
-- Live-поддержка: casper, squashfs-tools
+- Arch Linux (rolling release)
+- Ядро: linux, linux-firmware
+- Консольные утилиты: btop, mc, nano, vim, tmux, zsh
+- Сеть: curl, wget, git, NetworkManager, openssh
+- Архиваторы: unzip, zip, p7zip, zstd
+- Установщик: archinstall (TUI)
 - **Скрипт доустановки:** `/usr/local/bin/vibecode-upgrade`
 
 ---
@@ -232,32 +232,25 @@ sudo vibecode-upgrade
 ### Minimal ISO
 
 ```bash
-# Проверка
-make legacy-check-mini
-
 # Сборка
-make legacy-mini
+make arch-mini
 
-# Быстрая пересборка
-make legacy-mini-keep
+# Быстрая пересборка (с сохранением chroot)
+make arch-mini-keep
 ```
 
-**Скрипт:** `scripts/legacy/build-minimal-iso.sh`
+**Скрипт:** `scripts/build/build-vibe-arch-minimal.sh`
+**Профиль:** `archiso-vibelinux-minimal/`
 
 ### Full ISO
 
 ```bash
-# Проверка
-make legacy-check
-
 # Сборка
-make legacy-full
-
-# Быстрая пересборка
-make legacy-full-keep
+make arch
 ```
 
-**Скрипт:** `scripts/legacy/build-iso.sh`
+**Скрипт:** `scripts/build/build-vibe-arch.sh`
+**Профиль:** `archiso-vibelinux/`
 
 ---
 

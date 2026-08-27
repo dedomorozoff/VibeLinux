@@ -38,11 +38,17 @@ soft/
 archiso-vibelinux/airootfs/opt/
 # AUR package cache (seeds from /srv/vibe-aur-cache, created by build-vibe-arch.sh)
 archiso-vibelinux/airootfs/root/aur-cache/
-# nlsh artifacts copied into profile by build-vibe-arch.sh (canonical: soft/nlsh/)
-archiso-vibelinux/airootfs/root/nlsh/*.pkg.tar.zst
-archiso-vibelinux/airootfs/root/nlsh/nlsh
-!soft/nlsh/nlsh.desktop
-!soft/nlsh/nlsh.svg
+# dmsh artifacts copied into profile by build-vibe-arch.sh (canonical: soft/dmsh/)
+archiso-vibelinux/airootfs/root/dmsh/*.pkg.tar.zst
+archiso-vibelinux/airootfs/root/dmsh/dmsh
+!soft/dmsh/dmsh.desktop
+!soft/dmsh/dmsh.svg
+
+# Mini-профиль: dmsh-пакет и dmed-бинарник кладёт build-vibe-arch-minimal.sh
+# (canonical: soft/dmsh/, soft/dmed/)
+archiso-vibelinux-minimal/airootfs/root/dmsh/*.pkg.tar.zst
+archiso-vibelinux-minimal/airootfs/root/dmsh/dmsh
+archiso-vibelinux-minimal/airootfs/usr/local/
 
 # AI assistants
 .junie/

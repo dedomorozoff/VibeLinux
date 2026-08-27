@@ -206,7 +206,16 @@ COMPRESSION_OPTIONS=(-15)
 EOF
 
 if command -v mkinitcpio &>/dev/null; then
-  mkinitcpio -P
+  # nvidia-open бывает собран под предыдущую версию ядра (репозитории
+  # рассинхронизированы) — тогда «module not found: 'nvidia'» и падение.
+  # Не роняем сборку: пересобираем initramfs без nvidia-модулей, они
+  # подхватятся udev уже из rootfs после загрузки.
+  if ! mkinitcpio -P; then
+    echo "WARNING: mkinitcpio failed (nvidia/kernel version mismatch?)"
+    echo "Retrying without nvidia modules in initramfs..."
+    sed -i 's/^MODULES=.*/MODULES=(vboxguest vboxsf vboxvideo)/' /etc/mkinitcpio.conf
+    mkinitcpio -P || echo "WARNING: mkinitcpio failed again — initramfs may be incomplete"
+  fi
 fi
 
 # Pacman hook: finalize boot files (copy kernel as regular file, fix symlinks)
@@ -426,33 +435,33 @@ chown -R vibe:vibe /home/vibe/.npm
 
 # Crush — нативный бинарник из GitHub-релизов. npm-пакет @charmland/crush
 # при первом запуске качает бинарник в /usr/lib/node_modules и у обычного
-# пользователя падает с EACCES, поэтому ставим напрямую.
-if ! command -v crush >/dev/null 2>&1; then
-  CRUSH_AA=""
-  case "$(uname -m)" in
-    x86_64) CRUSH_AA="x86_64" ;;
-    aarch64|arm64) CRUSH_AA="arm64" ;;
-  esac
-  if [[ -n "$CRUSH_AA" ]]; then
-    CRUSH_VER="$(curl -fsSL --retry 3 https://api.github.com/repos/charmbracelet/crush/releases/latest 2>/dev/null | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -1 || true)"
-    if [[ -n "$CRUSH_VER" ]]; then
-      CRUSH_TMP="$(mktemp -d)"
-      if curl -fsSL --retry 3 "https://github.com/charmbracelet/crush/releases/download/${CRUSH_VER}/crush_${CRUSH_VER#v}_Linux_${CRUSH_AA}.tar.gz" -o "$CRUSH_TMP/crush.tar.gz"; then
-        tar -xzf "$CRUSH_TMP/crush.tar.gz" -C "$CRUSH_TMP"
-        install -Dm 755 "$CRUSH_TMP/crush_${CRUSH_VER#v}_Linux_${CRUSH_AA}/crush" /usr/local/bin/crush \
-          && echo "OK: crush ${CRUSH_VER} установлен из GitHub-релиза"
-      else
-        echo "WARNING: crush download failed"
-      fi
-      rm -rf "$CRUSH_TMP"
+# пользователя падает с EACCES, поэтому ставим напрямую и сносим npm-версию
+# (в переиспользуемом work-каталоге мог остаться старый враппер).
+CRUSH_AA=""
+case "$(uname -m)" in
+  x86_64) CRUSH_AA="x86_64" ;;
+  aarch64|arm64) CRUSH_AA="arm64" ;;
+esac
+if [[ -n "$CRUSH_AA" ]]; then
+  CRUSH_VER="$(curl -fsSL --retry 3 https://api.github.com/repos/charmbracelet/crush/releases/latest 2>/dev/null | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -1 || true)"
+  if [[ -n "$CRUSH_VER" ]]; then
+    CRUSH_TMP="$(mktemp -d)"
+    if curl -fsSL --retry 3 "https://github.com/charmbracelet/crush/releases/download/${CRUSH_VER}/crush_${CRUSH_VER#v}_Linux_${CRUSH_AA}.tar.gz" -o "$CRUSH_TMP/crush.tar.gz"; then
+      tar -xzf "$CRUSH_TMP/crush.tar.gz" -C "$CRUSH_TMP"
+      install -Dm 755 "$CRUSH_TMP/crush_${CRUSH_VER#v}_Linux_${CRUSH_AA}/crush" /usr/local/bin/crush \
+        && echo "OK: crush ${CRUSH_VER} установлен из GitHub-релиза"
     else
-      echo "WARNING: не удалось получить версию crush"
+      echo "WARNING: crush download failed"
     fi
+    rm -rf "$CRUSH_TMP"
+  else
+    echo "WARNING: не удалось получить версию crush"
   fi
 fi
+npm uninstall -g "@charmland/crush" >/dev/null 2>&1 || true
 
 # Обёртки для агентов: кэш и tmp в /tmp (tmpfs), чтобы не забивать overlay
-for agent_bin in claude kilo mimo qwen codex opencode nlsh crush kimi; do
+for agent_bin in claude kilo mimo qwen codex opencode dmsh crush kimi; do
   REAL_BIN="$(type -p "$agent_bin" 2>/dev/null || true)"
   if [[ -z "$REAL_BIN" || -f "${REAL_BIN}.real" ]]; then
     continue
@@ -1419,7 +1428,7 @@ cat > /home/vibe/Desktop/GET-STARTED.html << 'EOF'
   <li><strong>Claude Code</strong> — <code>claude</code> (Anthropic)</li>
   <li><strong>Codex</strong> — <code>codex</code> (OpenAI)</li>
   <li><strong>Kilo / MiMo / Continue / Crush / Kimi</strong> — <code>kilo</code>, <code>mimo</code>, <code>cn</code>, <code>crush</code>, <code>kimi</code></li>
-  <li><strong>nlsh</strong> — offline AI shell (model included)</li>
+  <li><strong>dmsh</strong> — offline AI shell (model included)</li>
 </ul>
 <p><em>Ollama и тяжёлый AI-стек (WebUI/ComfyUI/Python-venv) ставятся после установки на диск:</em></p>
 <pre><span class="cmd">sudo install-ollama</span>
@@ -1477,7 +1486,7 @@ AGENTS=(
   "mimo:Mimo"
   "crush:Crush"
   "kimi:Kimi CLI"
-  "nlsh:nlsh"
+  "dmsh:dmsh"
 )
 
 FOUND=()
@@ -1577,60 +1586,60 @@ if [[ -f /usr/share/applications/dev.zed.Zed.desktop ]]; then
   chmod 755 /home/vibe/Desktop/Zed.desktop
 fi
 
-# nlsh — Natural Language Shell (AI Shell Assistant)
-echo "Installing nlsh..."
-NLSH_INSTALLED=0
-# Берём самый свежий пакет по mtime (в /root/nlsh может лежать несколько)
-NLSH_PKG="$(ls -t /root/nlsh/nlsh-*.pkg.tar.zst 2>/dev/null | head -1 || true)"
-if [[ -n "$NLSH_PKG" ]]; then
-  # Pre-built Arch package — installs /usr/bin/nlsh
+# dmsh — Natural Language Shell (AI Shell Assistant)
+echo "Installing dmsh..."
+DMSH_INSTALLED=0
+# Берём самый свежий пакет по mtime (в /root/dmsh может лежать несколько)
+DMSH_PKG="$(ls -t /root/dmsh/dmsh-*.pkg.tar.zst 2>/dev/null | head -1 || true)"
+if [[ -n "$DMSH_PKG" ]]; then
+  # Pre-built Arch package — installs /usr/bin/dmsh
   # Post-transaction hooks (PackageKit/DBus) can fail inside the chroot;
   # tolerate that and verify the binary instead of the pacman exit code.
-  NLSH_TGT=/usr/bin/nlsh
+  DMSH_TGT=/usr/bin/dmsh
   # Сносим предыдущую инсталляцию (иначе даунгрейд/битая база мешают -U)
-  pacman -Rdd --noconfirm nlsh >/dev/null 2>&1 || true
-  rm -f "$NLSH_TGT" "$NLSH_TGT.real"
-  pacman -U --noconfirm "$NLSH_PKG" >/dev/null 2>&1 || true
-  if [[ ! -x "$NLSH_TGT" ]]; then
+  pacman -Rdd --noconfirm dmsh >/dev/null 2>&1 || true
+  rm -f "$DMSH_TGT" "$DMSH_TGT.real"
+  pacman -U --noconfirm "$DMSH_PKG" >/dev/null 2>&1 || true
+  if [[ ! -x "$DMSH_TGT" ]]; then
     # pacman -U может упасть в chroot из-за нехватки места (как far2l);
-    # извлекаем файлы пакета напрямую — /usr/bin/nlsh попадает на место.
-    tar -I zstd -xf "$NLSH_PKG" -C / 2>/dev/null || true
+    # извлекаем файлы пакета напрямую — /usr/bin/dmsh попадает на место.
+    tar -I zstd -xf "$DMSH_PKG" -C / 2>/dev/null || true
   fi
-  if [[ -x "$NLSH_TGT" ]]; then
-    NLSH_INSTALLED=1
-    echo "OK: nlsh installed from pre-built package ($(basename "$NLSH_PKG"))"
+  if [[ -x "$DMSH_TGT" ]]; then
+    DMSH_INSTALLED=1
+    echo "OK: dmsh installed from pre-built package ($(basename "$DMSH_PKG"))"
   else
-    echo "ERROR: nlsh package installation failed"
+    echo "ERROR: dmsh package installation failed"
   fi
-elif [[ -f /root/nlsh/nlsh ]]; then
-  cp /root/nlsh/nlsh /usr/local/bin/nlsh
-  chmod +x /usr/local/bin/nlsh
-  NLSH_INSTALLED=1
+elif [[ -f /root/dmsh/dmsh ]]; then
+  cp /root/dmsh/dmsh /usr/local/bin/dmsh
+  chmod +x /usr/local/bin/dmsh
+  DMSH_INSTALLED=1
 fi
 
-if [[ $NLSH_INSTALLED -eq 1 ]]; then
+if [[ $DMSH_INSTALLED -eq 1 ]]; then
   # Bundle small AI model for offline use (Q2_K ~200MB for weak machines)
-  NLSH_MODELS_DIR="/home/vibe/.config/nlsh/models"
-  mkdir -p "$NLSH_MODELS_DIR"
+  DMSH_MODELS_DIR="/home/vibe/.config/dmsh/models"
+  mkdir -p "$DMSH_MODELS_DIR"
 
   MODEL_NAME="qwen2.5-0.5b-instruct-q2_k.gguf"
   MODEL_URL="https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q2_k.gguf"
 
-  if [[ -f /root/nlsh/models/$MODEL_NAME ]]; then
-    cp /root/nlsh/models/$MODEL_NAME "$NLSH_MODELS_DIR/"
-    chown vibe:vibe "$NLSH_MODELS_DIR/$MODEL_NAME"
+  if [[ -f /root/dmsh/models/$MODEL_NAME ]]; then
+    cp /root/dmsh/models/$MODEL_NAME "$DMSH_MODELS_DIR/"
+    chown vibe:vibe "$DMSH_MODELS_DIR/$MODEL_NAME"
     echo "OK: bundled model Q2_K from local file"
   else
     echo "Downloading Q2_K model (~200MB)..."
-    curl -L "$MODEL_URL" -o "$NLSH_MODELS_DIR/$MODEL_NAME" 2>&1 | tail -5 || \
+    curl -L "$MODEL_URL" -o "$DMSH_MODELS_DIR/$MODEL_NAME" 2>&1 | tail -5 || \
       echo "WARNING: model download failed"
-    chown vibe:vibe "$NLSH_MODELS_DIR/$MODEL_NAME" 2>/dev/null || true
+    chown vibe:vibe "$DMSH_MODELS_DIR/$MODEL_NAME" 2>/dev/null || true
   fi
 
   # Default config for vibe user
-  NLSH_CONFIG_DIR="/home/vibe/.config/nlsh"
-  mkdir -p "$NLSH_CONFIG_DIR"
-  cat > "$NLSH_CONFIG_DIR/config.json" << NLSCONF
+  DMSH_CONFIG_DIR="/home/vibe/.config/dmsh"
+  mkdir -p "$DMSH_CONFIG_DIR"
+  cat > "$DMSH_CONFIG_DIR/config.json" << NLSCONF
 {
   "default_model": "$MODEL_NAME",
   "ctx_size": 2048,
@@ -1641,29 +1650,29 @@ if [[ $NLSH_INSTALLED -eq 1 ]]; then
   "shell": "/bin/zsh"
 }
 NLSCONF
-  chown -R vibe:vibe "$NLSH_CONFIG_DIR"
+  chown -R vibe:vibe "$DMSH_CONFIG_DIR"
 
-  if [[ -f /root/nlsh/nlsh.svg ]]; then
-    cp /root/nlsh/nlsh.svg /usr/share/pixmaps/nlsh.svg
+  if [[ -f /root/dmsh/dmsh.svg ]]; then
+    cp /root/dmsh/dmsh.svg /usr/share/pixmaps/dmsh.svg
   fi
 
-  cat > /home/vibe/Desktop/nlsh.desktop << 'EOF'
+  cat > /home/vibe/Desktop/dmsh.desktop << 'EOF'
 [Desktop Entry]
 Type=Application
-Name=nlsh — AI Shell Assistant
+Name=dmsh — AI Shell Assistant
 GenericName=Natural Language Shell
 Comment=AI-ассистент для управления системой через естественный язык
-Exec=konsole --hold -e nlsh
-Icon=nlsh
+Exec=konsole --hold -e dmsh
+Icon=dmsh
 Terminal=false
 Categories=Development;Utility;AI;
 Keywords=ai;llm;shell;assistant;local;
 StartupNotify=false
 EOF
-  chmod 755 /home/vibe/Desktop/nlsh.desktop
-  echo "nlsh installed with llama.cpp engine + offline model"
+  chmod 755 /home/vibe/Desktop/dmsh.desktop
+  echo "dmsh installed with llama.cpp engine + offline model"
 else
-  echo "WARNING: nlsh not found in /root/nlsh/ (no binary, no pre-built package)"
+  echo "WARNING: dmsh not found in /root/dmsh/ (no binary, no pre-built package)"
 fi
 
 # Copy desktop shortcuts to system applications so they appear in Kickoff menu
@@ -2345,11 +2354,11 @@ if [[ -f /home/vibe/.config/kickoffrc ]]; then
   cp /home/vibe/.config/kickoffrc /etc/skel/.config/
 fi
 
-# Копируем nlsh config и model в /etc/skel
-if [[ -d /home/vibe/.config/nlsh ]]; then
-  mkdir -p /etc/skel/.config/nlsh
-  cp -r /home/vibe/.config/nlsh/* /etc/skel/.config/nlsh/
-  chown -R root:root /etc/skel/.config/nlsh
+# Копируем dmsh config и model в /etc/skel
+if [[ -d /home/vibe/.config/dmsh ]]; then
+  mkdir -p /etc/skel/.config/dmsh
+  cp -r /home/vibe/.config/dmsh/* /etc/skel/.config/dmsh/
+  chown -R root:root /etc/skel/.config/dmsh
 fi
 
 # Копируем Konsole theme
@@ -2383,11 +2392,11 @@ if [[ -f /home/vibe/.config/lazygit/config.yml ]]; then
   cp /home/vibe/.config/lazygit/config.yml /etc/skel/.config/lazygit/
 fi
 
-# Копируем nlsh model в /etc/skel для новых пользователей
-if [[ -d /home/vibe/.config/nlsh/models ]]; then
-  mkdir -p /etc/skel/.config/nlsh/models
-  cp -r /home/vibe/.config/nlsh/models/* /etc/skel/.config/nlsh/models/
-  chown -R root:root /etc/skel/.config/nlsh
+# Копируем dmsh model в /etc/skel для новых пользователей
+if [[ -d /home/vibe/.config/dmsh/models ]]; then
+  mkdir -p /etc/skel/.config/dmsh/models
+  cp -r /home/vibe/.config/dmsh/models/* /etc/skel/.config/dmsh/models/
+  chown -R root:root /etc/skel/.config/dmsh
 fi
 
 chown -R root:root /etc/skel

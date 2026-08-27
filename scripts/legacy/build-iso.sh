@@ -347,68 +347,68 @@ case "${BUILD_MODE}" in
     log "Установка драйверов NVIDIA..."
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/install-nvidia.sh"
 
-    # === Установка nlsh (Natural Language Shell) ===
-    log "Установка nlsh (AI Shell Assistant)..."
-    # Источник — .deb из GitHub-релизов (dedomorozoff/nlsh), всегда последняя
+    # === Установка dmsh (Natural Language Shell) ===
+    log "Установка dmsh (AI Shell Assistant)..."
+    # Источник — .deb из GitHub-релизов (dedomorozoff/dmsh), всегда последняя
     # стабильная версия. Фолбэки: «сырой» бинарник из релиза, затем локальный
-    # soft/nlsh/nlsh.
-    NLSH_RELEASES_API="https://api.github.com/repos/dedomorozoff/nlsh/releases/latest"
-    NLSH_INSTALLED=0
-    NLSH_JSON="$(curl -fsSL --retry 3 "$NLSH_RELEASES_API" 2>/dev/null || true)"
-    NLSH_DEB_URL="$(grep -o 'https://[^"]*amd64\.deb' <<<"$NLSH_JSON" | head -1 || true)"
-    NLSH_BIN_URL="$(grep -o 'https://[^"]*nlsh-linux-amd64' <<<"$NLSH_JSON" | head -1 || true)"
+    # soft/dmsh/dmsh.
+    DMSH_RELEASES_API="https://api.github.com/repos/dedomorozoff/dmsh/releases/latest"
+    DMSH_INSTALLED=0
+    DMSH_JSON="$(curl -fsSL --retry 3 "$DMSH_RELEASES_API" 2>/dev/null || true)"
+    DMSH_DEB_URL="$(grep -o 'https://[^"]*amd64\.deb' <<<"$DMSH_JSON" | head -1 || true)"
+    DMSH_BIN_URL="$(grep -o 'https://[^"]*dmsh-linux-amd64' <<<"$DMSH_JSON" | head -1 || true)"
 
-    if [[ -n "$NLSH_DEB_URL" ]]; then
-      curl -fsSL --retry 3 "$NLSH_DEB_URL" -o "${CHROOT_DIR}/tmp/nlsh.deb" || true
-      if [[ -s "${CHROOT_DIR}/tmp/nlsh.deb" ]]; then
-        chroot "${CHROOT_DIR}" dpkg -i /tmp/nlsh.deb >/dev/null 2>&1 || true
+    if [[ -n "$DMSH_DEB_URL" ]]; then
+      curl -fsSL --retry 3 "$DMSH_DEB_URL" -o "${CHROOT_DIR}/tmp/dmsh.deb" || true
+      if [[ -s "${CHROOT_DIR}/tmp/dmsh.deb" ]]; then
+        chroot "${CHROOT_DIR}" dpkg -i /tmp/dmsh.deb >/dev/null 2>&1 || true
       fi
-      rm -f "${CHROOT_DIR}/tmp/nlsh.deb"
+      rm -f "${CHROOT_DIR}/tmp/dmsh.deb"
       # Проверяем результат по факту (dpkg может упасть в chroot по мелочи)
-      [[ -x "${CHROOT_DIR}/usr/bin/nlsh" ]] && NLSH_INSTALLED=1
+      [[ -x "${CHROOT_DIR}/usr/bin/dmsh" ]] && DMSH_INSTALLED=1
     fi
 
-    if [[ $NLSH_INSTALLED -eq 0 ]]; then
-      log "Установка nlsh из .deb не удалась — пробую «сырой» бинарник..."
-      if [[ -n "$NLSH_BIN_URL" ]]; then
-        curl -fsSL --retry 3 "$NLSH_BIN_URL" -o "${CHROOT_DIR}/usr/local/bin/nlsh" || true
-      elif [[ -f "${ROOT_DIR}/soft/nlsh/nlsh" ]]; then
-        cp "${ROOT_DIR}/soft/nlsh/nlsh" "${CHROOT_DIR}/usr/local/bin/nlsh"
+    if [[ $DMSH_INSTALLED -eq 0 ]]; then
+      log "Установка dmsh из .deb не удалась — пробую «сырой» бинарник..."
+      if [[ -n "$DMSH_BIN_URL" ]]; then
+        curl -fsSL --retry 3 "$DMSH_BIN_URL" -o "${CHROOT_DIR}/usr/local/bin/dmsh" || true
+      elif [[ -f "${ROOT_DIR}/soft/dmsh/dmsh" ]]; then
+        cp "${ROOT_DIR}/soft/dmsh/dmsh" "${CHROOT_DIR}/usr/local/bin/dmsh"
       fi
-      if [[ -f "${CHROOT_DIR}/usr/local/bin/nlsh" ]]; then
-        chmod +x "${CHROOT_DIR}/usr/local/bin/nlsh"
-        NLSH_INSTALLED=1
+      if [[ -f "${CHROOT_DIR}/usr/local/bin/dmsh" ]]; then
+        chmod +x "${CHROOT_DIR}/usr/local/bin/dmsh"
+        DMSH_INSTALLED=1
       fi
     fi
 
-    if [[ $NLSH_INSTALLED -eq 1 ]]; then
-      log "nlsh установлен"
+    if [[ $DMSH_INSTALLED -eq 1 ]]; then
+      log "dmsh установлен"
 
-      if [[ -f "${ROOT_DIR}/soft/nlsh/nlsh.svg" ]]; then
-        cp "${ROOT_DIR}/soft/nlsh/nlsh.svg" "${CHROOT_DIR}/usr/share/pixmaps/nlsh.svg"
-        log "nlsh иконка скопирована"
+      if [[ -f "${ROOT_DIR}/soft/dmsh/dmsh.svg" ]]; then
+        cp "${ROOT_DIR}/soft/dmsh/dmsh.svg" "${CHROOT_DIR}/usr/share/pixmaps/dmsh.svg"
+        log "dmsh иконка скопирована"
       fi
 
       # Bundle small AI model for offline use (Q2_K ~200MB for weak machines)
-      NLSH_MODELS_DIR="${CHROOT_DIR}/home/vibecode/.config/nlsh/models"
-      mkdir -p "$NLSH_MODELS_DIR"
+      DMSH_MODELS_DIR="${CHROOT_DIR}/home/vibecode/.config/dmsh/models"
+      mkdir -p "$DMSH_MODELS_DIR"
 
       MODEL_NAME="qwen2.5-0.5b-instruct-q2_k.gguf"
       MODEL_URL="https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q2_k.gguf"
 
-      if [[ -f "${ROOT_DIR}/soft/nlsh/models/$MODEL_NAME" ]]; then
-        cp "${ROOT_DIR}/soft/nlsh/models/$MODEL_NAME" "$NLSH_MODELS_DIR/"
+      if [[ -f "${ROOT_DIR}/soft/dmsh/models/$MODEL_NAME" ]]; then
+        cp "${ROOT_DIR}/soft/dmsh/models/$MODEL_NAME" "$DMSH_MODELS_DIR/"
         log "OK: bundled model Q2_K from local file"
       else
         log "Downloading Q2_K model (~200MB)..."
-        curl -L "$MODEL_URL" -o "$NLSH_MODELS_DIR/$MODEL_NAME" 2>&1 | tail -5 || \
+        curl -L "$MODEL_URL" -o "$DMSH_MODELS_DIR/$MODEL_NAME" 2>&1 | tail -5 || \
           log "WARNING: model download failed"
       fi
 
       # Default config for vibecode user
-      NLSH_CONFIG_DIR="${CHROOT_DIR}/home/vibecode/.config/nlsh"
-      mkdir -p "$NLSH_CONFIG_DIR"
-      cat > "$NLSH_CONFIG_DIR/config.json" << NLSCONF
+      DMSH_CONFIG_DIR="${CHROOT_DIR}/home/vibecode/.config/dmsh"
+      mkdir -p "$DMSH_CONFIG_DIR"
+      cat > "$DMSH_CONFIG_DIR/config.json" << NLSCONF
 {
   "default_model": "$MODEL_NAME",
   "ctx_size": 2048,
@@ -421,15 +421,15 @@ case "${BUILD_MODE}" in
 NLSCONF
 
       # Also copy to /etc/skel for new user creation
-      mkdir -p "${CHROOT_DIR}/etc/skel/.config/nlsh/models"
-      cp "$NLSH_CONFIG_DIR/config.json" "${CHROOT_DIR}/etc/skel/.config/nlsh/config.json"
-      if [[ -f "$NLSH_MODELS_DIR/$MODEL_NAME" ]]; then
-        cp "$NLSH_MODELS_DIR/$MODEL_NAME" "${CHROOT_DIR}/etc/skel/.config/nlsh/models/"
+      mkdir -p "${CHROOT_DIR}/etc/skel/.config/dmsh/models"
+      cp "$DMSH_CONFIG_DIR/config.json" "${CHROOT_DIR}/etc/skel/.config/dmsh/config.json"
+      if [[ -f "$DMSH_MODELS_DIR/$MODEL_NAME" ]]; then
+        cp "$DMSH_MODELS_DIR/$MODEL_NAME" "${CHROOT_DIR}/etc/skel/.config/dmsh/models/"
       fi
 
-      log "nlsh model bundled and config created"
+      log "dmsh model bundled and config created"
     else
-      log "WARNING: nlsh не установлен (релиз недоступен, локального бинарника в soft/nlsh/ нет)"
+      log "WARNING: dmsh не установлен (релиз недоступен, локального бинарника в soft/dmsh/ нет)"
     fi
 
     # Настройка autologin для live сессии
@@ -516,19 +516,19 @@ SDDMEOF
     log "Применение брендинга VibeCode OS..."
     chroot "${CHROOT_DIR}" /bin/bash -c "DEBIAN_FRONTEND=noninteractive /root/apply-branding.sh /root/branding vibecode"
 
-    # === Ярлык nlsh на рабочем столе ===
-    log "Создание ярлыка nlsh на рабочем столе..."
+    # === Ярлык dmsh на рабочем столе ===
+    log "Создание ярлыка dmsh на рабочем столе..."
     mkdir -p "${CHROOT_DIR}/home/vibecode/Desktop"
     mkdir -p "${CHROOT_DIR}/home/vibecode/.local/share/applications"
     mkdir -p "${CHROOT_DIR}/usr/share/pixmaps"
     mkdir -p "${CHROOT_DIR}/home/vibecode/.config"
 
     # Копируем .desktop файл
-    if [[ -f "${ROOT_DIR}/soft/nlsh/nlsh.desktop" ]]; then
-      cp "${ROOT_DIR}/soft/nlsh/nlsh.desktop" "${CHROOT_DIR}/home/vibecode/Desktop/nlsh.desktop"
-      cp "${ROOT_DIR}/soft/nlsh/nlsh.desktop" "${CHROOT_DIR}/home/vibecode/.local/share/applications/nlsh.desktop"
-      chmod +x "${CHROOT_DIR}/home/vibecode/Desktop/nlsh.desktop"
-      log "nlsh.desktop скопирован на рабочий стол"
+    if [[ -f "${ROOT_DIR}/soft/dmsh/dmsh.desktop" ]]; then
+      cp "${ROOT_DIR}/soft/dmsh/dmsh.desktop" "${CHROOT_DIR}/home/vibecode/Desktop/dmsh.desktop"
+      cp "${ROOT_DIR}/soft/dmsh/dmsh.desktop" "${CHROOT_DIR}/home/vibecode/.local/share/applications/dmsh.desktop"
+      chmod +x "${CHROOT_DIR}/home/vibecode/Desktop/dmsh.desktop"
+      log "dmsh.desktop скопирован на рабочий стол"
     fi
 
     # Включаем отображение иконок на рабочем столе KDE Plasma

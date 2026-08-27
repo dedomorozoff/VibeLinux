@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### Changed
+- **nlsh переименован в dmsh** (апстрим: `github.com/dedomorozoff/dmsh`, v0.2.6+)
+  - Бинарник: `nlsh` → `dmsh` (`/usr/bin/dmsh`), конфиг: `~/.config/nlsh/` → `~/.config/dmsh/`
+  - Скрипты сборки (`build-vibe-arch.sh`, legacy `build-iso.sh`) и `customize_airootfs.sh`
+    переведены на новые URL релизов, имена пакетов (`.pkg.tar.zst` / `.deb`) и ассеты
+  - Локальный офлайн-фолбэк: `soft/nlsh/` → `soft/dmsh/`; ярлыки и иконка — `dmsh.desktop` / `dmsh.svg`
+
 ### Added
 - **Arch ISO — AI-агенты предустановлены в образ** (решает проблему «AI не ставится в live-сессии»):
   - Все CLI-агенты запечены в squashfs на этапе сборки: opencode (pacman), qwen-code, Claude Code, Codex, Kilo, MiMo, Continue, Kimi (npm global), Crush (нативный бинарник из GitHub-релизов) — работают и в live, и на установленной системе, без root и без доустановки

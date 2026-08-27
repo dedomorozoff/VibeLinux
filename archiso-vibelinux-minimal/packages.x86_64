@@ -1,0 +1,69 @@
+# VibeLinux Minimal packages — CLI-only Arch Linux
+base
+linux
+linux-firmware
+
+# Boot
+syslinux
+memtest86+
+memtest86+-efi
+efibootmgr
+edk2-shell
+
+# Initramfs
+mkinitcpio
+mkinitcpio-archiso
+
+# Network
+networkmanager
+iwd
+iptables
+
+# Shell & tools
+zsh
+tmux
+nano
+vim
+btop
+mc
+htop
+git
+curl
+wget
+ca-certificates
+openssh
+rsync
+
+# Archives
+unzip
+zip
+p7zip
+zstd
+
+# Base-devel (for AUR / makepkg)
+base-devel
+
+# Filesystem tools
+parted
+dosfstools
+e2fsprogs
+btrfs-progs
+gptfdisk
+
+# System utilities
+fastfetch
+tree
+jq
+sudo
+man-db
+man-pages
+
+# USB / storage
+usbutils
+
+# AI CLI tools deps
+nodejs
+npm
+python-pipx
+opencode
+

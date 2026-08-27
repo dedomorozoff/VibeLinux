@@ -59,7 +59,7 @@ make legacy-lite       # Ubuntu 24.04 Lite (CLI-only, legacy)
 
 **AI-стек (в ISO, предустановлен — работает и в live, и на установленной системе):**
 - **opencode**, **qwen-code**, **Claude Code**, **Codex**, **Kilo**, **MiMo**, **Continue**, **Crush**, **Kimi** — все CLI-агенты запечены в образ
-- **nlsh** — Natural Language Shell (AI-ассистент в терминале)
+- **dmsh** — Natural Language Shell (AI-ассистент в терминале)
 
 **Ollama и тяжёлый AI-стек (post-install, после установки на диск):**
 - `sudo install-ollama` — рантайм локальных LLM (в live-ISO не входит: пакет ~500 МБ)
@@ -130,7 +130,7 @@ sudo ./scripts/ai/install-ollama-models.sh
 - **qwen-code:** `qwen`
 - **Claude Code:** `claude`
 - **Codex:** `codex`
-- **nlsh:** `nlsh`
+- **dmsh:** `dmsh`
 - **ai-chat:** `ai-chat`
 - **Open WebUI:** http://localhost:3000 (после `setup-ai-stack.sh`)
 

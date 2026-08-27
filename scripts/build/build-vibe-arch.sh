@@ -68,50 +68,50 @@ if [[ -d "$BRANDING_DIR" ]]; then
     fi
 fi
 
-# 3b) Fetch nlsh into airootfs.
+# 3b) Fetch dmsh into airootfs.
 # Primary source — pre-built Arch package from GitHub releases
-# (https://github.com/dedomorozoff/nlsh), always the latest stable version.
-# Local soft/nlsh/*.pkg.tar.zst kept as an offline fallback; icon/desktop
-# assets are still taken from soft/nlsh (they are not shipped in releases).
-NLSH_RELEASES_API="https://api.github.com/repos/dedomorozoff/nlsh/releases/latest"
-NLSH_DST="$PROFILE_DIR/airootfs/root/nlsh"
+# (https://github.com/dedomorozoff/dmsh), always the latest stable version.
+# Local soft/dmsh/*.pkg.tar.zst kept as an offline fallback; icon/desktop
+# assets are still taken from soft/dmsh (they are not shipped in releases).
+DMSH_RELEASES_API="https://api.github.com/repos/dedomorozoff/dmsh/releases/latest"
+DMSH_DST="$PROFILE_DIR/airootfs/root/dmsh"
 SOFT_DIR="$(cd "$(dirname "$(readlink -f "$0")")/../../soft" 2>/dev/null && pwd || true)"
-log "Fetching nlsh into airootfs..."
-mkdir -p "$NLSH_DST"
+log "Fetching dmsh into airootfs..."
+mkdir -p "$DMSH_DST"
 # Вычищаем старые пакеты/бинарники, чтобы в профиле не копилось мусор
 # и ls не подсовывал устаревшие версии
-rm -f "$NLSH_DST"/*.pkg.tar.zst "$NLSH_DST/nlsh"
+rm -f "$DMSH_DST"/*.pkg.tar.zst "$DMSH_DST/dmsh"
 
-NLSH_OK=0
-NLSH_JSON="$(curl -fsSL --retry 3 "$NLSH_RELEASES_API" 2>/dev/null || true)"
-NLSH_URL="$(grep -o 'https://[^"]*x86_64\.pkg\.tar\.zst' <<<"$NLSH_JSON" | head -1 || true)"
-if [[ -n "$NLSH_URL" ]]; then
-    if curl -fsSL --retry 3 "$NLSH_URL" -o "$NLSH_DST/$(basename "$NLSH_URL")"; then
-        NLSH_OK=1
-        log "nlsh downloaded from GitHub releases: $(basename "$NLSH_URL")"
+DMSH_OK=0
+DMSH_JSON="$(curl -fsSL --retry 3 "$DMSH_RELEASES_API" 2>/dev/null || true)"
+DMSH_URL="$(grep -o 'https://[^"]*x86_64\.pkg\.tar\.zst' <<<"$DMSH_JSON" | head -1 || true)"
+if [[ -n "$DMSH_URL" ]]; then
+    if curl -fsSL --retry 3 "$DMSH_URL" -o "$DMSH_DST/$(basename "$DMSH_URL")"; then
+        DMSH_OK=1
+        log "dmsh downloaded from GitHub releases: $(basename "$DMSH_URL")"
     else
-        warn "nlsh download failed: $NLSH_URL"
+        warn "dmsh download failed: $DMSH_URL"
     fi
 else
-    warn "nlsh release info unavailable (network?) — trying local fallback"
+    warn "dmsh release info unavailable (network?) — trying local fallback"
 fi
 
-if [[ $NLSH_OK -eq 0 && -d "$SOFT_DIR/nlsh" ]] && compgen -G "$SOFT_DIR/nlsh/*.pkg.tar.zst" >/dev/null; then
-    cp "$SOFT_DIR"/nlsh/*.pkg.tar.zst "$NLSH_DST/"
-    NLSH_OK=1
-    log "Using local pre-built nlsh package from soft/nlsh/"
+if [[ $DMSH_OK -eq 0 && -d "$SOFT_DIR/dmsh" ]] && compgen -G "$SOFT_DIR/dmsh/*.pkg.tar.zst" >/dev/null; then
+    cp "$SOFT_DIR"/dmsh/*.pkg.tar.zst "$DMSH_DST/"
+    DMSH_OK=1
+    log "Using local pre-built dmsh package from soft/dmsh/"
 fi
 
-# Иконка и .desktop в релизы не входят — берём из soft/nlsh, если есть
-if [[ -d "$SOFT_DIR/nlsh" ]]; then
-    [[ -f "$SOFT_DIR/nlsh/nlsh.svg" ]] && cp "$SOFT_DIR/nlsh/nlsh.svg" "$NLSH_DST/"
-    [[ -f "$SOFT_DIR/nlsh/nlsh.desktop" ]] && cp "$SOFT_DIR/nlsh/nlsh.desktop" "$NLSH_DST/"
+# Иконка и .desktop в релизы не входят — берём из soft/dmsh, если есть
+if [[ -d "$SOFT_DIR/dmsh" ]]; then
+    [[ -f "$SOFT_DIR/dmsh/dmsh.svg" ]] && cp "$SOFT_DIR/dmsh/dmsh.svg" "$DMSH_DST/"
+    [[ -f "$SOFT_DIR/dmsh/dmsh.desktop" ]] && cp "$SOFT_DIR/dmsh/dmsh.desktop" "$DMSH_DST/"
 fi
 
-if [[ $NLSH_OK -eq 1 ]]; then
-    log "nlsh ready in airootfs/root/nlsh/"
+if [[ $DMSH_OK -eq 1 ]]; then
+    log "dmsh ready in airootfs/root/dmsh/"
 else
-    warn "nlsh package unavailable (no network and none in soft/nlsh/) — skipping"
+    warn "dmsh package unavailable (no network and none in soft/dmsh/) — skipping"
 fi
 
 # 3c) Copy AI/helper scripts to /opt/vibecode/scripts (post-install helpers).

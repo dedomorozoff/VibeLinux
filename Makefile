@@ -22,7 +22,7 @@
 #
 # Старые имена (full, mini, lite, check, ...) работают как алиасы legacy-целей.
 
-.PHONY: arch generate wizard \
+.PHONY: arch arch-mini arch-mini-keep generate wizard \
         legacy-full legacy-full-keep legacy-mini legacy-mini-keep \
         legacy-lite legacy-full-vibe legacy-check legacy-check-mini legacy-upgrade \
         bsd bsd-setup bsd-customize bsd-build \
@@ -44,6 +44,16 @@ DETECT_DISTRO := $(shell if command -v pacman >/dev/null 2>&1; then echo "arch";
 arch:
 	@echo "🚀 Запуск сборки Arch Linux..."
 	sudo bash $(ПУТЬ)/scripts/build/build-vibe-arch.sh
+
+# Минимальная сборка ISO (CLI only, Arch Linux)
+arch-mini:
+	@echo "🚀 Запуск минимальной сборки ISO (Arch Linux, CLI)..."
+	sudo bash $(ПУТЬ)/scripts/build/build-vibe-arch-minimal.sh
+
+# Минимальная сборка с сохранением chroot (быстрая пересборка)
+arch-mini-keep:
+	@echo "🔄 Минимальная сборка с сохранением chroot (Arch Linux, CLI)..."
+	sudo KEEP_CHROOT=1 bash $(ПУТЬ)/scripts/build/build-vibe-arch-minimal.sh
 
 # Генерация скрипта сборки из JSON-конфигурации
 generate:
@@ -166,6 +176,7 @@ help:
 	@echo ""
 	@echo "Основная линия (Arch Linux + KDE Plasma 6):"
 	@echo "  make arch       - сборка ISO"
+	@echo "  make arch-mini  - минимальная сборка ISO (CLI only)"
 	@echo "  make generate   - генерация скрипта сборки из JSON-конфига"
 	@echo "  make wizard     - пост-установочный мастер (live-сессия)"
 	@echo ""
