@@ -20,7 +20,7 @@ iwd
 iptables
 
 # Shell & tools
-zsh
+fish
 tmux
 nano
 vim
