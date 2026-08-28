@@ -45,7 +45,10 @@ ln -sf /usr/share/zoneinfo/UTC /etc/localtime
 sed -i 's/#en_US.UTF-8/en_US.UTF-8/' /etc/locale.gen
 sed -i 's/#ru_RU.UTF-8/ru_RU.UTF-8/' /etc/locale.gen
 locale-gen
-echo "LANG=ru_RU.UTF-8" > /etc/locale.conf
+cat > /etc/locale.conf << 'EOF'
+LANG=ru_RU.UTF-8
+LANGUAGE=ru_RU:ru
+EOF
 
 # Console (TTY): кириллический шрифт + русская раскладка с переключением на EN
 # по Alt+Shift. Всё из базового пакета kbd (терминальные шрифты + keymaps),
