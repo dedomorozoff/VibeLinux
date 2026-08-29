@@ -67,3 +67,7 @@ npm
 python-pipx
 opencode
 
+# Text installer (archinstall + branded wrapper "vinstall")
+archinstall
+reflector
+

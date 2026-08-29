@@ -15,4 +15,5 @@ airootfs_image_tool_options=('-comp' 'zstd' '-Xcompression-level' '15')
 file_permissions=(
   ["/root"]="0:0:750"
   ["/root/customize_airootfs.sh"]="0:0:755"
+  ["/usr/local/bin/vinstall"]="0:0:755"
 )

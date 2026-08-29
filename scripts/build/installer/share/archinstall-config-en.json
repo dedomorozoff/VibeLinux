@@ -1,0 +1,26 @@
+{
+  "archinstall-language": "English",
+  "hostname": "vibelinux",
+  "kernels": ["linux"],
+  "locale_config": {
+    "kb_layout": "us",
+    "sys_enc": "UTF-8",
+    "sys_lang": "en_US"
+  },
+  "bootloader": "Systemd-boot",
+  "bootloader_config": {
+    "bootloader": "Systemd-boot",
+    "uki": false,
+    "removable": false
+  },
+  "ntp": true,
+  "swap": true,
+  "timezone": "UTC",
+  "audio_config": null,
+  "network_config": {},
+  "packages": [],
+  "offline": false,
+  "no_pkg_lookups": false,
+  "silent": false,
+  "script": "guided"
+}

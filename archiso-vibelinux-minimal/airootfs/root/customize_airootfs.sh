@@ -21,6 +21,8 @@ cat > /etc/motd << 'EOF'
   █   ███ ████  █████ █████ ███ █   █  ███  █   █
 
  VibeLinux Minimal — CLI-only Arch Linux
+
+ Установка на диск:  sudo vinstall
 EOF
 
 # OS Release
@@ -60,14 +62,25 @@ KEYMAP=ruwin_alt_sh-UTF-8
 FONT=eurlatgr
 EOF
 
-# Default shell
-chsh -s /usr/bin/fish root 2>/dev/null || true
+# Гарантированно применяем кириллический шрифт и раскладку при загрузке
+# (systemd-vconsole-setup не всегда отрабатывает в live до getty).
+systemctl enable vibelinux-console.service 2>/dev/null || true
+
+# Default shell (fish)
+# usermod -s ставит shell напрямую (без валидации /etc/shells и PAM-лока,
+# из-за которых chsh в chroot молча падает). Плюс явно добавляем fish в
+# /etc/shells для корректности (автодополнение, другие утилиты).
+if ! grep -qx '/usr/bin/fish' /etc/shells 2>/dev/null; then
+  echo '/usr/bin/fish' >> /etc/shells
+fi
+usermod -s /usr/bin/fish root 2>/dev/null || true
 
 # User
 if ! id vibe &>/dev/null; then
-  useradd -m -G wheel -s /usr/bin/fish vibe
+  useradd -m -G wheel -s /bin/bash vibe
   echo "vibe:vibe" | chpasswd
 fi
+usermod -s /usr/bin/fish vibe 2>/dev/null || true
 echo "vibe ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/90_vibe
 chmod 440 /etc/sudoers.d/90_vibe
 

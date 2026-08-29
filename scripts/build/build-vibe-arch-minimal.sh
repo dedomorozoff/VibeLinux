@@ -89,6 +89,23 @@ else
     warn "dmed binary unavailable (no soft/dmed, no PATH binary, no Go) — skipping"
 fi
 
+# 3c2) vinstall — текстовый инсталлятор (обёртка над archinstall)
+#     Источник: scripts/build/installer/. Копируем в airootfs (попадает в
+#     /usr/local/bin и /usr/local/share установленной live-системы).
+VINSTALL_DIR="$(cd "$(dirname "$(readlink -f "$0")")/installer" && pwd)"
+if [[ -f "$VINSTALL_DIR/vinstall" ]]; then
+    mkdir -p "$PROFILE_DIR/airootfs/usr/local/bin" \
+             "$PROFILE_DIR/airootfs/usr/local/share/vibelinux"
+    install -Dm755 "$VINSTALL_DIR/vinstall" "$PROFILE_DIR/airootfs/usr/local/bin/vinstall"
+    install -Dm644 "$VINSTALL_DIR/share/archinstall-config.json" \
+        "$PROFILE_DIR/airootfs/usr/local/share/vibelinux/archinstall-config.json"
+    install -Dm644 "$VINSTALL_DIR/share/archinstall-config-en.json" \
+        "$PROFILE_DIR/airootfs/usr/local/share/vibelinux/archinstall-config-en.json"
+    log "vinstall installer copied -> airootfs/usr/local"
+else
+    warn "vinstall installer not found in scripts/build/installer/ — skipping"
+fi
+
 # 3c) Pre-populate /boot/vmlinuz-linux
 mkdir -p "$WORKDIR/x86_64/airootfs/boot"
 KVER=$(ls "$WORKDIR"/x86_64/airootfs/usr/lib/modules/ 2>/dev/null | grep -v extramodules | sort -V | tail -1 || true)
