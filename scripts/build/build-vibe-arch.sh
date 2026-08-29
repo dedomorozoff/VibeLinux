@@ -114,6 +114,45 @@ else
     warn "dmsh package unavailable (no network and none in soft/dmsh/) — skipping"
 fi
 
+# 3b2) Fetch dmed into airootfs.
+# Primary source — pre-built Arch package from GitHub releases
+# (https://github.com/dedomorozoff/dmed), always the latest stable version.
+# Local soft/dmed/dmed kept as an offline fallback (raw binary -> /usr/local/bin).
+DMED_RELEASES_API="https://api.github.com/repos/dedomorozoff/dmed/releases/latest"
+DMED_DST="$PROFILE_DIR/airootfs/root/dmed"
+SOFT_DIR="$(cd "$(dirname "$(readlink -f "$0")")/../../soft" 2>/dev/null && pwd || true)"
+log "Fetching dmed into airootfs..."
+mkdir -p "$DMED_DST"
+# Вычищаем старые пакеты/бинарники, чтобы в профиле не копилось мусор
+rm -f "$DMED_DST"/*.pkg.tar.zst "$DMED_DST/dmed"
+
+DMED_OK=0
+DMED_JSON="$(curl -fsSL --retry 3 "$DMED_RELEASES_API" 2>/dev/null || true)"
+DMED_URL="$(grep -o 'https://[^"]*x86_64\.pkg\.tar\.zst' <<<"$DMED_JSON" | head -1 || true)"
+if [[ -n "$DMED_URL" ]]; then
+    if curl -fsSL --retry 3 "$DMED_URL" -o "$DMED_DST/$(basename "$DMED_URL")"; then
+        DMED_OK=1
+        log "dmed downloaded from GitHub releases: $(basename "$DMED_URL")"
+    else
+        warn "dmed download failed: $DMED_URL"
+    fi
+else
+    warn "dmed release info unavailable (network?) — trying local fallback"
+fi
+
+if [[ $DMED_OK -eq 0 && -f "$SOFT_DIR/dmed/dmed" ]]; then
+    cp -f "$SOFT_DIR/dmed/dmed" "$DMED_DST/dmed"
+    chmod +x "$DMED_DST/dmed"
+    DMED_OK=1
+    log "Using local pre-built dmed binary from soft/dmed/"
+fi
+
+if [[ $DMED_OK -eq 1 ]]; then
+    log "dmed ready in airootfs/root/dmed/"
+else
+    warn "dmed unavailable (no network and none in soft/dmed/) — skipping"
+fi
+
 # 3c) Copy AI/helper scripts to /opt/vibecode/scripts (post-install helpers).
 # В live-сессии доустановка AI-инструментов невозможна (оверлей в RAM),
 # поэтому тяжёлый AI-стек (WebUI / ComfyUI / Python-venv / модели)

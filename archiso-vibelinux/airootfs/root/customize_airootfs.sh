@@ -1678,6 +1678,38 @@ else
   echo "WARNING: dmsh not found in /root/dmsh/ (no binary, no pre-built package)"
 fi
 
+# dmed — terminal-native AI editor (Go)
+echo "Installing dmed..."
+DMED_INSTALLED=0
+# Сначала пытаемся поставить pre-built Arch package (регистрирует в pacman-базе)
+DMED_PKG="$(ls -t /root/dmed/dmed-*.pkg.tar.zst 2>/dev/null | head -1 || true)"
+if [[ -n "$DMED_PKG" ]]; then
+  DMED_TGT=/usr/bin/dmed
+  pacman -Rdd --noconfirm dmed >/dev/null 2>&1 || true
+  rm -f "$DMED_TGT" "$DMED_TGT.real"
+  pacman -U --noconfirm "$DMED_PKG" >/dev/null 2>&1 || true
+  if [[ ! -x "$DMED_TGT" ]]; then
+    # pacman -U может упасть в chroot; извлекаем файлы пакета напрямую
+    tar -I zstd -xf "$DMED_PKG" -C / 2>/dev/null || true
+  fi
+  if [[ -x "$DMED_TGT" ]]; then
+    DMED_INSTALLED=1
+    echo "OK: dmed installed from pre-built package ($(basename "$DMED_PKG"))"
+  else
+    echo "ERROR: dmed package installation failed"
+  fi
+elif [[ -f /root/dmed/dmed ]]; then
+  install -Dm755 /root/dmed/dmed /usr/local/bin/dmed
+  DMED_INSTALLED=1
+  echo "OK: dmed installed from raw binary (soft/dmed fallback)"
+fi
+
+if [[ $DMED_INSTALLED -eq 1 ]]; then
+  echo "dmed installed"
+else
+  echo "WARNING: dmed not found in /root/dmed/"
+fi
+
 # Copy desktop shortcuts to system applications so they appear in Kickoff menu
 # Skip files that already exist or came from packages (avoid duplicates in menu)
 for f in /home/vibe/Desktop/*.desktop; do
