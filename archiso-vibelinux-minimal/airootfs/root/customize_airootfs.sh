@@ -23,6 +23,8 @@ cat > /etc/motd << 'EOF'
  VibeLinux Minimal — CLI-only Arch Linux
 
  Установка на диск:  sudo vinstall
+
+ Раскладка RU/EN:     Alt+Shift   (по умолчанию EN; Alt+Shift один раз — русский ввод)
 EOF
 
 # OS Release
@@ -50,6 +52,25 @@ locale-gen
 cat > /etc/locale.conf << 'EOF'
 LANG=ru_RU.UTF-8
 LANGUAGE=ru_RU:ru
+EOF
+
+# Локаль для всех systemd-сессий (agetty autologin, ssh и т.п.), чтобы даже
+# процессам, запущенным ДО fish, доставалась ru_RU, а не C/English.
+cat > /etc/environment << 'EOF'
+LANG=ru_RU.UTF-8
+LANGUAGE=ru_RU:ru
+LC_CTYPE=ru_RU.UTF-8
+LC_NUMERIC=ru_RU.UTF-8
+LC_TIME=ru_RU.UTF-8
+LC_COLLATE=C
+LC_MONETARY=ru_RU.UTF-8
+LC_MESSAGES=ru_RU.UTF-8
+LC_PAPER=ru_RU.UTF-8
+LC_NAME=ru_RU.UTF-8
+LC_ADDRESS=ru_RU.UTF-8
+LC_TELEPHONE=ru_RU.UTF-8
+LC_MEASUREMENT=ru_RU.UTF-8
+LC_IDENTIFICATION=ru_RU.UTF-8
 EOF
 
 # Console (TTY): кириллический шрифт + русская раскладка с переключением на EN
@@ -212,6 +233,9 @@ for agent_bin in claude kilo mimo qwen codex opencode dmsh crush kimi dmed; do
     continue
   fi
   mv "$REAL_BIN" "${REAL_BIN}.real"
+  # Не полагаемся на сохранение exec-бита при copy-up в overlayfs — ставм явно.
+  # Иначе dmed (в /usr/local на нижнем слое) получает 644 и "Permission denied".
+  chmod +x "${REAL_BIN}.real"
   cat > "$REAL_BIN" << WRAPPEREOF
 #!/usr/bin/env bash
 export TMPDIR=/tmp
