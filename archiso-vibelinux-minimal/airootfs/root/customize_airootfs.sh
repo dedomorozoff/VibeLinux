@@ -76,11 +76,11 @@ EOF
 # Console (TTY): кириллический шрифт + русская раскладка с переключением на EN
 # по Alt+Shift. Всё из базового пакета kbd (терминальные шрифты + keymaps),
 # поэтому отдельные пакеты не нужны.
-#   FONT=eurlatgr   — современный консольный шрифт с кириллицей и латиницей
+#   FONT=cyr-sun16   — современный консольный шрифт с кириллицей и латиницей
 #   KEYMAP=ruwin_alt_sh-UTF-8 — русская раскладка; Alt+Shift переключает ru/en
 cat > /etc/vconsole.conf << 'EOF'
 KEYMAP=ruwin_alt_sh-UTF-8
-FONT=eurlatgr
+FONT=cyr-sun16
 EOF
 
 # Гарантированно применяем кириллический шрифт и раскладку при загрузке
@@ -104,6 +104,50 @@ fi
 usermod -s /usr/bin/fish vibe 2>/dev/null || true
 echo "vibe ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/90_vibe
 chmod 440 /etc/sudoers.d/90_vibe
+
+# Midnight Commander config for vibe (XDG-compatible)
+mkdir -p /home/vibe/.config/mc/ini /home/vibe/.config/mc/history
+cat > /home/vibe/.config/mc/ini/panels.ini << 'EOF'
+[Panels]
+show_backups=1
+show_dot_files=1
+fast_refresh=1
+reverse_files_only=1
+auto_menu=1
+show_size_in_bytes=0
+show_free_space=1
+EOF
+
+cat > /home/vibe/.config/mc/ini/mc.keymap << 'EOF'
+# Vibelinux minimal keymap
+[Browse]
+# Ctrl+O opens shell in current dir (default bash binding, keep it)
+shell=shell
+# F9 = menu, F10 = quit, arrows = navigate (defaults)
+EOF
+
+cat > /home/vibe/.config/mc/ini/ini << 'EOF'
+[Midnight-Commander]
+verbose=1
+auto_save_setup=1
+confirm_delete=1
+confirm_overwrite=1
+confirm_execute=0
+confirm_exit=0
+confirm_directory_switch=0
+confirm_resize=0
+confirm_quit_cyclic_switch=0
+confirm_virtual_copy_move=0
+confirm_history_cleanup=0
+use_internal_view=1
+use_internal_edit=1
+show_all_status=1
+beep=0
+skin=darkfar
+use_links=1
+EOF
+
+chown -R vibe:vibe /home/vibe/.config
 
 # Enable wheel group sudo
 sed -i 's/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/' /etc/sudoers

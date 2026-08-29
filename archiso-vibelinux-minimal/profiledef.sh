@@ -16,4 +16,5 @@ file_permissions=(
   ["/root"]="0:0:750"
   ["/root/customize_airootfs.sh"]="0:0:755"
   ["/usr/local/bin/vinstall"]="0:0:755"
+  ["/home/vibe/.config"]="1000:1000:750"
 )
