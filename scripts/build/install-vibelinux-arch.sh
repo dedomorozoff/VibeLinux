@@ -298,6 +298,11 @@ if [[ "${INSTALL_AI}" -eq 1 ]] && [[ "${MINIMAL}" -eq 0 ]]; then
     run_as_user 'npm install -g @qwen-code/qwen-code' 2>/dev/null || true
   fi
 
+  if ! command -v sourcecraft >/dev/null 2>&1; then
+    log "Установка SourceCraft CLI (Яндекс Code Assistant)..."
+    curl -fsSL https://s3.yandexcloud.net/sourcecraft-cli/install.sh | sh 2>/dev/null || warn "SourceCraft CLI не установился (проверьте интернет)"
+  fi
+
   log "Установка ai-chat (терминальный AI-чат)..."
   cat > /usr/local/bin/ai-chat << 'AICHATEOF'
 #!/usr/bin/env bash
@@ -374,6 +379,7 @@ log "  fastfetch   — информация о системе"
 log "  ai-chat     — чат с локальной LLM (после ai-setup)"
 log "  ai-setup    — скачать модели Ollama"
 log "  opencode    — AI coding agent"
+log "  sourcecraft — SourceCraft Code Assistant (Яндекс)"
 log "  qwen        — Qwen AI coding agent"
 log "  ai-env      — активация Python AI-окружения (~/.venv-ai)"
 log "  Open WebUI  — http://localhost:3000"

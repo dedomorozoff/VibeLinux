@@ -39,6 +39,7 @@
 - **Codex CLI** — `codex` (OpenAI)
 - **Claude Code** — `claude` (Anthropic)
 - **Qwen Code** — `qwen` (Alibaba)
+- **SourceCraft CLI** — `sourcecraft` (Яндекс Code Assistant, бесплатно без VPN)
 - **Kilo Code / MiMo Code / Continue** — `kilo`, `mimo`, `cn`
 - **Crush** — `crush` (Charm, LSP + MCP, multi-model)
 - **Kimi Code CLI** — `kimi` (Moonshot AI)

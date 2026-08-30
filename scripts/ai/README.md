@@ -85,6 +85,11 @@ sudo ./setup-ai-stack.sh
 - Kimi Code CLI (Moonshot AI)
 - Системные зависимости ставятся через `pacman` или `apt-get`
 
+**install-sourcecraft-cli.sh**
+- SourceCraft Code Assistant CLI (Яндекс, бесплатно без VPN)
+- Устанавливается через официальный install.sh
+- Быстрый старт: `sourcecraft`
+
 **install-terminal-ai.sh**
 - Дополнительные терминальные AI-утилиты
 - Работает в Arch и Debian/Ubuntu (`pacman` или `apt-get`)
