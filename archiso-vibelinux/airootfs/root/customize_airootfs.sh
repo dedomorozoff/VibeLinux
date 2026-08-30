@@ -417,6 +417,7 @@ NPM_AGENTS=(
   "@mimo-ai/cli:mimo"
   "@continuedev/cli:cn"
   "@moonshot-ai/kimi-code:kimi"
+  "@kodadev/koda-cli:koda"
 )
 for entry in "${NPM_AGENTS[@]}"; do
   pkg="${entry%%:*}"; bin="${entry##*:}"
@@ -474,7 +475,7 @@ fi
 npm uninstall -g "@charmland/crush" >/dev/null 2>&1 || true
 
 # Обёртки для агентов: кэш и tmp в /tmp (tmpfs), чтобы не забивать overlay
-for agent_bin in claude kilo mimo qwen codex opencode dmsh crush kimi sourcecraft; do
+for agent_bin in claude kilo mimo qwen codex opencode dmsh crush kimi sourcecraft koda; do
   REAL_BIN="$(type -p "$agent_bin" 2>/dev/null || true)"
   if [[ -z "$REAL_BIN" || -f "${REAL_BIN}.real" ]]; then
     continue
@@ -809,6 +810,7 @@ fi
 echo "── Предустановленные AI-агенты (работают сразу) ──"
 echo "  opencode      — Open source AI coding agent ($(status opencode))"
 echo "  SourceCraft   — Яндекс Code Assistant CLI ($(status sourcecraft))"
+echo "  Koda          — Koda CLI (Яндекс/Кода) ($(status koda))"
 echo "  qwen-code     — Qwen AI coding agent ($(status qwen))"
 echo "  Claude Code   — Anthropic terminal AI ($(status claude))"
 echo "  Codex         — OpenAI terminal AI ($(status codex))"
@@ -1320,7 +1322,7 @@ echo "  Welcome to VibeLinux!"
 echo "  Linux for vibe coding and AI development"
 echo "  ========================================="
 echo ""
-echo "  AI-агенты уже предустановлены: opencode, sourcecraft, qwen, claude, codex, crush, kimi"
+echo "  AI-агенты уже предустановлены: opencode, sourcecraft, koda, qwen, claude, codex, crush, kimi"
 echo "  Ollama (локальные LLM) ставится после установки на диск: sudo install-ollama"
 echo ""
 if [[ -d /run/archiso/bootmnt ]]; then
@@ -1439,6 +1441,7 @@ cat > /home/vibe/Desktop/GET-STARTED.html << 'EOF'
 <ul>
   <li><strong>opencode</strong> — <code>opencode</code> (AI coding agent)</li>
   <li><strong>SourceCraft CLI</strong> — <code>sourcecraft</code> (Яндекс Code Assistant)</li>
+  <li><strong>Koda CLI</strong> — <code>koda</code> (Яндекс/Кода, форк gemini-cli)</li>
   <li><strong>qwen-code</strong> — <code>qwen</code> (Alibaba coding agent)</li>
   <li><strong>Claude Code</strong> — <code>claude</code> (Anthropic)</li>
   <li><strong>Codex</strong> — <code>codex</code> (OpenAI)</li>
@@ -1495,6 +1498,7 @@ cat > /usr/local/bin/ai-launcher << 'LAUNCHEOF'
 AGENTS=(
   "opencode:OpenCode"
   "sourcecraft:SourceCraft CLI"
+  "koda:Koda CLI"
   "claude:Claude Code"
   "codex:Codex CLI"
   "qwen:Qwen Code"
@@ -1721,6 +1725,22 @@ if [[ $DMED_INSTALLED -eq 1 ]]; then
   echo "dmed installed"
 else
   echo "WARNING: dmed not found in /root/dmed/"
+fi
+
+# Koda Desktop — AI coding assistant (ООО «Кода»), pre-built Arch package.
+# Кладётся в /root/koda на этапе сборки (build-vibe-arch.sh).
+echo "Installing Koda Desktop..."
+KODA_PKG="$(ls -t /root/koda/koda-app-*.pacman /root/koda/koda-app-*.pkg.tar.zst 2>/dev/null | head -1 || true)"
+if [[ -n "$KODA_PKG" ]]; then
+  pacman -U --noconfirm "$KODA_PKG" >/dev/null 2>&1 || bsdtar -xpf "$KODA_PKG" -C / 2>/dev/null || true
+  # pacman ставит .desktop в /usr/share/applications; если бинарник появился — успех
+  if compgen -G "/usr/bin/koda*" "/usr/share/applications/*koda*" >/dev/null 2>&1; then
+    echo "OK: Koda Desktop installed from $KODA_PKG"
+  else
+    echo "WARNING: Koda Desktop .desktop не найден — проверьте пакет"
+  fi
+else
+  echo "WARNING: Koda Desktop package not found in /root/koda/ (build без сети?)"
 fi
 
 # Copy desktop shortcuts to system applications so they appear in Kickoff menu

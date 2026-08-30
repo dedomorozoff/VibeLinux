@@ -214,6 +214,7 @@ NPM_AGENTS=(
   "@mimo-ai/cli:mimo"
   "@continuedev/cli:cn"
   "@moonshot-ai/kimi-code:kimi"
+  "@kodadev/koda-cli:koda"
 )
 for entry in "${NPM_AGENTS[@]}"; do
   pkg="${entry%%:*}"; bin="${entry##*:}"
@@ -281,7 +282,7 @@ else
 fi
 
 # Wrapper scripts: redirect cache/tmp to /tmp (tmpfs) to avoid filling overlay
-for agent_bin in claude kilo mimo qwen codex opencode dmsh crush kimi dmed sourcecraft; do
+for agent_bin in claude kilo mimo qwen codex opencode dmsh crush kimi dmed sourcecraft koda; do
   REAL_BIN="$(type -p "$agent_bin" 2>/dev/null || true)"
   if [[ -z "$REAL_BIN" || -f "${REAL_BIN}.real" ]]; then
     continue

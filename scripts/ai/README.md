@@ -90,6 +90,11 @@ sudo ./setup-ai-stack.sh
 - Устанавливается через официальный install.sh
 - Быстрый старт: `sourcecraft`
 
+**install-koda.sh**
+- Koda CLI (ООО «Кода», AI coding assistant, форк gemini-cli)
+- Требует Node.js 20+, ставится через npm
+- Быстрый старт: `koda`
+
 **install-terminal-ai.sh**
 - Дополнительные терминальные AI-утилиты
 - Работает в Arch и Debian/Ubuntu (`pacman` или `apt-get`)

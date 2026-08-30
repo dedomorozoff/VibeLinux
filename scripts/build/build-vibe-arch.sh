@@ -153,6 +153,29 @@ else
     warn "dmed unavailable (no network and none in soft/dmed/) — skipping"
 fi
 
+# 3b3) Fetch Koda Desktop (.pacman) into airootfs.
+# Источник — https://download.kodacode.ru (ООО «Кода», AI coding assistant).
+# Устанавливается в customize_airootfs.sh через pacman -U (с fallback на bsdtar).
+KODA_DST="$PROFILE_DIR/airootfs/root/koda"
+KODA_URL="https://download.kodacode.ru/download/koda-app-latest.pacman"
+log "Fetching Koda Desktop into airootfs..."
+mkdir -p "$KODA_DST"
+rm -f "$KODA_DST"/koda-app-*.pacman "$KODA_DST"/koda-app-*.pkg.tar.zst
+
+KODA_OK=0
+if curl -fsSL --retry 3 "$KODA_URL" -o "$KODA_DST/koda-app-latest.pacman"; then
+    KODA_OK=1
+    log "Koda Desktop downloaded: $(basename "$KODA_URL") ($(du -h "$KODA_DST/koda-app-latest.pacman" | cut -f1))"
+else
+    warn "Koda Desktop download failed — skipping"
+fi
+
+if [[ $KODA_OK -eq 1 ]]; then
+    log "Koda Desktop ready in airootfs/root/koda/"
+else
+    warn "Koda Desktop unavailable (no network) — skipping"
+fi
+
 # 3c) Copy AI/helper scripts to /opt/vibecode/scripts (post-install helpers).
 # В live-сессии доустановка AI-инструментов невозможна (оверлей в RAM),
 # поэтому тяжёлый AI-стек (WebUI / ComfyUI / Python-venv / модели)

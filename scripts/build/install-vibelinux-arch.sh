@@ -303,6 +303,11 @@ if [[ "${INSTALL_AI}" -eq 1 ]] && [[ "${MINIMAL}" -eq 0 ]]; then
     curl -fsSL https://s3.yandexcloud.net/sourcecraft-cli/install.sh | sh 2>/dev/null || warn "SourceCraft CLI не установился (проверьте интернет)"
   fi
 
+  if command -v npm >/dev/null 2>&1 && ! command -v koda >/dev/null 2>&1; then
+    log "Установка Koda CLI (AI coding assistant)..."
+    run_as_user 'npm install -g @kodadev/koda-cli' 2>/dev/null || warn "Koda CLI не установился (проверьте npm)"
+  fi
+
   log "Установка ai-chat (терминальный AI-чат)..."
   cat > /usr/local/bin/ai-chat << 'AICHATEOF'
 #!/usr/bin/env bash
@@ -380,6 +385,7 @@ log "  ai-chat     — чат с локальной LLM (после ai-setup)"
 log "  ai-setup    — скачать модели Ollama"
 log "  opencode    — AI coding agent"
 log "  sourcecraft — SourceCraft Code Assistant (Яндекс)"
+log "  koda        — Koda CLI (AI coding assistant)"
 log "  qwen        — Qwen AI coding agent"
 log "  ai-env      — активация Python AI-окружения (~/.venv-ai)"
 log "  Open WebUI  — http://localhost:3000"
