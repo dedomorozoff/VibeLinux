@@ -25,6 +25,21 @@ cat > /etc/motd << 'EOF'
  Установка на диск:  sudo vinstall
 
  Раскладка RU/EN:     Alt+Shift   (по умолчанию EN; Alt+Shift один раз — русский ввод)
+
+ ── AI-агенты (уже предустановлены) ─────────────────────────
+   claude, codex, qwen, kimi, kilo, mimo, cn, koda, src (SourceCraft)
+   dmed, dmsh, crush, opencode            запуск: <имя> --help
+   terminal AI chat:  ai-chat
+
+ Доустановка AI-стека (после установки на диск):
+   sudo /opt/vibecode/scripts/ai/setup-ai-stack.sh
+   Другие сценарии: ls /opt/vibecode/scripts/ai/
+
+ ── Инструменты ────────────────────────────────────────────
+   btop (монитор), mc (файловый менеджер), tmux (мультиплексор)
+   rg, fd, bat, jq | fish (шелл) | vim/nano (редакторы)
+
+   Информация о системе: fastfetch
 EOF
 
 # OS Release
@@ -233,11 +248,15 @@ if [[ -f "$CLAUDE_GLOBAL/install.cjs" ]]; then
   node "$CLAUDE_GLOBAL/install.cjs" || echo "WARNING: claude-code postinstall failed"
 fi
 
-# SourceCraft Code Assistant CLI (Яндекс) — официальный installer
-if ! command -v sourcecraft >/dev/null 2>&1; then
+# SourceCraft Code Assistant CLI (Яндекс) — официальный installer.
+# Ставим глобально (-i /usr/local → /usr/local/bin) и без правки rc-файлов (-n),
+# иначе установщик кладёт бинарник в $HOME/sourcecraft/bin/src (для root → /root),
+# и юзер vibe его не увидит. Команда называется `src`.
+if ! command -v src >/dev/null 2>&1; then
   echo "Installing SourceCraft CLI..."
-  if curl -fsSL --retry 3 https://s3.yandexcloud.net/sourcecraft-cli/install.sh | sh; then
-    echo "OK: sourcecraft installed"
+  if curl -fsSL --retry 3 https://s3.yandexcloud.net/sourcecraft-cli/install.sh \
+      | sh -s -- -i /usr/local -n; then
+    echo "OK: sourcecraft (src) installed to /usr/local/bin"
   else
     echo "WARNING: sourcecraft install failed (offline?)"
   fi
@@ -282,7 +301,7 @@ else
 fi
 
 # Wrapper scripts: redirect cache/tmp to /tmp (tmpfs) to avoid filling overlay
-for agent_bin in claude kilo mimo qwen codex opencode dmsh crush kimi dmed sourcecraft koda; do
+for agent_bin in claude kilo mimo qwen codex opencode dmsh crush kimi dmed src sourcecraft koda; do
   REAL_BIN="$(type -p "$agent_bin" 2>/dev/null || true)"
   if [[ -z "$REAL_BIN" || -f "${REAL_BIN}.real" ]]; then
     continue

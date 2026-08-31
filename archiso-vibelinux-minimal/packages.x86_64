@@ -57,6 +57,17 @@ jq
 sudo
 man-db
 man-pages
+pciutils
+
+# Network diagnostics
+bind-tools
+inetutils
+traceroute
+
+# Dev / code search
+ripgrep
+fd
+bat
 
 # USB / storage
 usbutils

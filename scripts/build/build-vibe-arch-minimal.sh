@@ -58,35 +58,60 @@ if grep -qs "$WORKDIR" /proc/mounts; then
     done
 fi
 
-# 3b) dmed — terminal-native AI editor (Go binary, no AUR package)
-#     Источник: soft/dmed/dmed (вне git). Если бинарника нет — пытаемся собрать
-#     через Go, иначе предупреждаем. Кладём в airootfs/usr/local/bin (попадает
-#     в /usr/local/bin установленной live-системы).
+# 3b) dmed — terminal-native AI editor (Go binary, no AUR package).
+#     Источники (по приоритету): soft/dmed/dmed → официальный GitHub release →
+#     сборка через Go. Релиз-фоллбек нужен, т.к. soft/dmed вне git и при чистой
+#     сборке/CI бинарника на хосте может не быть. Кладём в /usr/local/bin.
 DMED_DST="$PROFILE_DIR/airootfs/usr/local/bin/dmed"
-DMED_DIR="$(cd "$(dirname "$(readlink -f "$0")")/../../soft/dmed" 2>/dev/null && pwd)"
+mkdir -p "$(dirname "$DMED_DST")"
+DMED_COPIED=0
+
+# Безопасно вычисляем источник (без set -e-риска от cd в отсутствующий каталог).
+DMED_DIR="$(cd "$(dirname "$(readlink -f "$0")")/../../soft/dmed" 2>/dev/null && pwd || true)"
 DMED_SRC="$DMED_DIR/dmed"
 if [[ -f "$DMED_SRC" ]]; then
-    if [[ ! -x "$DMED_SRC" ]]; then
-        chmod +x "$DMED_SRC"
-    fi
-    mkdir -p "$(dirname "$DMED_DST")"
+    [[ -x "$DMED_SRC" ]] || chmod +x "$DMED_SRC"
     cp -f "$DMED_SRC" "$DMED_DST"
+    DMED_COPIED=1
     log "dmed copied from soft/dmed/dmed -> $DMED_DST"
 elif command -v dmed >/dev/null 2>&1; then
-    mkdir -p "$(dirname "$DMED_DST")"
     cp -f "$(command -v dmed)" "$DMED_DST"
+    DMED_COPIED=1
     log "dmed copied from PATH -> $DMED_DST"
-elif command -v go >/dev/null 2>&1; then
-    log "dmed binary not found; building via Go..."
-    mkdir -p "$(dirname "$DMED_DST")"
+fi
+
+if [[ $DMED_COPIED -eq 0 ]] && command -v curl >/dev/null 2>&1; then
+    log "dmed binary not on host; trying official GitHub release..."
+    DMED_VER="$(curl -fsSL --retry 3 https://api.github.com/repos/dedomorozoff/dmed/releases/latest 2>/dev/null | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -1 || true)"
+    if [[ -n "$DMED_VER" ]]; then
+        DMED_TMP="$(mktemp -d)"
+        if curl -fsSL --retry 3 \
+            "https://github.com/dedomorozoff/dmed/releases/download/${DMED_VER}/dmed-linux-amd64" \
+            -o "$DMED_TMP/dmed"; then
+            chmod +x "$DMED_TMP/dmed"
+            cp -f "$DMED_TMP/dmed" "$DMED_DST"
+            DMED_COPIED=1
+            log "dmed ${DMED_VER} downloaded from GitHub -> $DMED_DST"
+        else
+            warn "dmed download failed"
+        fi
+        rm -rf "$DMED_TMP"
+    fi
+fi
+
+if [[ $DMED_COPIED -eq 0 ]] && command -v go >/dev/null 2>&1; then
+    log "dmed unavailable; building via Go..."
     if go install github.com/dedomorozoff/dmed@latest 2>/dev/null; then
         cp -f "$(go env GOPATH)/bin/dmed" "$DMED_DST"
+        DMED_COPIED=1
         log "dmed built from source -> $DMED_DST"
     else
-        warn "dmed build failed — skipping"
+        warn "dmed build failed"
     fi
-else
-    warn "dmed binary unavailable (no soft/dmed, no PATH binary, no Go) — skipping"
+fi
+
+if [[ $DMED_COPIED -eq 0 ]]; then
+    warn "dmed binary unavailable (no soft/dmed, no PATH, offline, no Go) — skipping"
 fi
 
 # 3c2) vinstall — текстовый инсталлятор (обёртка над archinstall)
@@ -104,6 +129,20 @@ if [[ -f "$VINSTALL_DIR/vinstall" ]]; then
     log "vinstall installer copied -> airootfs/usr/local"
 else
     warn "vinstall installer not found in scripts/build/installer/ — skipping"
+fi
+
+# 3b2) Copy AI/helper scripts to /opt/vibecode/scripts (post-install helpers).
+#     Тяжёлый AI-стек (WebUI / ComfyUI / Python-venv / модели) ставится ПОСЛЕ
+#     установки на диск: sudo /opt/vibecode/scripts/ai/setup-ai-stack.sh.
+#     Единый источник — scripts/ai/ (общий с полной редакцией, DRY).
+SCRIPTS_DIR="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+if [[ -d "$SCRIPTS_DIR/ai" ]]; then
+    log "Copying scripts/ai to airootfs/opt/vibecode/scripts/..."
+    mkdir -p "$PROFILE_DIR/airootfs/opt/vibecode/scripts"
+    cp -r "$SCRIPTS_DIR/ai" "$PROFILE_DIR/airootfs/opt/vibecode/scripts/"
+    log "AI scripts copied to airootfs/opt/vibecode/scripts/"
+else
+    warn "scripts/ai not found — skipping /opt/vibecode copy"
 fi
 
 # 3c) Pre-populate /boot/vmlinuz-linux

@@ -50,6 +50,10 @@ archiso-vibelinux-minimal/airootfs/root/dmsh/*.pkg.tar.zst
 archiso-vibelinux-minimal/airootfs/root/dmsh/dmsh
 archiso-vibelinux-minimal/airootfs/usr/local/
 
+# Koda Desktop пакет скачивает build-vibe-arch.sh (download.kodacode.ru)
+archiso-vibelinux/airootfs/root/koda/koda-app-*.pacman
+archiso-vibelinux/airootfs/root/koda/koda-app-*.pkg.tar.zst
+
 # AI assistants
 .junie/
 .qwen/

@@ -429,11 +429,15 @@ for entry in "${NPM_AGENTS[@]}"; do
   fi
 done
 
-# SourceCraft Code Assistant CLI (Яндекс) — официальный installer
-if ! command -v sourcecraft >/dev/null 2>&1; then
+# SourceCraft Code Assistant CLI (Яндекс) — официальный installer.
+# Ставим глобально (-i /usr/local → /usr/local/bin) и без правки rc-файлов (-n),
+# иначе бинарник уходит в $HOME/sourcecraft/bin/src (для root → /root) и юзер
+# vibe его не увидит. Команда называется `src`.
+if ! command -v src >/dev/null 2>&1; then
   echo "Installing SourceCraft CLI..."
-  if curl -fsSL --retry 3 https://s3.yandexcloud.net/sourcecraft-cli/install.sh | sh; then
-    echo "OK: sourcecraft установлен"
+  if curl -fsSL --retry 3 https://s3.yandexcloud.net/sourcecraft-cli/install.sh \
+      | sh -s -- -i /usr/local -n; then
+    echo "OK: sourcecraft (src) установлен в /usr/local/bin"
   else
     echo "WARNING: sourcecraft install failed (offline?)"
   fi
@@ -475,7 +479,7 @@ fi
 npm uninstall -g "@charmland/crush" >/dev/null 2>&1 || true
 
 # Обёртки для агентов: кэш и tmp в /tmp (tmpfs), чтобы не забивать overlay
-for agent_bin in claude kilo mimo qwen codex opencode dmsh crush kimi sourcecraft koda; do
+for agent_bin in claude kilo mimo qwen codex opencode dmsh crush kimi src sourcecraft koda; do
   REAL_BIN="$(type -p "$agent_bin" 2>/dev/null || true)"
   if [[ -z "$REAL_BIN" || -f "${REAL_BIN}.real" ]]; then
     continue
@@ -809,7 +813,7 @@ fi
 
 echo "── Предустановленные AI-агенты (работают сразу) ──"
 echo "  opencode      — Open source AI coding agent ($(status opencode))"
-echo "  SourceCraft   — Яндекс Code Assistant CLI ($(status sourcecraft))"
+echo "  SourceCraft   — Яндекс Code Assistant CLI ($(status src))"
 echo "  Koda          — Koda CLI (Яндекс/Кода) ($(status koda))"
 echo "  qwen-code     — Qwen AI coding agent ($(status qwen))"
 echo "  Claude Code   — Anthropic terminal AI ($(status claude))"
@@ -1322,7 +1326,7 @@ echo "  Welcome to VibeLinux!"
 echo "  Linux for vibe coding and AI development"
 echo "  ========================================="
 echo ""
-echo "  AI-агенты уже предустановлены: opencode, sourcecraft, koda, qwen, claude, codex, crush, kimi"
+echo "  AI-агенты уже предустановлены: opencode, src (SourceCraft), koda, qwen, claude, codex, crush, kimi"
 echo "  Ollama (локальные LLM) ставится после установки на диск: sudo install-ollama"
 echo ""
 if [[ -d /run/archiso/bootmnt ]]; then
@@ -1440,7 +1444,7 @@ cat > /home/vibe/Desktop/GET-STARTED.html << 'EOF'
 <h2>AI Tools (предустановлены)</h2>
 <ul>
   <li><strong>opencode</strong> — <code>opencode</code> (AI coding agent)</li>
-  <li><strong>SourceCraft CLI</strong> — <code>sourcecraft</code> (Яндекс Code Assistant)</li>
+  <li><strong>SourceCraft CLI</strong> — <code>src</code> (Яндекс Code Assistant)</li>
   <li><strong>Koda CLI</strong> — <code>koda</code> (Яндекс/Кода, форк gemini-cli)</li>
   <li><strong>qwen-code</strong> — <code>qwen</code> (Alibaba coding agent)</li>
   <li><strong>Claude Code</strong> — <code>claude</code> (Anthropic)</li>
@@ -1497,7 +1501,7 @@ cat > /usr/local/bin/ai-launcher << 'LAUNCHEOF'
 # возвращается в меню; завершение — пункт «Выход» или Ctrl+D.
 AGENTS=(
   "opencode:OpenCode"
-  "sourcecraft:SourceCraft CLI"
+  "src:SourceCraft CLI"
   "koda:Koda CLI"
   "claude:Claude Code"
   "codex:Codex CLI"

@@ -298,9 +298,9 @@ if [[ "${INSTALL_AI}" -eq 1 ]] && [[ "${MINIMAL}" -eq 0 ]]; then
     run_as_user 'npm install -g @qwen-code/qwen-code' 2>/dev/null || true
   fi
 
-  if ! command -v sourcecraft >/dev/null 2>&1; then
-    log "Установка SourceCraft CLI (Яндекс Code Assistant)..."
-    curl -fsSL https://s3.yandexcloud.net/sourcecraft-cli/install.sh | sh 2>/dev/null || warn "SourceCraft CLI не установился (проверьте интернет)"
+  if ! command -v src >/dev/null 2>&1; then
+    log "Установка SourceCraft CLI (Яндекс Code Assistant, команда: src)..."
+    curl -fsSL https://s3.yandexcloud.net/sourcecraft-cli/install.sh | sh -s -- -i /usr/local -n 2>/dev/null || warn "SourceCraft CLI не установился (проверьте интернет)"
   fi
 
   if command -v npm >/dev/null 2>&1 && ! command -v koda >/dev/null 2>&1; then
