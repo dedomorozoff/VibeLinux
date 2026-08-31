@@ -18,6 +18,12 @@
   "timezone": "UTC",
   "audio_config": null,
   "network_config": {},
+  "mirrors": {
+    "Worldwide": [
+      "https://mirror.rackspace.com/archlinux/$repo/os/$arch",
+      "https://geo.mirror.pkgbuild.com/$repo/os/$arch"
+    ]
+  },
   "packages": [],
   "offline": false,
   "no_pkg_lookups": false,
