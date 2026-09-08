@@ -37,12 +37,13 @@ EOF
 fi
 
 # OS Release (for fastfetch / lsb_release)
-cat > /etc/os-release << 'EOF'
+VB_VER=$(date +%Y.%m)
+cat > /etc/os-release << EOF
 NAME="VibeLinux"
 PRETTY_NAME="VibeLinux (Arch Linux based)"
 ID=vibelinux
 ID_LIKE=arch
-VERSION=2026.04
+VERSION=${VB_VER}
 VERSION_CODENAME=genesis
 HOME_URL="https://vibelinux.org"
 DOCUMENTATION_URL="https://github.com/vibelinux/docs"
@@ -89,7 +90,7 @@ cat > /home/vibe/.config/fastfetch/config.jsonc << 'EOF'
       "type": "packages",
       "display": {
         "mode": "custom",
-        "custom": "packages: pacman-p, npm, pip, cargo"
+        "custom": "packages: pacman-p, npm, pip"
       }
     },
     { "type": "shell" },
@@ -183,13 +184,12 @@ EOF
 if [[ ! -s /boot/vmlinuz-linux ]]; then
   KVER=$(ls /usr/lib/modules/ 2>/dev/null | grep -v 'extramodules' | sort -V | tail -1)
   if [[ -n "$KVER" && -f "/usr/lib/modules/$KVER/vmlinuz" ]]; then
-    cp --sparse=never -f "/usr/lib/modules/$KVER/vmlinuz" /boot/vmlinuz-linux
+    cp --reflink=never --sparse=never -f "/usr/lib/modules/$KVER/vmlinuz" /boot/vmlinuz-linux
     chmod 644 /boot/vmlinuz-linux
     echo "OK: copied kernel to /boot/vmlinuz-linux ($(stat -c%s /boot/vmlinuz-linux) bytes)"
   fi
 fi
 
-# NVIDIA: rebuild initramfs with nvidia modules
 # Force-write mkinitcpio.conf (pacman may overwrite it during install)
 cat > /etc/mkinitcpio.conf << 'EOF'
 MODULES=(nvidia nvidia_modeset nvidia_uvm nvidia_drm vboxguest vboxsf vboxvideo)
@@ -226,12 +226,12 @@ When = PostTransaction
 Exec = /usr/local/bin/vibe-finalize-boot
 HOOK
 
-# SDDM autologin (Wayland — KDE 6 дефолт)
+# SDDM autologin (X11 — VirtualBox совместимость; Wayland падает без 3D)
 mkdir -p /etc/sddm.conf.d
 cat > /etc/sddm.conf.d/autologin.conf << EOF
 [Autologin]
 User=vibe
-Session=plasma.desktop
+Session=plasma-x11.desktop
 EOF
 
 # Getty autologin на tty1 для vibe (на случай если SDDM не стартует в live-сессии)
@@ -277,6 +277,13 @@ style = "bold #4CC9F0"
 when = "true"
 shell = ["bash", "--norc"]
 EOF
+
+# Fastfetch at terminal start (only interactive)
+cat >> /home/vibe/.zshrc << 'FFEOF'
+if [[ -o interactive ]]; then
+  fastfetch
+fi
+FFEOF
 
 if command -v starship >/dev/null 2>&1; then
   echo 'eval "$(starship init zsh)"' >> /home/vibe/.zshrc
@@ -759,17 +766,13 @@ X-KDE-autostart-phase=2
 X-KDE-autostart-after=plasma-desktop
 AUTOSTART
 
-# 2b. Автозапуск: закрепляем Konsole в панели (Plasma 6)
-cat > /home/vibe/.config/autostart/pin-konsole.desktop << AUTOSTART2
-[Desktop Entry]
-Type=Application
-Name=Pin Konsole to Panel
-Exec=bash -c 'sleep 10 && kwriteconfig6 --file plasma-org.kde.plasma.desktop-appletsrc --group Containments --group 3 --group Applets --group 6 --group Configuration --group General --key launchers "file:///usr/share/applications/org.kde.konsole.desktop,preferred://browser,file:///usr/share/applications/org.kde.dolphin.desktop,file:///usr/share/applications/org.kde.systemsettings.desktop" && killall plasmashell 2>/dev/null; kstart6 plasmashell 2>/dev/null' 
-OnlyShowIn=KDE
-X-KDE-autostart-phase=2
-X-KDE-autostart-after=plasma-desktop
-AUTOSTART2
-chown -R vibe:vibe /home/vibe/.config/autostart
+# Даём пользователю привязку к панели сразу — через plasma-org.kde.plasma.desktop-appletsrc
+# (без killall plasmashell, который ломает icontasks)
+cat > /home/vibe/.config/plasma-org.kde.plasma.desktop-appletsrc.appendix << 'PLASMAPANEL'
+[Containments][3][Applets][6][Configuration][General]
+launchers=file:///usr/share/applications/org.kde.konsole.desktop,preferred://browser,file:///usr/share/applications/org.kde.dolphin.desktop,file:///usr/share/applications/org.kde.systemsettings.desktop
+PLASMAPANEL
+chown vibe:vibe /home/vibe/.config/plasma-org.kde.plasma.desktop-appletsrc.appendix
 
 # 3. Plasma 6 Look-and-Feel: заменяем стандартные обои Breeze Dark на VibeLinux
 BREEZE_DEFAULTS="/usr/share/plasma/look-and-feel/org.kde.breezedark.desktop/contents/defaults"
@@ -1161,12 +1164,7 @@ Categories=System;
 EOF
 chmod 755 /home/vibe/Desktop/VibeLinux-Welcome.desktop
 
-# Rust setup hint
-cat >> /home/vibe/.zshrc << 'EOF'
-if command -v rustup &>/dev/null && [[ ! -f "$HOME/.cargo/env" ]]; then
-  rustup default stable 2>/dev/null || true
-fi
-EOF
+
 
 # Fix permissions
 chown -R vibe:vibe /home/vibe
@@ -1471,6 +1469,7 @@ PINTADESK
     rm -f /opt/pinta/pinta.AppImage
   fi
 fi
+
 # Calamares built from AUR source — no Python/Boost dependencies
 if [[ -x /usr/bin/calamares ]]; then
   MISSING=$(for f in $(find /usr/lib/calamares -name '*.so' -type f 2>/dev/null); do ldd "$f" 2>/dev/null; done | grep "not found" | awk '{print $1}' | sort -u)
@@ -1500,6 +1499,9 @@ instances:
   - id:       shellprocess-finalize-boot
     module:   shellprocess
     config:   shellprocess-finalize-boot.conf
+  - id:       shellprocess-pre-boot
+    module:   shellprocess
+    config:   shellprocess-pre-boot.conf
 
 branding: vibelinux
 
@@ -1523,6 +1525,7 @@ sequence:
     - localecfg
     - initcpiocfg
     - initcpio
+    - shellprocess@shellprocess-pre-boot
     - users
     - displaymanager
     - networkcfg
@@ -1660,6 +1663,12 @@ BOOT_FSTYPE=$(findmnt -n -o FSTYPE /boot 2>/dev/null || echo "unknown")
 echo "=== VibeLinux Boot Finalizer ==="
 echo "Boot filesystem type: $BOOT_FSTYPE"
 
+# На btrfs — nodatacow на /boot, чтобы ни один файл не был sparse/reflink
+if [ "$BOOT_FSTYPE" = "btrfs" ]; then
+  chattr +C /boot 2>/dev/null || true
+  echo "Enabled nodatacow on /boot"
+fi
+
 # 1. Заменяем все симлинки в /boot на реальные файлы
 echo "Checking symlinks in /boot..."
 for f in /boot/vmlinuz-* /boot/initramfs-*; do
@@ -1668,7 +1677,7 @@ for f in /boot/vmlinuz-* /boot/initramfs-*; do
     target=$(readlink -f "$f")
     if [ -f "$target" ]; then
       rm -f "$f"
-      cp --sparse=never -f "$target" "$f"
+      cp --reflink=never --sparse=never -f "$target" "$f"
       chmod 644 "$f"
       echo "  -> Replaced symlink $f with copy of $target"
     fi
@@ -1707,7 +1716,7 @@ for d in /usr/lib/modules/*/; do
     
     dest="/boot/vmlinuz-$kernel_name"
     rm -f "$dest"
-    cp --sparse=never -f "${d}vmlinuz" "$dest"
+    cp --reflink=never --sparse=never -f "${d}vmlinuz" "$dest"
     chmod 644 "$dest"
     echo "  -> Copied kernel to $dest"
   fi
@@ -1718,19 +1727,19 @@ if [ -n "$PRIMARY_KERNEL" ]; then
   if [ "$PRIMARY_KERNEL" != "linux" ]; then
     echo "Making $PRIMARY_KERNEL the default kernel..."
     rm -f "$KERNEL_DST"
-    cp --sparse=never -f "/boot/vmlinuz-$PRIMARY_KERNEL" "$KERNEL_DST"
+    cp --reflink=never --sparse=never -f "/boot/vmlinuz-$PRIMARY_KERNEL" "$KERNEL_DST"
     chmod 644 "$KERNEL_DST"
     
     if [ -f "/boot/initramfs-$PRIMARY_KERNEL.img" ]; then
       rm -f "$INITRD_DST"
-      cp --sparse=never -f "/boot/initramfs-$PRIMARY_KERNEL.img" "$INITRD_DST"
+      cp --reflink=never --sparse=never -f "/boot/initramfs-$PRIMARY_KERNEL.img" "$INITRD_DST"
       chmod 644 "$INITRD_DST"
       echo "  -> Copied initramfs to $INITRD_DST"
     fi
     
     if [ -f "/boot/initramfs-$PRIMARY_KERNEL-fallback.img" ]; then
       rm -f "$INITRD_FALLBACK_DST"
-      cp --sparse=never -f "/boot/initramfs-$PRIMARY_KERNEL-fallback.img" "$INITRD_FALLBACK_DST"
+      cp --reflink=never --sparse=never -f "/boot/initramfs-$PRIMARY_KERNEL-fallback.img" "$INITRD_FALLBACK_DST"
       chmod 644 "$INITRD_FALLBACK_DST"
       echo "  -> Copied fallback initramfs to $INITRD_FALLBACK_DST"
     fi
@@ -1742,10 +1751,12 @@ fi
 # 4. Fix sparse grubenv
 create_grubenv() {
   rm -f "$GRUBENV" 2>/dev/null || true
+  # nodatacow — чтобы btrfs не делал grubenv sparse или reflink
+  touch "$GRUBENV"
+  chattr +C "$GRUBENV" 2>/dev/null || true
   if command -v grub-editenv &>/dev/null; then
     grub-editenv "$GRUBENV" create
   else
-    # legacy fallback — создаёт не-sparse 1024‑байтовый файл
     dd if=/dev/zero bs=1024 count=1 of="$GRUBENV" conv=notrunc status=none 2>/dev/null
   fi
   chmod 644 "$GRUBENV"
@@ -1839,6 +1850,15 @@ script:
     - "grub-mkconfig -o /boot/grub/grub.cfg"
     - "if [ ! -d /sys/firmware/efi ]; then grub-install --target=i386-pc --boot-directory=/boot \"$(lsblk -ndo pkname \"$(findmnt -n -o SOURCE /)\" 2>/dev/null | head -1)\" 2>/dev/null || grub-install --target=i386-pc --boot-directory=/boot /dev/sda; fi"
     - "if command -v limine-entry-tool &>/dev/null; then limine-entry-tool; fi"
+EOF
+
+# shellprocess-pre-boot — фикс ядра/grubenv перед установкой GRUB
+cat > /etc/calamares/modules/shellprocess-pre-boot.conf << 'EOF'
+---
+dontChroot: false
+timeout: 30
+script:
+    - "/usr/local/bin/vibe-finalize-boot"
 EOF
 
 # machineid — генерация machine-id
@@ -1945,16 +1965,16 @@ elif [[ -f /root/branding/logos/vibecodeos-logo.svg ]]; then
   # Fallback: копируем SVG если PNG не сгенерировался
   cp /root/branding/logos/vibecodeos-logo.svg /usr/share/calamares/branding/vibelinux/logo.svg
 fi
-cat > /usr/share/calamares/branding/vibelinux/branding.desc << 'BRANDCONF'
+cat > /usr/share/calamares/branding/vibelinux/branding.desc << BRANDCONF
 ---
 componentName: vibelinux
 strings:
   productName: VibeLinux
   shortProductName: VibeLinux
-  version: 2026.04
-  shortVersion: "2026.04"
-  versionedName: VibeLinux 2026.04
-  shortVersionedName: VibeLinux 2026.04
+  version: ${VB_VER}
+  shortVersion: "${VB_VER}"
+  versionedName: VibeLinux ${VB_VER}
+  shortVersionedName: VibeLinux ${VB_VER}
   bootloaderEntryName: VibeLinux
   productUrl: https://vibelinux.org
   supportUrl: https://github.com/vibelinux

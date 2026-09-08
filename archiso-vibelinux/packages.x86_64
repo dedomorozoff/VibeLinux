@@ -9,8 +9,8 @@ mkinitcpio-archiso
 pacman-mirrorlist
 
 # Boot
-plymouth
 grub
+plymouth
 syslinux
 memtest86+
 memtest86+-efi
@@ -83,6 +83,9 @@ jq
 fzf
 ripgrep
 tmux
+zellij
+fnm
+podman
 unzip
 zstd
 git

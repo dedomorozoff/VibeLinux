@@ -60,15 +60,14 @@ if command -v update-grub &> /dev/null; then
   echo "GRUB_DISABLE_OS_PROBER=true" >> /etc/default/grub
 
   # Fix: grubenv не должен быть sparse на btrfs (иначе GRUB падает с sparse file not allowed)
+  # Решение: nodatacow (+C) на директории /boot/grub + fallocate для предварительного выделения блоков
   GRUBENV="/boot/grub/grubenv"
   if [[ -f "$GRUBENV" ]]; then
-    grub-editenv "$GRUBENV" set default=0 2>/dev/null || {
-      rm -f "$GRUBENV"
-      grub-editenv "$GRUBENV" create 2>/dev/null || dd if=/dev/zero bs=1024 count=1 of="$GRUBENV" 2>/dev/null
-      grub-editenv "$GRUBENV" set default=0 2>/dev/null || true
-    }
-    chattr +m "$GRUBENV" 2>/dev/null || true
+    rm -f "$GRUBENV"
   fi
+  chattr +C /boot/grub 2>/dev/null || true
+  fallocate -l 1024 "$GRUBENV" 2>/dev/null || dd if=/dev/zero bs=1024 count=1 of="$GRUBENV" 2>/dev/null
+  grub-editenv "$GRUBENV" set default=0 2>/dev/null || true
 
   update-grub || echo "[bootloader] Предупреждение: не удалось обновить GRUB (возможно, в chroot)"
 fi

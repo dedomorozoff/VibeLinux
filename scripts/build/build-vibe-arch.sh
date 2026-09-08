@@ -126,7 +126,7 @@ if [[ -n "$KVER" && -f "$WORKDIR/x86_64/airootfs/usr/lib/modules/$KVER/vmlinuz" 
   # kernel already installed (incremental build) – copy it directly
   # Remove any dangling symlink from a previous run first
   rm -f "$WORKDIR/x86_64/airootfs/boot/vmlinuz-linux"
-  cp --sparse=never "$WORKDIR/x86_64/airootfs/usr/lib/modules/$KVER/vmlinuz" \
+  cp --reflink=never --sparse=never "$WORKDIR/x86_64/airootfs/usr/lib/modules/$KVER/vmlinuz" \
      "$WORKDIR/x86_64/airootfs/boot/vmlinuz-linux"
   log "Pre-populated /boot/vmlinuz-linux from /usr/lib/modules/$KVER/vmlinuz (non-sparse)"
 else
