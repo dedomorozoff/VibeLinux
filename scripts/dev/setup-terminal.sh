@@ -22,9 +22,27 @@ if [[ -z "${USER_HOME}" ]]; then
 fi
 BRANDING_DIR="/root/branding"
 
-echo "[setup-terminal] Установка Kitty..."
-apt-get update -y || true
-DEBIAN_FRONTEND=noninteractive apt-get install -y kitty || true
+echo "[setup-terminal] Установка Kitty и шрифтов для кодинга..."
+if command -v pacman >/dev/null 2>&1; then
+  pacman -Sy --noconfirm --needed \
+    kitty \
+    ttf-jetbrains-mono \
+    ttf-fira-code \
+    ttf-cascadia-code \
+    ttf-hack
+elif command -v apt-get >/dev/null 2>&1; then
+  apt-get update -y || true
+  DEBIAN_FRONTEND=noninteractive apt-get install -y kitty || true
+  DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    fonts-jetbrains-mono \
+    fonts-firacode \
+    fonts-cascadia-code \
+    fonts-hack \
+    || true
+else
+  echo "[setup-terminal] Неподдерживаемый пакетный менеджер (нужен pacman или apt-get)."
+  exit 1
+fi
 
 echo "[setup-terminal] Копирование конфигов..."
 mkdir -p "${USER_HOME}/.config/kitty"
@@ -41,12 +59,5 @@ else
 fi
 chown -R "$USER_NAME:$USER_NAME" "${USER_HOME}/.config/kitty" 2>/dev/null || true
 
-echo "[setup-terminal] Установка шрифтов для кодинга..."
-DEBIAN_FRONTEND=noninteractive apt-get install -y \
-  fonts-jetbrains-mono \
-  fonts-firacode \
-  fonts-cascadia-code \
-  fonts-hack \
-  || true
-
 echo "[setup-terminal] Готово."
+

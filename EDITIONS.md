@@ -1,26 +1,79 @@
 # VibeCode OS — Две редакции
 
-Этот документ описывает различия между двумя редакциями VibeCode OS.
+Этот документ описывает различия между редакциями VibeCode OS.
+
+**Основная линия — Arch Linux (rolling): полная (KDE Plasma 6) и минимальная (CLI) редакции.**
+Ubuntu-редакции (Full / Lite) поддерживаются в статусе legacy.
 
 ---
 
 ## 📦 Редакции
 
-### VibeCode OS Minimal
-**Минимальная консольная система**
+### VibeCode OS Arch (основная)
+**Полноценная рабочая среда на Arch Linux + KDE Plasma 6**
+
+```
+┌─────────────────────────────────────────────┐
+│  VibeCode OS Arch                           │
+│  ────────────────────                       │
+│  • Графический установщик (Calamares)       │
+│  • KDE Plasma 6 + SDDM (autologin)          │
+│  • Полный Dev-стек из коробки               │
+│  • AI-инструменты (Ollama, opencode, qwen)  │
+│  • VS Code, Zed, Neovim, Kate                │
+│  • Python, Node.js, Rust, Go, Java, PHP     │
+│  • Docker, lazygit                          │
+│  • Брендинг VibeLinux                       │
+│                                              │
+│  Размер ISO: ~3-4 ГБ                        │
+│  Размер после установки: ~15-20 ГБ          │
+└─────────────────────────────────────────────┘
+```
+
+**Для кого:**
+- Разработчики всех уровней
+- AI-энтузиасты и исследователи
+- Любители кастомизации и keyboard-driven интерфейсов
+
+**Состав:**
+- KDE Plasma 6 + SDDM (дисплей-менеджер, autologin)
+- Установщик: Calamares (ярлык на рабочем столе)
+- Терминалы: Kitty, Konsole; Zsh + Oh My Zsh + Starship
+- CLI-утилиты (eza, bat, fd, rg, fzf, zoxide, btop)
+- Языки: Python (pyenv), Node.js (nvm), Rust (rustup), Go, Java (SDKMAN!), PHP
+- Редакторы: VS Code, Zed, Neovim (AstroNvim), Kate
+- AI-стек: opencode, qwen-code, claude-code, codex, kilo, mimo, continue, crush, kimi (предустановлены), dmsh, Ollama (post-install), Python AI-библиотеки (post-install)
+- Инструменты: Git, lazygit, Docker + docker-compose
+- Графика: Pinta, Spectacle, Flameshot; API: Bruno; БД: sqlite3 + sqliteman
+- Браузер: Firefox; AUR-пакеты: yay, zed-editor-bin, visual-studio-code-bin, bruno-bin, calamares
+- Брендинг: темы, обои, иконки, Plymouth, KDE-тема
+
+**Сборка:**
+
+```bash
+make arch
+```
+
+**Скрипт:** `scripts/build/build-vibe-arch.sh`
+**Профиль:** `archiso-vibelinux/`
+
+---
+
+### VibeCode OS Minimal (Arch Linux)
+**Минимальная консольная система на Arch Linux**
 
 ```
 ┌─────────────────────────────────────────────┐
 │  VibeCode OS Minimal                        │
 │  ─────────────────────────                  │
-│  • Текстовый установщик                     │
+│  • Текстовый установщик (archinstall)       │
 │  • Только CLI (без GUI)                     │
-│  • Базовые утилиты (htop, mc, git, zsh)     │
-│  • MC (Midnight Commander)                  │
+│  • Базовые утилиты (btop, mc, git, zsh)     │
+│  • Arch Linux (rolling release)             │
 │  • Скрипт доустановки vibecode-upgrade      │
 │                                              │
-│  Размер ISO: ~500 МБ - 1 ГБ                 │
-│  Размер после установки: ~2-3 ГБ            │
+│  Размер ISO: ~400-600 МБ                    │
+│  Размер после установки: ~1-2 ГБ            │
 └─────────────────────────────────────────────┘
 ```
 
@@ -31,17 +84,17 @@
 - Виртуальные машины с ограниченными ресурсами
 
 **Состав:**
-- Ubuntu 24.04 LTS (база)
-- Ядро: linux-image-generic, linux-headers-generic
-- Консольные утилиты: htop, mc, nano, vim-tiny, tmux, zsh
-- Сеть: curl, wget, git, NetworkManager
-- Архиваторы: unzip, zip, p7zip-full
-- Live-поддержка: casper, squashfs-tools
+- Arch Linux (rolling release)
+- Ядро: linux, linux-firmware
+- Консольные утилиты: btop, mc, nano, vim, tmux, zsh
+- Сеть: curl, wget, git, NetworkManager, openssh
+- Архиваторы: unzip, zip, p7zip, zstd
+- Установщик: archinstall (TUI)
 - **Скрипт доустановки:** `/usr/local/bin/vibecode-upgrade`
 
 ---
 
-### VibeCode OS Full
+### VibeCode OS Full (Ubuntu, legacy)
 **Полноценная рабочая среда для разработки**
 
 ```
@@ -179,32 +232,25 @@ sudo vibecode-upgrade
 ### Minimal ISO
 
 ```bash
-# Проверка
-make check-mini
-
 # Сборка
-make mini
+make arch-mini
 
-# Быстрая пересборка
-make mini-keep
+# Быстрая пересборка (с сохранением chroot)
+make arch-mini-keep
 ```
 
-**Скрипт:** `scripts/build-minimal-iso.sh`
+**Скрипт:** `scripts/build/build-vibe-arch-minimal.sh`
+**Профиль:** `archiso-vibelinux-minimal/`
 
 ### Full ISO
 
 ```bash
-# Проверка
-make check
-
 # Сборка
-make full
-
-# Быстрая пересборка
-make full-keep
+make arch
 ```
 
-**Скрипт:** `scripts/build-iso.sh`
+**Скрипт:** `scripts/build/build-vibe-arch.sh`
+**Профиль:** `archiso-vibelinux/`
 
 ---
 

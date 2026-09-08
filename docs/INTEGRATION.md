@@ -1,5 +1,9 @@
 # Интеграция из temp/custom-linux-iso
 
+> **⚠️ Исторический документ:** с момента этой интеграции структура `scripts/` изменилась —
+> Ubuntu-сборки (`build-vibe-lite-ubuntu.sh`, `build-vibe-full-ubuntu.sh`, `build-iso.sh` и др.)
+> переехали в `scripts/legacy/`. Основная линия — `scripts/build/build-vibe-arch.sh` (Arch Linux).
+
 ## Что было перенесено
 
 Из проекта `temp/custom-linux-iso` были перенесены и адаптированы следующие компоненты:
@@ -56,8 +60,8 @@ sudo bash scripts/build/build-vibe-generated.sh
 ### 5. ✅ Обновлённый Makefile
 
 **Новые цели:**
-- `make lite` — быстрая Lite-сборка
-- `make full-vibe` — полная сборка со всеми инструментами
+- `make legacy-lite` — быстрая Lite-сборка (legacy Ubuntu)
+- `make legacy-full-vibe` — полная сборка со всеми инструментами (legacy Ubuntu)
 - `make arch` — сборка на базе Arch Linux
 - `make generate` — генерация скрипта из JSON
 - `make wizard` — запуск пост-установочного мастера
@@ -83,11 +87,11 @@ scripts/
 ### Быстрая сборка
 
 ```bash
-# Lite (быстро, только базовое)
-make lite
+# Lite (быстро, только базовое, legacy)
+make legacy-lite
 
-# Full (все инструменты)
-make full-vibe
+# Full (все инструменты, legacy)
+make legacy-full-vibe
 
 # Arch Linux
 make arch

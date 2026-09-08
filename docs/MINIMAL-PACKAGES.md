@@ -14,7 +14,7 @@
 | **Оболочка** | `zsh`, `tmux` | ~4 МБ | Терминал и мультиплексор |
 | **Редакторы** | `nano`, `vim-tiny` | ~800 КБ | Редактирование файлов |
 | **Сеть** | `network-manager`, `iputils-ping`, `curl`, `wget`, `ca-certificates` | ~3 МБ | Управление сетью, загрузка файлов, SSL |
-| **Мониторинг** | `htop` | ~5 МБ | Монитор процессов |
+| **Мониторинг** | `btop` | ~3 МБ | Монитор процессов |
 | **Безопасность** | `sudo` | ~2 МБ | Выполнение от root |
 | **Архиваторы** | `unzip` | ~200 КБ | Распаковка ZIP |
 | **Виртуализация** | `virtualbox-guest-utils` | ~5 МБ | Интеграция с VirtualBox |
@@ -154,13 +154,13 @@
 
 ## 🛠️ Как изменить состав
 
-1. Отредактируйте `scripts/base/minimal-packages.sh`
+1. Отредактируйте `scripts/legacy/base/minimal-packages.sh`
 2. Закомментируйте/раскомментируйте нужные секции
 3. Пересоберите ISO:
 
 ```bash
 sudo rm -rf build-minimal/
-sudo BUILD_MODE=full ./scripts/build-minimal-iso.sh
+sudo BUILD_MODE=full ./scripts/legacy/build-minimal-iso.sh
 ```
 
 ---

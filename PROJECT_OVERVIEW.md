@@ -10,13 +10,13 @@
 
 ```bash
 # Проверка зависимостей
-BUILD_MODE=dry-run ./scripts/build-iso.sh
+BUILD_MODE=dry-run ./scripts/legacy/build-iso.sh
 
-# Полная сборка (требует root)
-sudo BUILD_MODE=full ./scripts/build-iso.sh
+# Полная сборка (требует root, legacy Ubuntu)
+sudo BUILD_MODE=full ./scripts/legacy/build-iso.sh
 
 # Быстрая пересборка (сохраняет chroot)
-sudo KEEP_CHROOT=1 BUILD_MODE=full ./scripts/build-iso.sh
+sudo KEEP_CHROOT=1 BUILD_MODE=full ./scripts/legacy/build-iso.sh
 ```
 
 Готовый ISO будет в `build/VibeCodeOS-alpha.iso`
@@ -61,11 +61,12 @@ qemu-system-x86_64 -cdrom build/VibeCodeOS-alpha.iso -m 2048 -enable-kvm
 
 ### **Базовые технические решения**
 
-- **Базовая система:** `Ubuntu 24.04 LTS (Noble Numbat)` — свежие пакеты и долгосрочная поддержка.
-- **Основное окружение рабочего стола:** `MATE` (вариант «Vibe‑Zen»).
-- **Планируемая community‑версия:** тайловый WM (например, `i3wm`, вариант «Vibe‑Flow») после стабилизации основной редакции.
+- **Базовая система:** `Arch Linux (rolling)` — основная редакция (профиль `archiso-vibelinux/`).
+- **Основное окружение рабочего стола:** `KDE Plasma 6` (вариант «Vibe‑Zen») + SDDM (autologin).
+- **Legacy‑редакции:** Ubuntu 24.04 LTS (Full / Minimal / Lite) — поддерживаются, но не являются основным направлением.
 - **Метод сборки дистрибутива:**
-  - Автоматизированная сборка через скрипты на базе `debootstrap` + инструментов для создания live‑ISO.
+  - Основная сборка — `archiso` (Arch Linux, `make arch`).
+  - Legacy‑сборки Ubuntu — `debootstrap` + инструменты для создания live‑ISO.
   - Интеграция со **GitHub Actions** для воспроизводимой сборки ISO.
 
 ---
@@ -83,21 +84,24 @@ qemu-system-x86_64 -cdrom build/VibeCodeOS-alpha.iso -m 2048 -enable-kvm
 ### Core OS / alpha ISO — статус
 
 - **Сделано:**
-  - [x] Выбран стек сборки ISO (debootstrap + SquashFS + GRUB + casper)
+  - [x] Основная сборка на Arch Linux (archiso) + KDE Plasma 6; legacy — debootstrap + SquashFS + GRUB + casper
   - [x] Спроектированы и реализованы базовые скрипты Core OS
-  - [x] MATE desktop с автологином
-  - [x] Установщик (ubiquity) с ярлыком на рабочем столе
+  - [x] KDE Plasma desktop с автологином (SDDM)
+  - [x] Установщик (Calamares; legacy — ubiquity) с ярлыком на рабочем столе
   - [x] Базовый брендинг (логотип, обои, темы, шрифты)
   - [x] Расширенный набор утилит (neofetch, firefox, network-manager и др.)
   - [x] Информация о дистрибутиве (lsb-release, os-release)
 
 - **Команды сборки:**
 ```bash
-# Полная сборка
-sudo BUILD_MODE=full ./scripts/build-iso.sh
+# Основная сборка (Arch Linux + KDE Plasma 6)
+make arch
 
-# Быстрая пересборка
-sudo KEEP_CHROOT=1 BUILD_MODE=full ./scripts/build-iso.sh
+# Legacy: полная сборка Ubuntu
+sudo BUILD_MODE=full ./scripts/legacy/build-iso.sh
+
+# Legacy: быстрая пересборка (сохраняет chroot)
+sudo KEEP_CHROOT=1 BUILD_MODE=full ./scripts/legacy/build-iso.sh
 ```
 
 - **Следующие шаги:** Тестирование Live-образа и установщика (см. `docs/ALPHA-STATUS.md`)

@@ -94,7 +94,7 @@ alias javac='javac'
 alias df='df -h'
 alias du='du -h'
 alias free='free -h'
-alias top='htop'
+alias top='btop'
 
 # Auto cd
 setopt AUTO_CD

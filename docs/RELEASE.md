@@ -63,14 +63,14 @@ v2.0.0          - breaking changes
 
 ```bash
 # Локальная сборка
-sudo BUILD_MODE=full ./scripts/build-iso.sh
+sudo BUILD_MODE=full ./scripts/legacy/build-iso.sh
 
 # Тестирование в VM
 qemu-system-x86_64 -cdrom build/VibeCodeOS-alpha.iso -m 2048 -enable-kvm
 
 # Проверка чек-листа
 # - [ ] ISO загружается
-# - [ ] MATE запускается
+# - [ ] KDE Plasma запускается
 # - [ ] Установщик работает
 # - [ ] Базовые утилиты на месте
 # - [ ] Брендинг применён
@@ -168,7 +168,7 @@ git push origin main v0.1.1-alpha
 
 ```bash
 # 1. Собрать ISO локально
-sudo BUILD_MODE=full ./scripts/build-iso.sh
+sudo BUILD_MODE=full ./scripts/legacy/build-iso.sh
 
 # 2. Переименовать
 mv build/VibeCodeOS-alpha.iso build/VibeCodeOS-v0.1.0-alpha.iso
@@ -215,7 +215,7 @@ md5sum VibeCodeOS-v0.1.0-alpha.iso > VibeCodeOS-v0.1.0-alpha.iso.md5
 ### Roadmap релизов
 
 **v0.1.0-alpha** (текущий)
-- Базовая система с MATE
+- Базовая система с KDE Plasma
 - Установщик
 - Базовый брендинг
 

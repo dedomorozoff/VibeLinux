@@ -11,9 +11,9 @@
 Или собрать самостоятельно:
 
 ```bash
-make arch         # Arch Linux (KDE Plasma + полный стек)
-make full         # Ubuntu 24.04 Full (KDE Plasma + dev)
-make lite         # Ubuntu 24.04 Lite (CLI-only)
+make arch              # Arch Linux (KDE Plasma + полный стек)
+make legacy-full       # Ubuntu 24.04 Full (KDE Plasma + dev, legacy)
+make legacy-lite       # Ubuntu 24.04 Lite (CLI-only, legacy)
 ```
 
 ---
@@ -33,10 +33,10 @@ make lite         # Ubuntu 24.04 Lite (CLI-only)
 
 ### ✨ Что включено
 
-#### Arch Linux / Full (Ubuntu)
+#### Arch Linux (основная) / Full (Ubuntu, legacy)
 
 **Базовая система:**
-- Arch Linux (rolling) или Ubuntu 24.04 LTS
+- Arch Linux (rolling) — основная редакция; Ubuntu 24.04 LTS — legacy
 - KDE Plasma Desktop — современное окружение
 - SDDM — дисплей-менеджер с autologin
 - Брендинг VibeLinux — темы, обои, шрифты
@@ -57,18 +57,15 @@ make lite         # Ubuntu 24.04 Lite (CLI-only)
 - **Git** + **lazygit** — TUI для Git
 - **Docker** + **Docker Compose** — контейнеризация
 
-**AI-стек (в ISO):**
-- **Ollama** — локальные LLM (автозапуск)
-- **opencode** — AI-агент для кодинга
-- **qwen-code** — Qwen AI-агент
-- **nlsh** — Natural Language Shell (AI-ассистент в терминале)
+**AI-стек (в ISO, предустановлен — работает и в live, и на установленной системе):**
+- **opencode**, **qwen-code**, **Claude Code**, **Codex**, **Kilo**, **MiMo**, **Continue**, **Crush**, **Kimi** — все CLI-агенты запечены в образ
+- **dmsh** — Natural Language Shell (AI-ассистент в терминале)
 
-**AI-стек (post-install):**
-- `setup-python-ai-stack.sh` — PyTorch, Transformers, LangChain, LlamaIndex
-- `install-open-webui.sh` — веб-интерфейс для моделей
-- `setup-comfyui.sh` — генерация изображений (Stable Diffusion)
-- `install-aider.sh` — AI-парное программирование
-- `install-claude-code.sh`, `install-cursor.sh` — проприетарные AI-агенты
+**Ollama и тяжёлый AI-стек (post-install, после установки на диск):**
+- `sudo install-ollama` — рантайм локальных LLM (в live-ISO не входит: пакет ~500 МБ)
+- `sudo ai-setup` — базовые Ollama-модели
+- `sudo /opt/vibecode/scripts/ai/setup-ai-stack.sh` — PyTorch, Transformers, LangChain, LlamaIndex, Open WebUI, ComfyUI
+- В live-сессии корень — RAM-оверлей, поэтому тяжёлые компоненты ставятся только после установки на диск
 
 **Графические приложения:**
 - **Pinta** — графический редактор
@@ -90,7 +87,7 @@ make lite         # Ubuntu 24.04 Lite (CLI-only)
 - Ubuntu 24.04 LTS, CLI-only
 - Zsh + Starship
 - Git, build-essential
-- htop, tmux, mc, curl, wget
+- btop, tmux, mc, curl, wget
 
 ---
 
@@ -99,15 +96,18 @@ make lite         # Ubuntu 24.04 Lite (CLI-only)
 #### Сборка ISO
 
 ```bash
-# Arch Linux
+# Arch Linux (основная линия)
 make arch
 
-# Ubuntu
-make full
-make lite
+# Ubuntu (legacy)
+make legacy-full
+make legacy-lite
 
-# С сохранением chroot (для ускорения повторной сборки)
-make full-keep
+# С сохранением chroot (для ускорения повторной сборки, legacy)
+make legacy-full-keep
+
+# FreeBSD (экспериментальная редакция VibeBSD, сборка на FreeBSD-хосте)
+make bsd
 ```
 
 #### Установка на хост-систему
@@ -116,19 +116,23 @@ make full-keep
 # Dev-стек
 sudo ./scripts/dev/setup-dev-env.sh
 
-# AI-стек (post-install)
+# AI-стек (post-install; в образе VibeLinux Arch CLI-агенты уже предустановлены,
+# ollama ставится отдельно — install-ollama.sh)
+sudo ./scripts/ai/install-ollama.sh
 sudo ./scripts/ai/setup-ai-stack.sh
 sudo ./scripts/ai/install-ollama-models.sh
 ```
 
 #### Использование AI
 
-- **Ollama:** `ollama run qwen2.5-coder`
+- **Ollama** (после `install-ollama`): `ollama run qwen2.5-coder`
 - **opencode:** `opencode`
 - **qwen-code:** `qwen`
-- **nlsh:** `nlsh repl`
+- **Claude Code:** `claude`
+- **Codex:** `codex`
+- **dmsh:** `dmsh`
 - **ai-chat:** `ai-chat`
-- **Open WebUI:** http://localhost:3000
+- **Open WebUI:** http://localhost:3000 (после `setup-ai-stack.sh`)
 
 ---
 
@@ -140,16 +144,17 @@ sudo ./scripts/ai/install-ollama-models.sh
 - [docs/BUILD-ISO.md](docs/BUILD-ISO.md) — процесс сборки ISO
 - [docs/DEVSTACK.md](docs/DEVSTACK.md) — dev-стек
 - [docs/AI-STACK.md](docs/AI-STACK.md) — AI-стек
+- [docs/VIBEBSD.md](docs/VIBEBSD.md) — экспериментальная FreeBSD-редакция
 
 ---
 
 ### 📦 Скрипты
 
 **Сборка ISO:**
-- `scripts/build/build-vibe-arch.sh` — Arch Linux
-- `scripts/build/build-vibe-full-ubuntu.sh` — Ubuntu Full
-- `scripts/build/build-vibe-lite-ubuntu.sh` — Ubuntu Lite
-- `scripts/build-iso.sh` — основной оркестратор (Ubuntu)
+- `scripts/build/build-vibe-arch.sh` — Arch Linux (основная)
+- `scripts/legacy/build-vibe-full-ubuntu.sh` — Ubuntu Full (legacy)
+- `scripts/legacy/build-vibe-lite-ubuntu.sh` — Ubuntu Lite (legacy)
+- `scripts/legacy/build-iso.sh` — оркестратор Ubuntu Full (legacy)
 
 **Dev-стек:**
 - `scripts/dev/setup-dev-env.sh` — полная установка
@@ -165,7 +170,6 @@ sudo ./scripts/ai/install-ollama-models.sh
 - `scripts/ai/setup-python-ai-stack.sh` — Python AI libs
 - `scripts/ai/setup-comfyui.sh` — ComfyUI
 - `scripts/ai/install-open-webui.sh`
-- `scripts/ai/install-aider.sh`
 
 **Драйверы:**
 - `scripts/drivers/install-nvidia.sh`

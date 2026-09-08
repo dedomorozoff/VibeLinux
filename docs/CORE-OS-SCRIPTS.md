@@ -6,40 +6,41 @@
 
 ### 1. Основные каталоги
 
-- `scripts/base/` — базовые пакеты, cleanup, системные настройки.
-- `scripts/desktop/` — установка и настройка MATE и графического стека.
+- `scripts/base/` — общие утилиты (`generate-build-script.sh`, `vibe-wizard.sh`).
+- `scripts/legacy/` — **Ubuntu-редакции (legacy)**: сборка ISO (`build-iso.sh`, `build-minimal-iso.sh`), пакетные (`legacy/base/`) и DE-скрипты (`legacy/desktop/`).
+- `scripts/desktop/` — пуст (DE-скрипты переехали в `legacy/desktop/`).
 - `scripts/drivers/` — установка проприетарных драйверов (в первую очередь NVIDIA).
-- `scripts/build/` — сборка ISO (debootstrap + SquashFS + GRUB, интеграция с CI).
+- `scripts/build/` — сборка ISO (основная — Arch Linux/archiso; интеграция с CI).
 
 Dev- и AI-скрипты вынесены отдельно и описаны в `docs/DEVSTACK.md` и `docs/AI-STACK.md`.
 
 ---
 
-### 2. Слой Base (`scripts/base/`)
+### 2. Слой Base (`scripts/legacy/base/` — legacy Ubuntu)
 
-- `scripts/base/base-packages.sh`
+- `scripts/legacy/base/base-packages.sh`
   - Устанавливает базовые CLI-утилиты:
-    - мониторинг и системные утилиты (`htop`, `btop`, `neofetch`),
+    - мониторинг и системные утилиты (`btop`, `neofetch`),
     - инструменты для загрузки (`curl`, `wget`, `unzip`),
     - инструменты разработки (`git`, `build-essential`),
     - служебные пакеты (`ca-certificates`, `software-properties-common`).
   - Ожидается запуск с правами `root` на Ubuntu 24.04 или совместимой.
 
-- `scripts/base/cleanup.sh`
+- `scripts/legacy/base/cleanup.sh`
   - Удаляет типичные предустановленные пакеты (офис, почта, игры и т.п.).
   - Выполняет `autoremove`.
   - Список пакетов будет уточняться и может отличаться между live-окружением и установленной системой.
 
 ---
 
-### 3. Слой Desktop (`scripts/desktop/`)
+### 3. Слой Desktop (`scripts/legacy/desktop/`)
 
-- `scripts/desktop/install-kde.sh`
-  - Устанавливает MATE и дисплей-менеджер LightDM.
+- `scripts/legacy/desktop/install-kde.sh`
+  - Устанавливает KDE Plasma и дисплей-менеджер SDDM.
   - Режим выбирается переменной `PROFILE`:
     - `PROFILE=minimal` — на базе `kde-plasma-desktop` (минимальная KDE).
     - `PROFILE=standard` (по умолчанию) — на базе `kde-full` (полный стек KDE Plasma).
-  - Настраивает LightDM как дисплей-менеджер по умолчанию, когда это уместно.
+  - Настраивает SDDM как дисплей-менеджер по умолчанию, когда это уместно.
   - Может работать как внутри chroot при сборке ISO, так и на установленной системе.
 
 ---
@@ -59,9 +60,11 @@ Dev- и AI-скрипты вынесены отдельно и описаны в
 
 ---
 
-### 5. Слой Build (`scripts/build/`)
+### 5. Слой Build (legacy Ubuntu — `scripts/legacy/`)
 
-- `scripts/build-iso.sh`
+> **⚠️ Legacy:** слой Build на `debootstrap` (Ubuntu 24.04) — устаревший. Основная сборка дистрибутива — **Arch Linux + KDE Plasma 6** через `make arch` → `scripts/build/build-vibe-arch.sh` (профиль `archiso-vibelinux/`).
+
+- `scripts/legacy/build-iso.sh`
   - Оркестратор сборки ISO на основе:
     - `debootstrap` (rootfs Ubuntu 24.04),
     - `squashfs-tools` (`mksquashfs`),

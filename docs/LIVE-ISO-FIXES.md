@@ -145,13 +145,13 @@ VBoxManage storageattach "VibeCode Test" --storagectl "IDE Controller" \
 
 ```bash
 # Dry-run проверка
-BUILD_MODE=dry-run ./scripts/build-minimal-iso.sh
+BUILD_MODE=dry-run ./scripts/legacy/build-minimal-iso.sh
 
 # Полная сборка
-sudo BUILD_MODE=full ./scripts/build-minimal-iso.sh
+sudo BUILD_MODE=full ./scripts/legacy/build-minimal-iso.sh
 
 # Проверка ISO
-./scripts/verify-build.sh /path/to/iso
+./scripts/legacy/verify-build.sh /path/to/iso
 ```
 
 ## Ссылки

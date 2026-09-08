@@ -41,18 +41,21 @@ jobs:
 
       - name: Check script syntax
         run: |
-          bash -n scripts/build-iso.sh
+          bash -n scripts/legacy/build-iso.sh
+          bash -n scripts/legacy/base/*.sh
+          bash -n scripts/legacy/desktop/*.sh
+          bash -n scripts/legacy/build/*.sh
+          bash -n scripts/build/*.sh
           bash -n scripts/base/*.sh
-          bash -n scripts/desktop/*.sh
           bash -n scripts/drivers/*.sh
           bash -n scripts/dev/*.sh
           bash -n scripts/ai/*.sh
 
       - name: Run shellcheck
         run: |
-          shellcheck scripts/build-iso.sh || true
-          shellcheck scripts/base/*.sh || true
-          shellcheck scripts/desktop/*.sh || true
+          shellcheck scripts/legacy/build-iso.sh || true
+          shellcheck scripts/legacy/base/*.sh || true
+          shellcheck scripts/legacy/desktop/*.sh || true
           shellcheck scripts/drivers/*.sh || true
 
   # Dry-run проверка
@@ -78,8 +81,8 @@ jobs:
         env:
           BUILD_MODE: dry-run
         run: |
-          chmod +x scripts/build-iso.sh
-          ./scripts/build-iso.sh
+          chmod +x scripts/legacy/build-iso.sh
+          ./scripts/legacy/build-iso.sh
 
   # Полная сборка ISO
   build-iso:
@@ -124,8 +127,8 @@ jobs:
         env:
           BUILD_MODE: ${{ github.event_name == 'push' && 'full' || github.event.inputs.build_mode || 'full' }}
         run: |
-          chmod +x scripts/build-iso.sh
-          sudo BUILD_MODE=${{ github.event_name == 'push' && 'full' || github.event.inputs.build_mode || 'full' }} ./scripts/build-iso.sh
+          chmod +x scripts/legacy/build-iso.sh
+          sudo BUILD_MODE=${{ github.event_name == 'push' && 'full' || github.event.inputs.build_mode || 'full' }} ./scripts/legacy/build-iso.sh
 
       - name: Check ISO file
         run: |

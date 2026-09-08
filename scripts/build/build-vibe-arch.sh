@@ -68,24 +68,138 @@ if [[ -d "$BRANDING_DIR" ]]; then
     fi
 fi
 
-# 3b) Copy nlsh to airootfs
-SOFT_DIR="$(cd "$(dirname "$(readlink -f "$0")")/../../soft" 2>/dev/null && pwd)"
-if [[ -d "$SOFT_DIR/nlsh" ]]; then
-    log "Copying nlsh to airootfs..."
-    mkdir -p "$PROFILE_DIR/airootfs/root/nlsh"
-    if [[ -f "$SOFT_DIR/nlsh/nlsh" ]]; then
-        cp "$SOFT_DIR/nlsh/nlsh" "$PROFILE_DIR/airootfs/root/nlsh/"
-        chmod +x "$PROFILE_DIR/airootfs/root/nlsh/nlsh"
+# 3b) Fetch dmsh into airootfs.
+# Primary source — pre-built Arch package from GitHub releases
+# (https://github.com/dedomorozoff/dmsh), always the latest stable version.
+# Local soft/dmsh/*.pkg.tar.zst kept as an offline fallback; icon/desktop
+# assets are still taken from soft/dmsh (they are not shipped in releases).
+DMSH_RELEASES_API="https://api.github.com/repos/dedomorozoff/dmsh/releases/latest"
+DMSH_DST="$PROFILE_DIR/airootfs/root/dmsh"
+SOFT_DIR="$(cd "$(dirname "$(readlink -f "$0")")/../../soft" 2>/dev/null && pwd || true)"
+log "Fetching dmsh into airootfs..."
+mkdir -p "$DMSH_DST"
+# Вычищаем старые пакеты/бинарники, чтобы в профиле не копилось мусор
+# и ls не подсовывал устаревшие версии
+rm -f "$DMSH_DST"/*.pkg.tar.zst "$DMSH_DST/dmsh"
+
+DMSH_OK=0
+DMSH_JSON="$(curl -fsSL --retry 3 "$DMSH_RELEASES_API" 2>/dev/null || true)"
+DMSH_URL="$(grep -o 'https://[^"]*x86_64\.pkg\.tar\.zst' <<<"$DMSH_JSON" | head -1 || true)"
+if [[ -n "$DMSH_URL" ]]; then
+    if curl -fsSL --retry 3 "$DMSH_URL" -o "$DMSH_DST/$(basename "$DMSH_URL")"; then
+        DMSH_OK=1
+        log "dmsh downloaded from GitHub releases: $(basename "$DMSH_URL")"
+    else
+        warn "dmsh download failed: $DMSH_URL"
     fi
-    if [[ -f "$SOFT_DIR/nlsh/nlsh.svg" ]]; then
-        cp "$SOFT_DIR/nlsh/nlsh.svg" "$PROFILE_DIR/airootfs/root/nlsh/"
-    fi
-    if [[ -f "$SOFT_DIR/nlsh/nlsh.desktop" ]]; then
-        cp "$SOFT_DIR/nlsh/nlsh.desktop" "$PROFILE_DIR/airootfs/root/nlsh/"
-    fi
-    log "nlsh copied to airootfs/root/nlsh/"
 else
-    warn "nlsh not found in soft/nlsh/ — skipping"
+    warn "dmsh release info unavailable (network?) — trying local fallback"
+fi
+
+if [[ $DMSH_OK -eq 0 && -d "$SOFT_DIR/dmsh" ]] && compgen -G "$SOFT_DIR/dmsh/*.pkg.tar.zst" >/dev/null; then
+    cp "$SOFT_DIR"/dmsh/*.pkg.tar.zst "$DMSH_DST/"
+    DMSH_OK=1
+    log "Using local pre-built dmsh package from soft/dmsh/"
+fi
+
+# Иконка и .desktop в релизы не входят — берём из soft/dmsh, если есть
+if [[ -d "$SOFT_DIR/dmsh" ]]; then
+    [[ -f "$SOFT_DIR/dmsh/dmsh.svg" ]] && cp "$SOFT_DIR/dmsh/dmsh.svg" "$DMSH_DST/"
+    [[ -f "$SOFT_DIR/dmsh/dmsh.desktop" ]] && cp "$SOFT_DIR/dmsh/dmsh.desktop" "$DMSH_DST/"
+fi
+
+if [[ $DMSH_OK -eq 1 ]]; then
+    log "dmsh ready in airootfs/root/dmsh/"
+else
+    warn "dmsh package unavailable (no network and none in soft/dmsh/) — skipping"
+fi
+
+# 3b2) Fetch dmed into airootfs.
+# Primary source — pre-built Arch package from GitHub releases
+# (https://github.com/dedomorozoff/dmed), always the latest stable version.
+# Local soft/dmed/dmed kept as an offline fallback (raw binary -> /usr/local/bin).
+DMED_RELEASES_API="https://api.github.com/repos/dedomorozoff/dmed/releases/latest"
+DMED_DST="$PROFILE_DIR/airootfs/root/dmed"
+SOFT_DIR="$(cd "$(dirname "$(readlink -f "$0")")/../../soft" 2>/dev/null && pwd || true)"
+log "Fetching dmed into airootfs..."
+mkdir -p "$DMED_DST"
+# Вычищаем старые пакеты/бинарники, чтобы в профиле не копилось мусор
+rm -f "$DMED_DST"/*.pkg.tar.zst "$DMED_DST/dmed"
+
+DMED_OK=0
+DMED_JSON="$(curl -fsSL --retry 3 "$DMED_RELEASES_API" 2>/dev/null || true)"
+DMED_URL="$(grep -o 'https://[^"]*x86_64\.pkg\.tar\.zst' <<<"$DMED_JSON" | head -1 || true)"
+if [[ -n "$DMED_URL" ]]; then
+    if curl -fsSL --retry 3 "$DMED_URL" -o "$DMED_DST/$(basename "$DMED_URL")"; then
+        DMED_OK=1
+        log "dmed downloaded from GitHub releases: $(basename "$DMED_URL")"
+    else
+        warn "dmed download failed: $DMED_URL"
+    fi
+else
+    warn "dmed release info unavailable (network?) — trying local fallback"
+fi
+
+if [[ $DMED_OK -eq 0 && -f "$SOFT_DIR/dmed/dmed" ]]; then
+    cp -f "$SOFT_DIR/dmed/dmed" "$DMED_DST/dmed"
+    chmod +x "$DMED_DST/dmed"
+    DMED_OK=1
+    log "Using local pre-built dmed binary from soft/dmed/"
+fi
+
+if [[ $DMED_OK -eq 1 ]]; then
+    log "dmed ready in airootfs/root/dmed/"
+else
+    warn "dmed unavailable (no network and none in soft/dmed/) — skipping"
+fi
+
+# 3b3) Fetch Koda Desktop (.pacman) into airootfs.
+# Источник — https://download.kodacode.ru (ООО «Кода», AI coding assistant).
+# Устанавливается в customize_airootfs.sh через pacman -U (с fallback на bsdtar).
+KODA_DST="$PROFILE_DIR/airootfs/root/koda"
+KODA_URL="https://download.kodacode.ru/download/koda-app-latest.pacman"
+log "Fetching Koda Desktop into airootfs..."
+mkdir -p "$KODA_DST"
+rm -f "$KODA_DST"/koda-app-*.pacman "$KODA_DST"/koda-app-*.pkg.tar.zst
+
+KODA_OK=0
+if curl -fsSL --retry 3 "$KODA_URL" -o "$KODA_DST/koda-app-latest.pacman"; then
+    KODA_OK=1
+    log "Koda Desktop downloaded: $(basename "$KODA_URL") ($(du -h "$KODA_DST/koda-app-latest.pacman" | cut -f1))"
+else
+    warn "Koda Desktop download failed — skipping"
+fi
+
+if [[ $KODA_OK -eq 1 ]]; then
+    log "Koda Desktop ready in airootfs/root/koda/"
+else
+    warn "Koda Desktop unavailable (no network) — skipping"
+fi
+
+# 3c) Copy AI/helper scripts to /opt/vibecode/scripts (post-install helpers).
+# В live-сессии доустановка AI-инструментов невозможна (оверлей в RAM),
+# поэтому тяжёлый AI-стек (WebUI / ComfyUI / Python-venv / модели)
+# ставится ПОСЛЕ установки на диск: sudo /opt/vibecode/scripts/ai/setup-ai-stack.sh
+SCRIPTS_DIR="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+if [[ -d "$SCRIPTS_DIR/ai" ]]; then
+    log "Copying scripts/ai to airootfs/opt/vibecode/scripts/..."
+    mkdir -p "$PROFILE_DIR/airootfs/opt/vibecode/scripts"
+    cp -r "$SCRIPTS_DIR/ai" "$PROFILE_DIR/airootfs/opt/vibecode/scripts/"
+    log "AI scripts copied to airootfs/opt/vibecode/scripts/"
+else
+    warn "scripts/ai not found — skipping /opt/vibecode copy"
+fi
+
+# 3d) Seed AUR package cache (calamares/yay-bin): host → profile airootfs.
+#     customize_airootfs.sh ставит из кэша без компиляции; свежесобранное
+#     складывает обратно в /root/aur-cache, откуда мы забираем после сборки.
+AUR_CACHE_DIR="${AUR_CACHE_DIR:-/srv/vibe-aur-cache}"
+mkdir -p "$AUR_CACHE_DIR" "$PROFILE_DIR/airootfs/root/aur-cache"
+if compgen -G "$AUR_CACHE_DIR/*.pkg.tar.zst" >/dev/null; then
+    cp -u "$AUR_CACHE_DIR"/*.pkg.tar.zst "$PROFILE_DIR/airootfs/root/aur-cache/"
+    log "AUR cache seeded: $(ls "$AUR_CACHE_DIR"/*.pkg.tar.zst 2>/dev/null | wc -l) pkg(s)"
+else
+    log "AUR cache empty — calamares/yay-bin будут собраны и закэшированы"
 fi
 
 log "Using profile: $PROFILE_DIR"
@@ -112,6 +226,16 @@ elif [[ -d "$WORKDIR" ]]; then
           "$WORKDIR"/iso._build_iso_image
 fi
 
+# 4a) Unmount leftover chroot mounts from previously interrupted builds.
+#     Если proc/sys/dev остались смонтированы в airootfs, mksquashfs начнёт
+#     «сжимать» псевдо-файлы ядра (например /proc/kcore) и зависнет.
+if grep -qs "$WORKDIR" /proc/mounts; then
+    log "Unmounting leftover chroot mounts in $WORKDIR..."
+    awk -v w="$WORKDIR" 'index($2, w) == 1 {print $2}' /proc/mounts | sort -r | while read -r m; do
+        umount -l "$m" 2>/dev/null || true
+    done
+fi
+
 # 4b) Pre-populate /boot/vmlinuz-linux before mkarchiso runs pacstrap.
 #     The mkinitcpio hook (90-mkinitcpio-install) expects this file to exist
 #     when it calls mkinitcpio -P, but the linux package does not ship it
@@ -121,7 +245,7 @@ fi
 #     Copying the kernel here (rather than using a symlink) ensures the host-side
 #     install/cp in mkarchiso's _make_boot_on_iso9660 can stat the file.
 mkdir -p "$WORKDIR/x86_64/airootfs/boot"
-KVER=$(ls "$WORKDIR"/x86_64/airootfs/usr/lib/modules/ 2>/dev/null | grep -v extramodules | sort -V | tail -1) || KVER=""
+KVER=$(ls "$WORKDIR"/x86_64/airootfs/usr/lib/modules/ 2>/dev/null | grep -v extramodules | sort -V | tail -1 || true)
 if [[ -n "$KVER" && -f "$WORKDIR/x86_64/airootfs/usr/lib/modules/$KVER/vmlinuz" ]]; then
   # kernel already installed (incremental build) – copy it directly
   # Remove any dangling symlink from a previous run first
@@ -151,6 +275,11 @@ fi
 # 6) Verify result
 ISO_FILE=$(ls -t "$OUTDIR"/vibelinux-*.iso 2>/dev/null | head -1) || ISO_FILE=""
 if [[ -f "$ISO_FILE" ]]; then
+    # Harvest freshly built AUR packages back to host cache
+    if compgen -G "$WORKDIR/x86_64/airootfs/root/aur-cache/*.pkg.tar.zst" >/dev/null; then
+        cp -u "$WORKDIR/x86_64/airootfs/root/aur-cache/"*.pkg.tar.zst "$AUR_CACHE_DIR/"
+        log "AUR cache updated: $(ls "$AUR_CACHE_DIR"/*.pkg.tar.zst | wc -l) pkg(s)"
+    fi
     log "Done! ISO at: $ISO_FILE"
     log "Size: $(du -h "$ISO_FILE" | cut -f1)"
     xorriso -indev "$ISO_FILE" -report_el_torito plain 2>&1 | head -20

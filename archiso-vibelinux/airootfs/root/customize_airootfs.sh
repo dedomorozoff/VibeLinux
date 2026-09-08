@@ -40,12 +40,12 @@ fi
 VB_VER=$(date +%Y.%m)
 cat > /etc/os-release << EOF
 NAME="VibeLinux"
-PRETTY_NAME="VibeLinux (Arch Linux based)"
+PRETTY_NAME="VibeLinux"
 ID=vibelinux
 ID_LIKE=arch
 VERSION=${VB_VER}
 VERSION_CODENAME=genesis
-HOME_URL="https://vibelinux.org"
+HOME_URL="https://dmintegroff.ru"
 DOCUMENTATION_URL="https://github.com/vibelinux/docs"
 SUPPORT_URL="https://github.com/vibelinux"
 BUG_REPORT_URL="https://github.com/vibelinux/issues"
@@ -131,7 +131,10 @@ ln -sf /usr/share/zoneinfo/UTC /etc/localtime
 sed -i 's/#en_US.UTF-8/en_US.UTF-8/' /etc/locale.gen
 sed -i 's/#ru_RU.UTF-8/ru_RU.UTF-8/' /etc/locale.gen
 locale-gen
-echo "LANG=ru_RU.UTF-8" > /etc/locale.conf
+cat > /etc/locale.conf << 'EOF'
+LANG=ru_RU.UTF-8
+LANGUAGE=ru_RU:ru
+EOF
 
 # Keyboard layout
 cat > /etc/X11/xorg.conf.d/00-keyboard.conf << EOF
@@ -163,9 +166,10 @@ systemctl enable NetworkManager || true
 systemctl enable systemd-timesyncd || true
 systemctl enable docker || true
 systemctl enable sddm || true
-systemctl enable ollama || true
 systemctl enable vboxservice || true
 systemctl enable nvidia-persistenced || true
+# Ollama НЕ в образе: ставится post-install (ai-install → Ollama),
+# там же включается её systemd-сервис (см. /usr/local/bin/install-ollama).
 
 # NVIDIA: modprobe config for DRM modeset (fallback if kernel cmdline missing)
 mkdir -p /etc/modprobe.d
@@ -191,17 +195,30 @@ if [[ ! -s /boot/vmlinuz-linux ]]; then
 fi
 
 # Force-write mkinitcpio.conf (pacman may overwrite it during install)
+# NOTE: no `autodetect` — it prunes modules to the build host's hardware
+# (e.g. sr_mod for CD-ROM drops out on hosts without an optical drive),
+# which breaks booting the ISO as an optical disc in VMs (VirtualBox).
+# Keep this heredoc in sync with airootfs/etc/mkinitcpio.conf.
 cat > /etc/mkinitcpio.conf << 'EOF'
 MODULES=(nvidia nvidia_modeset nvidia_uvm nvidia_drm vboxguest vboxsf vboxvideo)
 BINARIES=()
 FILES=()
-HOOKS=(base udev autodetect modconf kms block filesystems keyboard fsck archiso)
+HOOKS=(base udev modconf kms block filesystems keyboard fsck archiso)
 COMPRESSION="zstd"
-COMPRESSION_OPTIONS=(-19)
+COMPRESSION_OPTIONS=(-15)
 EOF
 
 if command -v mkinitcpio &>/dev/null; then
-  mkinitcpio -P
+  # nvidia-open бывает собран под предыдущую версию ядра (репозитории
+  # рассинхронизированы) — тогда «module not found: 'nvidia'» и падение.
+  # Не роняем сборку: пересобираем initramfs без nvidia-модулей, они
+  # подхватятся udev уже из rootfs после загрузки.
+  if ! mkinitcpio -P; then
+    echo "WARNING: mkinitcpio failed (nvidia/kernel version mismatch?)"
+    echo "Retrying without nvidia modules in initramfs..."
+    sed -i 's/^MODULES=.*/MODULES=(vboxguest vboxsf vboxvideo)/' /etc/mkinitcpio.conf
+    mkinitcpio -P || echo "WARNING: mkinitcpio failed again — initramfs may be incomplete"
+  fi
 fi
 
 # Pacman hook: finalize boot files (copy kernel as regular file, fix symlinks)
@@ -391,59 +408,131 @@ x-scheme-handler/terminal=kitty.desktop
 EOF
 fi
 
-# AI Stack scripts
-# Fix npm permissions for vibe user
+# === AI AGENTS: ПРЕДУСТАНОВКА В ОБРАЗ ===
+# Ключевая идея: все CLI-агенты запекаются в squashfs на этапе сборки.
+# В live-сессии не нужно ничего доустанавливать (нет root-запроса и нет
+# проблемы с местом — оверлей в RAM). Установленные агенты доступны и
+# в live-сессии, и на установленной системе.
 mkdir -p /home/vibe/.npm
 chown -R vibe:vibe /home/vibe/.npm
 
-# qwen-code (AI coding agent via npm) — ставим как root, потом фиксим права
-npm install -g @qwen-code/qwen-code 2>&1 | tail -5 || echo "WARNING: qwen-code install failed"
+NPM_AGENTS=(
+  "@qwen-code/qwen-code:qwen"
+  "@anthropic-ai/claude-code:claude"
+  "@openai/codex:codex"
+  "@kilocode/cli:kilo"
+  "@mimo-ai/cli:mimo"
+  "@continuedev/cli:cn"
+  "@moonshot-ai/kimi-code:kimi"
+  "@kodadev/koda-cli:koda"
+)
+for entry in "${NPM_AGENTS[@]}"; do
+  pkg="${entry%%:*}"; bin="${entry##*:}"
+  if command -v "$bin" >/dev/null 2>&1; then
+    echo "OK: $bin уже установлен"
+  else
+    echo "Installing $pkg (→ $bin)..."
+    npm install -g "$pkg" 2>&1 | tail -3 || echo "WARNING: $pkg install failed"
+  fi
+done
+
+# SourceCraft Code Assistant CLI (Яндекс) — официальный installer.
+# Ставим глобально (-i /usr/local → /usr/local/bin) и без правки rc-файлов (-n),
+# иначе бинарник уходит в $HOME/sourcecraft/bin/src (для root → /root) и юзер
+# vibe его не увидит. Команда называется `src`.
+if ! command -v src >/dev/null 2>&1; then
+  echo "Installing SourceCraft CLI..."
+  if curl -fsSL --retry 3 https://s3.yandexcloud.net/sourcecraft-cli/install.sh \
+      | sh -s -- -i /usr/local -n; then
+    echo "OK: sourcecraft (src) установлен в /usr/local/bin"
+  else
+    echo "WARNING: sourcecraft install failed (offline?)"
+  fi
+fi
+
+# Claude Code: запускаем postinstall вручную (нативный бинарник)
+CLAUDE_GLOBAL="$(npm root -g)/@anthropic-ai/claude-code"
+if [[ -f "$CLAUDE_GLOBAL/install.cjs" ]]; then
+  echo "Running claude-code postinstall..."
+  node "$CLAUDE_GLOBAL/install.cjs" || echo "WARNING: claude-code postinstall failed"
+fi
 chown -R vibe:vibe /home/vibe/.npm
 
-# Python AI venv устанавливается post-install через:
-#   sudo /opt/vibecode/scripts/ai/setup-python-ai-stack.sh
-
-cat > /usr/local/bin/ai-chat << 'AICHATEOF'
-#!/usr/bin/env bash
-MODEL="${AI_MODEL:-qwen2.5-coder}"
-if ! command -v ollama &>/dev/null; then
-  echo "Ollama not installed. Run: sudo pacman -S ollama"
-  exit 1
+# Crush — нативный бинарник из GitHub-релизов. npm-пакет @charmland/crush
+# при первом запуске качает бинарник в /usr/lib/node_modules и у обычного
+# пользователя падает с EACCES, поэтому ставим напрямую и сносим npm-версию
+# (в переиспользуемом work-каталоге мог остаться старый враппер).
+CRUSH_AA=""
+case "$(uname -m)" in
+  x86_64) CRUSH_AA="x86_64" ;;
+  aarch64|arm64) CRUSH_AA="arm64" ;;
+esac
+if [[ -n "$CRUSH_AA" ]]; then
+  CRUSH_VER="$(curl -fsSL --retry 3 https://api.github.com/repos/charmbracelet/crush/releases/latest 2>/dev/null | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -1 || true)"
+  if [[ -n "$CRUSH_VER" ]]; then
+    CRUSH_TMP="$(mktemp -d)"
+    if curl -fsSL --retry 3 "https://github.com/charmbracelet/crush/releases/download/${CRUSH_VER}/crush_${CRUSH_VER#v}_Linux_${CRUSH_AA}.tar.gz" -o "$CRUSH_TMP/crush.tar.gz"; then
+      tar -xzf "$CRUSH_TMP/crush.tar.gz" -C "$CRUSH_TMP"
+      install -Dm 755 "$CRUSH_TMP/crush_${CRUSH_VER#v}_Linux_${CRUSH_AA}/crush" /usr/local/bin/crush \
+        && echo "OK: crush ${CRUSH_VER} установлен из GitHub-релиза"
+    else
+      echo "WARNING: crush download failed"
+    fi
+    rm -rf "$CRUSH_TMP"
+  else
+    echo "WARNING: не удалось получить версию crush"
+  fi
 fi
-echo "VibeLinux AI Chat (model: $MODEL)"
-echo "Commands: /help, /model <name>, /quit"
-echo
-while true; do
-  read -rp "> " line
-  case "$line" in
-    /quit|/exit|/q) break ;;
-    /help)
-      echo "Commands:"
-      echo "  /model <name> - change model"
-      echo "  /quit         - exit"
-      ;;
-    /model\ *)
-      MODEL="${line#/model }"
-      export AI_MODEL="$MODEL"
-      echo "Model: $MODEL"
-      ;;
-    "") continue ;;
-    *) ollama run "$MODEL" "$line" ;;
-  esac
+npm uninstall -g "@charmland/crush" >/dev/null 2>&1 || true
+
+# Обёртки для агентов: кэш и tmp в /tmp (tmpfs), чтобы не забивать overlay
+for agent_bin in claude kilo mimo qwen codex opencode dmsh crush kimi src sourcecraft koda; do
+  REAL_BIN="$(type -p "$agent_bin" 2>/dev/null || true)"
+  if [[ -z "$REAL_BIN" || -f "${REAL_BIN}.real" ]]; then
+    continue
+  fi
+  mv "$REAL_BIN" "${REAL_BIN}.real"
+  cat > "$REAL_BIN" << WRAPPEREOF
+#!/usr/bin/env bash
+export TMPDIR=/tmp
+export XDG_CACHE_HOME=/tmp/\${USER:-root}/.cache
+export XDG_CONFIG_HOME=/tmp/\${USER:-root}/.config
+mkdir -p "\$XDG_CACHE_HOME" "\$XDG_CONFIG_HOME"
+exec "${REAL_BIN}.real" "\$@"
+WRAPPEREOF
+  chmod +x "$REAL_BIN"
 done
-AICHATEOF
-chmod +x /usr/local/bin/ai-chat
+
+# Скрипты пост-установочного AI-стека (скопированы в /opt/vibecode на этапе сборки)
+if [[ -d /opt/vibecode/scripts/ai ]]; then
+  chmod -R +x /opt/vibecode/scripts/ai 2>/dev/null || true
+  echo "OK: /opt/vibecode/scripts/ai готов (setup-ai-stack.sh для post-install)"
+fi
+
+# Тяжёлый AI-стек (Python venv / WebUI / ComfyUI) устанавливается ПОСЛЕ установки на диск:
+#   sudo /opt/vibecode/scripts/ai/setup-ai-stack.sh
 
 cat > /usr/local/bin/ai-setup << 'AISETUPEOF'
 #!/usr/bin/env bash
+set -euo pipefail
+
+# Проверка live-сессии: archiso держит корень в RAM (overlay), модели туда не влезут.
+if [[ -d /run/archiso/bootmnt ]]; then
+  echo "Live-сессия: корень — overlay в RAM, ollama и модели сюда не помещаются."
+  echo "Установите VibeLinux на диск (Install VibeLinux), затем:"
+  echo "  sudo install-ollama   # рантайм локальных LLM"
+  echo "  ai-setup              # базовые модели"
+  exit 0
+fi
+
 echo "Downloading base Ollama models..."
 echo
 for model in qwen2.5-coder:7b llama3.2:3b codellama:7b; do
   echo "-> $model"
-  ollama pull "$model" 2>&1 | tail -1
+  ollama pull "$model" 2>&1 | tail -1 || true
   echo
 done
-echo "Done! Run: ai-chat"
+echo "Done! Модели лежат в /var/lib/ollama/models"
 AISETUPEOF
 chmod +x /usr/local/bin/ai-setup
 
@@ -451,103 +540,204 @@ chmod +x /usr/local/bin/ai-setup
 
 # Proprietary AI tool installers
 
-# Cursor IDE installer
+# Cursor Agent CLI installer (official)
 cat > /usr/local/bin/install-cursor << 'CURSOREOF'
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "Installing Cursor IDE..."
-
-if command -v yay >/dev/null 2>&1; then
-  echo "Using AUR package: cursor-bin"
-  yay -S --noconfirm cursor-bin
-  exit 0
-fi
-
-if command -v paru >/dev/null 2>&1; then
-  echo "Using AUR package: cursor-bin"
-  paru -S --noconfirm cursor-bin
-  exit 0
-fi
-
-ARCH="$(uname -m)"
-case "$ARCH" in
-  x86_64) CURSOR_ARCH="x64" ;;
-  aarch64) CURSOR_ARCH="arm64" ;;
-  *)
-    echo "Unsupported CPU architecture: $ARCH"
-    echo "Install Cursor manually: https://cursor.com/downloads"
-    exit 1
-    ;;
-esac
-
-TMP_APPIMAGE="/tmp/Cursor.AppImage"
-if ! curl -fL "https://downloads.cursor.com/production/linux/${CURSOR_ARCH}/Cursor.AppImage" -o "$TMP_APPIMAGE"; then
-  echo "Failed to download Cursor AppImage."
-  echo "Install manually: https://cursor.com/downloads"
+if [[ -d /run/archiso/bootmnt ]]; then
+  echo "Live-сессия: корень — RAM-оверлей, установка в /usr невозможна."
+  echo "Установите VibeLinux на диск и запустите install-cursor там."
   exit 1
 fi
 
-mkdir -p /opt/cursor
-mv "$TMP_APPIMAGE" /opt/cursor/Cursor.AppImage
-chmod +x /opt/cursor/Cursor.AppImage
-cat > /usr/share/applications/cursor.desktop << EOF
-[Desktop Entry]
-Name=Cursor
-Exec=/opt/cursor/Cursor.AppImage --no-sandbox
-Icon=utilities-terminal
-Type=Application
-Categories=Development;IDE;
-EOF
-echo "Cursor installed: /opt/cursor/Cursor.AppImage"
+echo "Installing Cursor Agent CLI..."
+if curl -fsSL https://cursor.com/install | bash; then
+  echo "Cursor Agent installed! Run: agent"
+else
+  echo "Failed to install Cursor Agent."
+  echo "Manual install: https://cursor.com/docs/cli/overview"
+  exit 1
+fi
 CURSOREOF
 chmod +x /usr/local/bin/install-cursor
 
-# Amazon Kiro installer (if available)
+# Amazon Kiro installer (official CLI)
 cat > /usr/local/bin/install-kiro << 'KIROEOF'
 #!/usr/bin/env bash
-echo "Installing Amazon Kiro..."
-if command -v npm >/dev/null; then
-  npm install -g @amazon/kiro 2>/dev/null && echo "Kiro installed via npm" || {
-    echo "Kiro package not found on npm. Check: https://kiro.dev"
-    echo "Alternative: install from official site"
-  }
+set -euo pipefail
+
+if [[ -d /run/archiso/bootmnt ]]; then
+  echo "Live-сессия: корень — RAM-оверлей, установка в /usr невозможна."
+  echo "Установите VibeLinux на диск и запустите install-kiro там."
+  exit 1
+fi
+
+echo "Installing Amazon Kiro CLI..."
+if curl -fsSL https://cli.kiro.dev/install | bash; then
+  echo "Kiro installed! Run: kiro"
 else
-  echo "npm not found. Install Node.js first."
+  echo "Failed to install Kiro. See: https://kiro.dev/downloads"
+  exit 1
 fi
 KIROEOF
 chmod +x /usr/local/bin/install-kiro
 
+# Kilo Code CLI installer
+cat > /usr/local/bin/install-kilo << 'KILOEOF'
+#!/usr/bin/env bash
+set -euo pipefail
+echo "Installing Kilo Code CLI..."
+if command -v npm >/dev/null 2>&1; then
+  npm install -g @kilocode/cli
+  echo "Kilo Code installed! Run: kilo"
+else
+  echo "npm not found. Install Node.js first."
+  exit 1
+fi
+KILOEOF
+chmod +x /usr/local/bin/install-kilo
+
+# MiMo Code CLI installer
+cat > /usr/local/bin/install-mimo << 'MIMOEOF'
+#!/usr/bin/env bash
+set -euo pipefail
+echo "Installing MiMo Code CLI..."
+if command -v npm >/dev/null 2>&1; then
+  npm install -g @mimo-ai/cli
+  echo "MiMo Code installed! Run: mimo"
+else
+  echo "npm not found. Install Node.js first."
+  exit 1
+fi
+MIMOEOF
+chmod +x /usr/local/bin/install-mimo
+
+# Crush CLI installer — нативный бинарник из GitHub-релизов
+cat > /usr/local/bin/install-crush << 'CRUSHEOF'
+#!/usr/bin/env bash
+set -euo pipefail
+echo "Installing Crush..."
+CRUSH_AA=""
+case "$(uname -m)" in
+  x86_64) CRUSH_AA="x86_64" ;;
+  aarch64|arm64) CRUSH_AA="arm64" ;;
+  *) echo "Unsupported arch: $(uname -m)"; exit 1 ;;
+esac
+CRUSH_VER="$(curl -fsSL --retry 3 https://api.github.com/repos/charmbracelet/crush/releases/latest | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -1)"
+[[ -n "$CRUSH_VER" ]] || { echo "Failed to resolve latest release"; exit 1; }
+CRUSH_TMP="$(mktemp -d)"
+trap 'rm -rf "$CRUSH_TMP"' EXIT
+curl -fsSL --retry 3 "https://github.com/charmbracelet/crush/releases/download/${CRUSH_VER}/crush_${CRUSH_VER#v}_Linux_${CRUSH_AA}.tar.gz" -o "$CRUSH_TMP/crush.tar.gz"
+tar -xzf "$CRUSH_TMP/crush.tar.gz" -C "$CRUSH_TMP"
+install -Dm 755 "$CRUSH_TMP/crush_${CRUSH_VER#v}_Linux_${CRUSH_AA}/crush" /usr/local/bin/crush
+echo "Crush ${CRUSH_VER} installed! Run: crush"
+CRUSHEOF
+chmod +x /usr/local/bin/install-crush
+
+# Kimi Code CLI installer
+cat > /usr/local/bin/install-kimi << 'KIMIEOF'
+#!/usr/bin/env bash
+set -euo pipefail
+echo "Installing Kimi Code CLI..."
+if command -v npm >/dev/null 2>&1; then
+  npm install -g @moonshot-ai/kimi-code
+  echo "Kimi Code installed! Run: kimi"
+else
+  echo "npm not found. Install Node.js first."
+  exit 1
+fi
+KIMIEOF
+chmod +x /usr/local/bin/install-kimi
+
+# Ollama installer (post-install, Arch)
+cat > /usr/local/bin/install-ollama << 'OLLAMAEOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ -d /run/archiso/bootmnt ]]; then
+  echo "Live-сессия: корень — RAM-оверлей, ollama (~500 МБ) сюда не поместится."
+  echo "Установите VibeLinux на диск и запустите install-ollama там."
+  exit 1
+fi
+
+echo "Installing Ollama..."
+if command -v ollama >/dev/null 2>&1; then
+  echo "Ollama is already installed: $(ollama --version 2>/dev/null || echo unknown version)"
+  exit 0
+fi
+if command -v pacman >/dev/null 2>&1; then
+  sudo pacman -S --noconfirm ollama
+  sudo systemctl enable --now ollama
+elif command -v apt-get >/dev/null 2>&1; then
+  curl -fsSL https://ollama.com/install.sh | sh
+  sudo systemctl enable --now ollama 2>/dev/null || true
+else
+  echo "Unsupported package manager. Install Ollama manually: https://ollama.com/download"
+  exit 1
+fi
+echo "Ollama installed and running!"
+echo "Download models: ollama pull qwen2.5-coder:7b  (or run: ai-setup)"
+OLLAMAEOF
+chmod +x /usr/local/bin/install-ollama
+
 # Claude Code installer
 cat > /usr/local/bin/install-claude-code << 'CLAUDEEOF'
 #!/usr/bin/env bash
+set -euo pipefail
 echo "Installing Claude Code..."
-if command -v npm >/dev/null; then
-  npm install -g @anthropic-ai/claude-code 2>/dev/null && echo "Claude Code installed" || {
-    echo "Failed to install Claude Code. Check: https://claude.ai/code"
-  }
-else
+if ! command -v npm >/dev/null 2>&1; then
   echo "npm not found. Install Node.js first."
+  exit 1
+fi
+if npm install -g @anthropic-ai/claude-code; then
+  # Run postinstall for native binary
+  CLAUDE_GLOBAL="$(npm root -g)/@anthropic-ai/claude-code"
+  if [[ -f "$CLAUDE_GLOBAL/install.cjs" ]]; then
+    echo "Running postinstall..."
+    node "$CLAUDE_GLOBAL/install.cjs" || echo "WARNING: postinstall failed"
+  fi
+  echo "Claude Code installed! Run: claude"
+else
+  echo "Failed to install Claude Code. Check: https://claude.ai/code"
+  exit 1
 fi
 CLAUDEEOF
 chmod +x /usr/local/bin/install-claude-code
 
-# Continue.dev installer
+# OpenAI Codex CLI installer
+cat > /usr/local/bin/install-codex << 'CODEXEOF'
+#!/usr/bin/env bash
+set -euo pipefail
+echo "Installing OpenAI Codex CLI..."
+if ! command -v npm >/dev/null 2>&1; then
+  echo "npm not found. Install Node.js first."
+  exit 1
+fi
+if npm install -g @openai/codex; then
+  echo "Codex installed! Run: codex"
+else
+  echo "Failed to install Codex. Check: https://developers.openai.com/codex/cli"
+  exit 1
+fi
+CODEXEOF
+chmod +x /usr/local/bin/install-codex
+
+# Continue.dev CLI installer
 cat > /usr/local/bin/install-continue << 'CONTINUEEOF'
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "Installing Continue.dev..."
-
-if command -v code >/dev/null 2>&1; then
-  code --install-extension continue.continue || true
-elif command -v codium >/dev/null 2>&1; then
-  codium --install-extension continue.continue || true
-elif command -v vscodium >/dev/null 2>&1; then
-  vscodium --install-extension continue.continue || true
+echo "Installing Continue.dev CLI..."
+if ! command -v npm >/dev/null 2>&1; then
+  echo "npm not found. Install Node.js first."
+  exit 1
+fi
+if npm install -g @continuedev/cli; then
+  echo "Continue CLI installed! Run: cn"
 else
-  echo "No supported editor CLI found (code/codium/vscodium)."
-  echo "Manual install: https://docs.continue.dev/install"
+  echo "Failed to install Continue CLI. Check: https://docs.continue.dev/cli"
+  exit 1
 fi
 
 CONFIG_DIR="$HOME/.continue"
@@ -586,10 +776,16 @@ echo 'Add to opencode config: "mcpServers": { "filesystem": { "command": "npx", 
 MCPEOF
 chmod +x /usr/local/bin/install-mcp-servers
 
-# Unified AI installer script
+# Unified AI installer — live-сессия осведомлён о месте (overlay в RAM).
+# CLI-агенты предустановлены в образ, поэтому менеджер в основном
+# показывает статус и направляет к post-install установкам на диск.
 cat > /usr/local/bin/ai-install << 'INSTALLEOF'
 #!/usr/bin/env bash
 set -euo pipefail
+
+is_live() {
+  [[ -d /run/archiso/bootmnt ]]
+}
 
 is_installed() {
   command -v "$1" >/dev/null 2>&1
@@ -597,59 +793,77 @@ is_installed() {
 
 status() {
   if is_installed "$1"; then
-    printf "installed"
+    printf "установлен"
   else
-    printf "not installed"
+    printf "не установлен"
   fi
+}
+
+live_blocked() {
+  if is_live; then
+    echo "В live-сессии корень — overlay в RAM, ставить в /usr некуда."
+    echo "Установите VibeLinux на диск и запустите эту команду там."
+    return 0
+  fi
+  return 1
 }
 
 echo "VibeLinux — AI Tool Installer"
 echo "=============================="
 echo ""
-echo "  [1] opencode      — Open source AI coding agent ($(status opencode))"
-echo "  [2] qwen-code     — Qwen AI coding agent ($(status qwen))"
-echo "  [3] aider         — AI pair programming ($(status aider))"
-echo "  [4] Continue.dev  — AI assistant for editors (install-ext)"
-echo "  [5] MCP servers   — Model Context Protocol (filesystem, github)"
-echo "  [6] Cursor        — Proprietary AI IDE"
-echo "  [7] Kiro          — Amazon's AI coding assistant"
-echo "  [8] Claude Code   — Anthropic terminal AI ($(status claude))"
-echo "  [9] ai-chat       — Local Ollama chat ($(status ai-chat))"
+if is_live; then
+  FREE=$(df -h / 2>/dev/null | awk 'NR==2{print $4}')
+  echo "Live-сессия: / — RAM-оверлей, свободно: ${FREE:-?}. Доустановка тяжёлых компонентов невозможна."
+  echo "Все CLI-агенты уже предустановлены и работают."
+  echo ""
+fi
+
+echo "── Предустановленные AI-агенты (работают сразу) ──"
+echo "  opencode      — Open source AI coding agent ($(status opencode))"
+echo "  SourceCraft   — Яндекс Code Assistant CLI ($(status src))"
+echo "  Koda          — Koda CLI (Яндекс/Кода) ($(status koda))"
+echo "  qwen-code     — Qwen AI coding agent ($(status qwen))"
+echo "  Claude Code   — Anthropic terminal AI ($(status claude))"
+echo "  Codex         — OpenAI terminal AI ($(status codex))"
+echo "  Kilo Code     — Open source AI coding agent ($(status kilo))"
+echo "  MiMo Code     — Xiaomi terminal AI ($(status mimo))"
+echo "  Continue.dev  — AI coding CLI ($(status cn))"
 echo ""
-read -rp "Install [1-9]: " choice
+echo "── Дополнительные действия ──"
+echo "  [1] Cursor Agent — Cursor terminal agent ($(status agent))"
+echo "  [2] Kiro          — Amazon's AI coding assistant ($(status kiro))"
+echo "  [3] MCP servers   — Model Context Protocol (filesystem, github)"
+echo "  [4] Ollama        — Local LLM runtime ($(status ollama))"
+echo "  [5] AI модели     — базовые Ollama-модели (ai-setup)"
+echo "  [6] AI stack      — WebUI + Python-стек + ComfyUI (setup-ai-stack)"
+echo ""
+if is_live; then
+  echo "Дальше: установите VibeLinux на диск (Install VibeLinux), затем:"
+else
+  echo "Post-install:"
+fi
+echo "  sudo install-ollama                                 # рантайм локальных LLM"
+echo "  sudo ai-setup                                       # базовые Ollama-модели"
+echo "  sudo /opt/vibecode/scripts/ai/setup-ai-stack.sh     # WebUI + Python-стек + ComfyUI"
+echo ""
+read -rp "Выберите [1-6] или Enter для выхода: " choice
 case "$choice" in
-  1)
-    if is_installed opencode; then
-      echo "opencode is already installed. Run: opencode"
+  1) live_blocked || install-cursor ;;
+  2) live_blocked || install-kiro ;;
+  3) install-mcp-servers ;;
+  4) live_blocked || install-ollama ;;
+  5) ai-setup ;;
+  6)
+    if is_live; then
+      echo "setup-ai-stack ставит тяжёлые компоненты (WebUI/ComfyUI/Python-стек)."
+      echo "В live-сессии нет места — запустите после установки на диск."
+    elif [[ -x /opt/vibecode/scripts/ai/setup-ai-stack.sh ]]; then
+      sudo /opt/vibecode/scripts/ai/setup-ai-stack.sh
     else
-      echo "opencode is not installed in this image."
+      echo "setup-ai-stack.sh не найден в образе."
     fi
     ;;
-  2)
-    if is_installed qwen; then
-      echo "qwen-code is already installed. Run: qwen"
-    elif command -v npm >/dev/null 2>&1; then
-      npm install -g @qwen-code/qwen-code
-    else
-      echo "npm not found. Install Node.js first."
-    fi
-    ;;
-  3)
-    if is_installed aider; then
-      echo "aider is already installed. Run: aider"
-    elif command -v pipx >/dev/null 2>&1; then
-      pipx install aider-chat
-    else
-      echo "pipx not found. Install pipx first."
-    fi
-    ;;
-  4) install-continue ;;
-  5) install-mcp-servers ;;
-  6) install-cursor ;;
-  7) install-kiro ;;
-  8) install-claude-code ;;
-  9) echo "ai-chat is pre-installed. Run: ai-chat" ;;
-  *) echo "Nothing to install." ;;
+  *) echo "Happy coding!" ;;
 esac
 INSTALLEOF
 chmod +x /usr/local/bin/ai-install
@@ -923,7 +1137,6 @@ Font=JetBrainsMono Nerd Font,12,-1,5,50,0,0,0,0,0,Regular
 
 [General]
 Name=VibeLinux
-Parent=FALLBACK
 
 [Scrolling]
 ScrollBarPosition=2
@@ -1098,6 +1311,13 @@ fi
 # Welcome App
 cat > /usr/local/bin/vibe-welcome << 'WELCOMEEOF'
 #!/usr/bin/env bash
+# VibeLinux first-run welcome. Запускается один раз:
+# после выбора создаёт маркер ~/.vibe-welcome-done.
+DONE_FILE="$HOME/.vibe-welcome-done"
+if [[ -f "$DONE_FILE" ]]; then
+  exit 0
+fi
+
 clear
 if [[ -f /usr/share/vibelinux/ascii-logo.txt ]]; then
   cat /usr/share/vibelinux/ascii-logo.txt
@@ -1109,31 +1329,39 @@ echo "  Welcome to VibeLinux!"
 echo "  Linux for vibe coding and AI development"
 echo "  ========================================="
 echo ""
-echo "  [1] Download AI models (ollama pull)"
-echo "  [2] Setup Rust (rustup default)"
+echo "  AI-агенты уже предустановлены: opencode, src (SourceCraft), koda, qwen, claude, codex, crush, kimi"
+echo "  Ollama (локальные LLM) ставится после установки на диск: sudo install-ollama"
+echo ""
+if [[ -d /run/archiso/bootmnt ]]; then
+  echo "  (Live-сессия: корень в RAM, тяжёлый AI-стек ставится после установки на диск)"
+fi
+echo "  [1] AI-инструменты (статус, MCP, доп. установки — ai-install)"
+echo "  [2] AI-модели (ai-setup — после установки на диск)"
 echo "  [3] System info (fastfetch)"
 echo "  [4] Skip"
 echo ""
 read -rp "  Choose [1-4]: " choice
 case "$choice" in
-  1) ai-setup ;;
-  2) runuser -u vibe -- bash -c 'rustup default stable' || true ;;
+  1) ai-install ;;
+  2) ai-setup ;;
   3) fastfetch ;;
-  *) echo "  Happy coding!"; exit 0 ;;
+  *) echo "  Happy coding!" ;;
 esac
+touch "$DONE_FILE"
+exit 0
 WELCOMEEOF
 chmod +x /usr/local/bin/vibe-welcome
 
-# Autostart Welcome App (first run only)
-mkdir -p /home/vibe/.config/autostart
-cat > /home/vibe/.config/autostart/vibe-welcome.desktop << EOF
-[Desktop Entry]
-Type=Application
-Name=VibeLinux Welcome
-Exec=/usr/local/bin/vibe-welcome
-Terminal=true
-X-GNOME-Autostart-enabled=true
-EOF
+# # Autostart Welcome App — открывается только пока нет маркера (первый вход в GUI)
+# mkdir -p /home/vibe/.config/autostart
+# cat > /home/vibe/.config/autostart/vibe-welcome.desktop << EOF
+# [Desktop Entry]
+# Type=Application
+# Name=VibeLinux Welcome
+# Exec=bash -c '[[ -f /home/vibe/.vibe-welcome-done ]] || /usr/local/bin/vibe-welcome'
+# Terminal=true
+# X-GNOME-Autostart-enabled=true
+# EOF
 
 # Systemd service — Welcome App (срабатывает даже без графической сессии)
 cat > /etc/systemd/system/vibe-welcome.service << 'SVCEOF'
@@ -1164,12 +1392,22 @@ Categories=System;
 EOF
 chmod 755 /home/vibe/Desktop/VibeLinux-Welcome.desktop
 
-
-
 # Fix permissions
 chown -R vibe:vibe /home/vibe
 
+# Rust: ставим toolchain один раз при сборке, а не при каждом запуске терминала.
+# Профиль minimal — без rust-docs (908 МБ) и rust-src; при желании:
+#   rustup component add rust-docs
+if command -v rustup &>/dev/null; then
+  runuser -u vibe -- bash -c 'rustup set profile minimal && rustup default stable' && \
+    touch /home/vibe/.vibe-rustup-ready || \
+    echo "WARN: rustup toolchain не установлен (нет сети?) — можно: runuser -u vibe -- bash -c \"rustup default stable\""
+  # Обрезаем доки у ранее установленных тулчейнов (полный профиль тянет ~900 МБ)
+  rm -rf /home/vibe/.rustup/toolchains/*/share/doc
+fi
+
 # Quick Start Guide
+mkdir -p /home/vibe/Desktop
 cat > /home/vibe/Desktop/GET-STARTED.html << 'EOF'
 <!DOCTYPE html>
 <html lang="en">
@@ -1222,14 +1460,21 @@ cat > /home/vibe/Desktop/GET-STARTED.html << 'EOF'
   <li><strong>Kate</strong> — KDE text editor</li>
 </ul>
 
-<h2>AI Tools</h2>
+<h2>AI Tools (предустановлены)</h2>
 <ul>
   <li><strong>opencode</strong> — <code>opencode</code> (AI coding agent)</li>
+  <li><strong>SourceCraft CLI</strong> — <code>src</code> (Яндекс Code Assistant)</li>
+  <li><strong>Koda CLI</strong> — <code>koda</code> (Яндекс/Кода, форк gemini-cli)</li>
   <li><strong>qwen-code</strong> — <code>qwen</code> (Alibaba coding agent)</li>
-  <li><strong>Ollama</strong> — auto-started on boot</li>
-  <li><strong>nlsh</strong> — offline AI shell (model included)</li>
-  <li><strong>ai-chat</strong> — terminal chat with local LLMs</li>
+  <li><strong>Claude Code</strong> — <code>claude</code> (Anthropic)</li>
+  <li><strong>Codex</strong> — <code>codex</code> (OpenAI)</li>
+  <li><strong>Kilo / MiMo / Continue / Crush / Kimi</strong> — <code>kilo</code>, <code>mimo</code>, <code>cn</code>, <code>crush</code>, <code>kimi</code></li>
+  <li><strong>dmsh</strong> — offline AI shell (model included)</li>
 </ul>
+<p><em>Ollama и тяжёлый AI-стек (WebUI/ComfyUI/Python-venv) ставятся после установки на диск:</em></p>
+<pre><span class="cmd">sudo install-ollama</span>
+<span class="cmd">sudo ai-setup</span>
+<span class="cmd">sudo /opt/vibecode/scripts/ai/setup-ai-stack.sh</span></pre>
 
 <h2>Quick Commands</h2>
 <pre><span class="cmd">fastfetch</span> <span class="sep">—</span> system info
@@ -1238,15 +1483,16 @@ cat > /home/vibe/Desktop/GET-STARTED.html << 'EOF'
 <span class="cmd">bat</span> file  <span class="sep">—</span> cat with syntax highlighting
 <span class="cmd">lazygit</span>  <span class="sep">—</span> git TUI
 <span class="cmd">opencode</span> <span class="sep">—</span> AI coding agent
-<span class="cmd">ai-chat</span>  <span class="sep">—</span> local AI chat
-<span class="cmd">ai-setup</span> <span class="sep">—</span> download AI models</pre>
+<span class="cmd">claude</span>   <span class="sep">—</span> Claude Code (Anthropic)
+<span class="cmd">codex</span>    <span class="sep">—</span> OpenAI Codex CLI
+<span class="cmd">ai-setup</span> <span class="sep">—</span> download AI models (post-install)</pre>
 
 <h2>First Steps</h2>
 <ol>
   <li>Open <strong>Konsole</strong> (or Kitty)</li>
-  <li>Run <code>ai-chat</code> to chat with local AI</li>
-  <li>Run <code>opencode</code> for AI pair programming</li>
-  <li>Run <code>ai-setup</code> to download more models</li>
+  <li>Run <code>opencode</code> / <code>claude</code> / <code>codex</code> — all pre-installed</li>
+  <li>Install VibeLinux to disk, then run <code>install-ollama</code> + <code>ai-setup</code> for local LLM models</li>
+  <li>Run <code>sudo /opt/vibecode/scripts/ai/setup-ai-stack.sh</code> for WebUI/ComfyUI/Python-стек</li>
   <li>Open <strong>Zed</strong> and start coding</li>
 </ol>
 
@@ -1256,17 +1502,6 @@ EOF
 chmod 644 /home/vibe/Desktop/GET-STARTED.html
 
 # Desktop shortcuts for key apps
-cat > /home/vibe/Desktop/AI-Chat.desktop << EOF
-[Desktop Entry]
-Type=Application
-Name=AI Chat
-Icon=utilities-terminal
-Exec=konsole --hold -e ai-chat
-Terminal=false
-Categories=Development;
-EOF
-chmod 755 /home/vibe/Desktop/AI-Chat.desktop
-
 cat > /home/vibe/Desktop/OpenCode.desktop << EOF
 [Desktop Entry]
 Type=Application
@@ -1278,16 +1513,104 @@ Categories=Development;
 EOF
 chmod 755 /home/vibe/Desktop/OpenCode.desktop
 
-cat > /home/vibe/Desktop/Qwen-Code.desktop << EOF
+# AI Agents Launcher — выбор из установленных CLI-агентов (GUI / TTY)
+cat > /usr/local/bin/ai-launcher << 'LAUNCHEOF'
+#!/usr/bin/env bash
+# Меню установленных AI-агентов: выбор → запуск. После выхода агента
+# возвращается в меню; завершение — пункт «Выход» или Ctrl+D.
+AGENTS=(
+  "opencode:OpenCode"
+  "src:SourceCraft CLI"
+  "koda:Koda CLI"
+  "claude:Claude Code"
+  "codex:Codex CLI"
+  "qwen:Qwen Code"
+  "kilo:Kilo Code"
+  "mimo:Mimo"
+  "crush:Crush"
+  "kimi:Kimi CLI"
+  "dmsh:dmsh"
+)
+
+FOUND=()
+for entry in "${AGENTS[@]}"; do
+  bin="${entry%%:*}"; label="${entry#*:}"
+  if type -p "$bin" >/dev/null 2>&1; then
+    FOUND+=("$bin" "$label")
+  fi
+done
+
+if [[ ${#FOUND[@]} -eq 0 ]]; then
+  MSG="AI-агенты не найдены. Запустите ai-install для установки."
+  if command -v kdialog &>/dev/null && [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]]; then
+    kdialog --error "$MSG"
+  elif [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" && ! -t 0 ]] && command -v konsole &>/dev/null; then
+    exec konsole --hold -e "$0"
+  else
+    echo "$MSG" >&2
+  fi
+  exit 1
+fi
+
+run_agent() {
+  echo "── $1 ── (выход из агента вернёт в меню)"
+  "$1"
+  local rc=$?
+  echo "── $1 завершён (код $rc) ──"
+}
+
+if [[ ! -t 0 ]]; then
+  # Запуск с ярлыка (stdin не TTY)
+  if command -v kdialog &>/dev/null && [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]]; then
+    CHOICE="$(kdialog --title "AI Agents" --menu "Выберите AI-агента:" "${FOUND[@]}")" || exit 0
+    # Агент открывается сразу; после его выхода в этом же окне появится меню
+    exec konsole -e env AI_LAUNCHER_PRESELECT="$CHOICE" "$0"
+  elif command -v konsole &>/dev/null && [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]]; then
+    # Без kdialog — просто интерактивное меню в новом окне konsole
+    exec konsole -e "$0"
+  else
+    echo "Нет графической сессии — запустите ai-launcher в терминале." >&2
+    exit 1
+  fi
+fi
+
+# Предвыбранный агент (из kdialog-ярлыка): запускаем, дальше — обычное меню
+PRE="${AI_LAUNCHER_PRESELECT:-}"
+if [[ -n "$PRE" ]] && type -p "$PRE" >/dev/null 2>&1; then
+  run_agent "$PRE"
+fi
+
+OPTIONS=()
+i=0
+while [[ $i -lt ${#FOUND[@]} ]]; do
+  OPTIONS+=("${FOUND[$i]} — ${FOUND[$((i+1))]}")
+  i=$((i+2))
+done
+
+while true; do
+  BODY_RUN=0
+  PS3=$'\nВыберите агента (номер): '
+  select opt in "${OPTIONS[@]}" "Выход"; do
+    BODY_RUN=1
+    [[ -z "$opt" || "$opt" == "Выход" ]] && exit 0
+    run_agent "${opt%% — *}"
+    break            # перерисовать меню
+  done
+  [[ $BODY_RUN -eq 0 ]] && exit 0   # EOF/Ctrl+D вместо номера — выходим
+done
+LAUNCHEOF
+chmod +x /usr/local/bin/ai-launcher
+
+cat > /home/vibe/Desktop/AI-Launcher.desktop << EOF
 [Desktop Entry]
 Type=Application
-Name=Qwen Code
+Name=AI Agents
 Icon=utilities-terminal
-Exec=konsole --hold -e qwen
+Exec=/usr/local/bin/ai-launcher
 Terminal=false
 Categories=Development;
 EOF
-chmod 755 /home/vibe/Desktop/Qwen-Code.desktop
+chmod 755 /home/vibe/Desktop/AI-Launcher.desktop
 
 cat > /home/vibe/Desktop/Install-AI-Tools.desktop << EOF
 [Desktop Entry]
@@ -1306,34 +1629,60 @@ if [[ -f /usr/share/applications/dev.zed.Zed.desktop ]]; then
   chmod 755 /home/vibe/Desktop/Zed.desktop
 fi
 
-# nlsh — Natural Language Shell (AI Shell Assistant)
-echo "Installing nlsh..."
-if [[ -f /root/nlsh/nlsh ]]; then
-  cp /root/nlsh/nlsh /usr/local/bin/nlsh
-  chmod +x /usr/local/bin/nlsh
+# dmsh — Natural Language Shell (AI Shell Assistant)
+echo "Installing dmsh..."
+DMSH_INSTALLED=0
+# Берём самый свежий пакет по mtime (в /root/dmsh может лежать несколько)
+DMSH_PKG="$(ls -t /root/dmsh/dmsh-*.pkg.tar.zst 2>/dev/null | head -1 || true)"
+if [[ -n "$DMSH_PKG" ]]; then
+  # Pre-built Arch package — installs /usr/bin/dmsh
+  # Post-transaction hooks (PackageKit/DBus) can fail inside the chroot;
+  # tolerate that and verify the binary instead of the pacman exit code.
+  DMSH_TGT=/usr/bin/dmsh
+  # Сносим предыдущую инсталляцию (иначе даунгрейд/битая база мешают -U)
+  pacman -Rdd --noconfirm dmsh >/dev/null 2>&1 || true
+  rm -f "$DMSH_TGT" "$DMSH_TGT.real"
+  pacman -U --noconfirm "$DMSH_PKG" >/dev/null 2>&1 || true
+  if [[ ! -x "$DMSH_TGT" ]]; then
+    # pacman -U может упасть в chroot из-за нехватки места (как far2l);
+    # извлекаем файлы пакета напрямую — /usr/bin/dmsh попадает на место.
+    tar -I zstd -xf "$DMSH_PKG" -C / 2>/dev/null || true
+  fi
+  if [[ -x "$DMSH_TGT" ]]; then
+    DMSH_INSTALLED=1
+    echo "OK: dmsh installed from pre-built package ($(basename "$DMSH_PKG"))"
+  else
+    echo "ERROR: dmsh package installation failed"
+  fi
+elif [[ -f /root/dmsh/dmsh ]]; then
+  cp /root/dmsh/dmsh /usr/local/bin/dmsh
+  chmod +x /usr/local/bin/dmsh
+  DMSH_INSTALLED=1
+fi
 
+if [[ $DMSH_INSTALLED -eq 1 ]]; then
   # Bundle small AI model for offline use (Q2_K ~200MB for weak machines)
-  NLSH_MODELS_DIR="/home/vibe/.config/nlsh/models"
-  mkdir -p "$NLSH_MODELS_DIR"
-  
+  DMSH_MODELS_DIR="/home/vibe/.config/dmsh/models"
+  mkdir -p "$DMSH_MODELS_DIR"
+
   MODEL_NAME="qwen2.5-0.5b-instruct-q2_k.gguf"
   MODEL_URL="https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q2_k.gguf"
-  
-  if [[ -f /root/nlsh/models/$MODEL_NAME ]]; then
-    cp /root/nlsh/models/$MODEL_NAME "$NLSH_MODELS_DIR/"
-    chown vibe:vibe "$NLSH_MODELS_DIR/$MODEL_NAME"
+
+  if [[ -f /root/dmsh/models/$MODEL_NAME ]]; then
+    cp /root/dmsh/models/$MODEL_NAME "$DMSH_MODELS_DIR/"
+    chown vibe:vibe "$DMSH_MODELS_DIR/$MODEL_NAME"
     echo "OK: bundled model Q2_K from local file"
   else
     echo "Downloading Q2_K model (~200MB)..."
-    curl -L "$MODEL_URL" -o "$NLSH_MODELS_DIR/$MODEL_NAME" 2>&1 | tail -5 || \
+    curl -L "$MODEL_URL" -o "$DMSH_MODELS_DIR/$MODEL_NAME" 2>&1 | tail -5 || \
       echo "WARNING: model download failed"
-    chown vibe:vibe "$NLSH_MODELS_DIR/$MODEL_NAME" 2>/dev/null || true
+    chown vibe:vibe "$DMSH_MODELS_DIR/$MODEL_NAME" 2>/dev/null || true
   fi
 
   # Default config for vibe user
-  NLSH_CONFIG_DIR="/home/vibe/.config/nlsh"
-  mkdir -p "$NLSH_CONFIG_DIR"
-  cat > "$NLSH_CONFIG_DIR/config.json" << NLSCONF
+  DMSH_CONFIG_DIR="/home/vibe/.config/dmsh"
+  mkdir -p "$DMSH_CONFIG_DIR"
+  cat > "$DMSH_CONFIG_DIR/config.json" << NLSCONF
 {
   "default_model": "$MODEL_NAME",
   "ctx_size": 2048,
@@ -1344,29 +1693,77 @@ if [[ -f /root/nlsh/nlsh ]]; then
   "shell": "/bin/zsh"
 }
 NLSCONF
-  chown -R vibe:vibe "$NLSH_CONFIG_DIR"
+  chown -R vibe:vibe "$DMSH_CONFIG_DIR"
 
-  if [[ -f /root/nlsh/nlsh.svg ]]; then
-    cp /root/nlsh/nlsh.svg /usr/share/pixmaps/nlsh.svg
+  if [[ -f /root/dmsh/dmsh.svg ]]; then
+    cp /root/dmsh/dmsh.svg /usr/share/pixmaps/dmsh.svg
   fi
 
-  cat > /home/vibe/Desktop/nlsh.desktop << 'EOF'
+  cat > /home/vibe/Desktop/dmsh.desktop << 'EOF'
 [Desktop Entry]
 Type=Application
-Name=nlsh — AI Shell Assistant
+Name=dmsh — AI Shell Assistant
 GenericName=Natural Language Shell
 Comment=AI-ассистент для управления системой через естественный язык
-Exec=konsole --hold -e nlsh repl
-Icon=nlsh
+Exec=konsole --hold -e dmsh
+Icon=dmsh
 Terminal=false
 Categories=Development;Utility;AI;
 Keywords=ai;llm;shell;assistant;local;
 StartupNotify=false
 EOF
-  chmod 755 /home/vibe/Desktop/nlsh.desktop
-  echo "nlsh installed with llama.cpp engine + offline model"
+  chmod 755 /home/vibe/Desktop/dmsh.desktop
+  echo "dmsh installed with llama.cpp engine + offline model"
 else
-  echo "WARNING: nlsh binary not found in /root/nlsh/"
+  echo "WARNING: dmsh not found in /root/dmsh/ (no binary, no pre-built package)"
+fi
+
+# dmed — terminal-native AI editor (Go)
+echo "Installing dmed..."
+DMED_INSTALLED=0
+# Сначала пытаемся поставить pre-built Arch package (регистрирует в pacman-базе)
+DMED_PKG="$(ls -t /root/dmed/dmed-*.pkg.tar.zst 2>/dev/null | head -1 || true)"
+if [[ -n "$DMED_PKG" ]]; then
+  DMED_TGT=/usr/bin/dmed
+  pacman -Rdd --noconfirm dmed >/dev/null 2>&1 || true
+  rm -f "$DMED_TGT" "$DMED_TGT.real"
+  pacman -U --noconfirm "$DMED_PKG" >/dev/null 2>&1 || true
+  if [[ ! -x "$DMED_TGT" ]]; then
+    # pacman -U может упасть в chroot; извлекаем файлы пакета напрямую
+    tar -I zstd -xf "$DMED_PKG" -C / 2>/dev/null || true
+  fi
+  if [[ -x "$DMED_TGT" ]]; then
+    DMED_INSTALLED=1
+    echo "OK: dmed installed from pre-built package ($(basename "$DMED_PKG"))"
+  else
+    echo "ERROR: dmed package installation failed"
+  fi
+elif [[ -f /root/dmed/dmed ]]; then
+  install -Dm755 /root/dmed/dmed /usr/local/bin/dmed
+  DMED_INSTALLED=1
+  echo "OK: dmed installed from raw binary (soft/dmed fallback)"
+fi
+
+if [[ $DMED_INSTALLED -eq 1 ]]; then
+  echo "dmed installed"
+else
+  echo "WARNING: dmed not found in /root/dmed/"
+fi
+
+# Koda Desktop — AI coding assistant (ООО «Кода»), pre-built Arch package.
+# Кладётся в /root/koda на этапе сборки (build-vibe-arch.sh).
+echo "Installing Koda Desktop..."
+KODA_PKG="$(ls -t /root/koda/koda-app-*.pacman /root/koda/koda-app-*.pkg.tar.zst 2>/dev/null | head -1 || true)"
+if [[ -n "$KODA_PKG" ]]; then
+  pacman -U --noconfirm "$KODA_PKG" >/dev/null 2>&1 || bsdtar -xpf "$KODA_PKG" -C / 2>/dev/null || true
+  # pacman ставит .desktop в /usr/share/applications; если бинарник появился — успех
+  if compgen -G "/usr/bin/koda*" "/usr/share/applications/*koda*" >/dev/null 2>&1; then
+    echo "OK: Koda Desktop installed from $KODA_PKG"
+  else
+    echo "WARNING: Koda Desktop .desktop не найден — проверьте пакет"
+  fi
+else
+  echo "WARNING: Koda Desktop package not found in /root/koda/ (build без сети?)"
 fi
 
 # Copy desktop shortcuts to system applications so they appear in Kickoff menu
@@ -1384,7 +1781,7 @@ done
 mkdir -p /home/vibe/.config
 cat > /home/vibe/.config/kickoffrc << 'EOF'
 [General]
-favorites=preferred://browser,org.kde.dolphin.desktop,org.kde.konsole.desktop,nlsh.desktop,AI-Chat.desktop,OpenCode.desktop,Qwen-Code.desktop,Install-AI-Tools.desktop,VibeLinux-Welcome.desktop
+favorites=preferred://browser,org.kde.dolphin.desktop,org.kde.konsole.desktop,OpenCode.desktop,AI-Launcher.desktop,Install-AI-Tools.desktop,VibeLinux-Welcome.desktop
 EOF
 chown vibe:vibe /home/vibe/.config/kickoffrc
 
@@ -1406,7 +1803,17 @@ chown builder:builder /tmp/aur-build
 
 aur_build() {
   local pkg=$1 dir=$2
-  echo "Building $pkg from AUR..."
+  # 1) Кэш pre-built пакетов (заполняется build-vibe-arch.sh из /srv/vibe-aur-cache)
+  local cached
+  cached=$(ls /root/aur-cache/${pkg}-*.pkg.tar.zst 2>/dev/null | head -1)
+  if [[ -n "$cached" && -f "$cached" ]]; then
+    echo "Installing $pkg from cache..."
+    pacman -U --noconfirm "$cached" 2>/dev/null || bsdtar -xpf "$cached" -C /
+    echo "$pkg installed from cache"
+    return 0
+  fi
+  # 2) Иначе собираем из AUR
+  echo "Building $pkg from AUR (в первый раз — потом возьмётся из кэша)..."
   runuser -u builder -- bash -c "
     cd /tmp/aur-build
     rm -rf $dir
@@ -1418,12 +1825,13 @@ aur_build() {
   pkg_file=$(ls /tmp/aur-build/$dir/*.pkg.tar.zst 2>/dev/null | head -1)
   if [[ -n "$pkg_file" && -f "$pkg_file" ]]; then
     pacman -U --noconfirm "$pkg_file" 2>/dev/null || bsdtar -xpf "$pkg_file" -C /
+    mkdir -p /root/aur-cache
+    cp "$pkg_file" /root/aur-cache/
     echo "$pkg installed"
   fi
 }
 
 aur_build yay-bin yay
-aur_build bruno-bin bruno
 aur_build calamares calamares
 # far2l — pre-built packages (pacman -U sometimes fails in chroot due to space checks)
 if ls /root/far2l/far2l-*.pkg.tar.zst 2>/dev/null | head -1; then
@@ -1691,7 +2099,7 @@ for d in /usr/lib/modules/*/; do
   kver="${d%/}"
   kver="${kver##*/}"
   [ "$kver" = "extramodules" ] || [ "$kver" = "extramessages" ] && continue
-  
+
   if [ -f "${d}vmlinuz" ]; then
     # Определяем имя ядра из pkgbase
     if [ -f "${d}pkgbase" ]; then
@@ -1708,12 +2116,12 @@ for d in /usr/lib/modules/*/; do
         kernel_name="linux"
       fi
     fi
-    
+
     echo "Found kernel: $kernel_name (version: $kver)"
     if [ -z "$PRIMARY_KERNEL" ]; then
       PRIMARY_KERNEL="$kernel_name"
     fi
-    
+
     dest="/boot/vmlinuz-$kernel_name"
     rm -f "$dest"
     cp --reflink=never --sparse=never -f "${d}vmlinuz" "$dest"
@@ -1729,14 +2137,14 @@ if [ -n "$PRIMARY_KERNEL" ]; then
     rm -f "$KERNEL_DST"
     cp --reflink=never --sparse=never -f "/boot/vmlinuz-$PRIMARY_KERNEL" "$KERNEL_DST"
     chmod 644 "$KERNEL_DST"
-    
+
     if [ -f "/boot/initramfs-$PRIMARY_KERNEL.img" ]; then
       rm -f "$INITRD_DST"
       cp --reflink=never --sparse=never -f "/boot/initramfs-$PRIMARY_KERNEL.img" "$INITRD_DST"
       chmod 644 "$INITRD_DST"
       echo "  -> Copied initramfs to $INITRD_DST"
     fi
-    
+
     if [ -f "/boot/initramfs-$PRIMARY_KERNEL-fallback.img" ]; then
       rm -f "$INITRD_FALLBACK_DST"
       cp --reflink=never --sparse=never -f "/boot/initramfs-$PRIMARY_KERNEL-fallback.img" "$INITRD_FALLBACK_DST"
@@ -1929,8 +2337,8 @@ services:
     action: enable
   - name: docker
     action: enable
-  - name: ollama
-    action: enable
+  # ollama не включён — она не входит в ISO и ставится post-install
+  # (install-ollama сам включает systemd-сервис)
   - name: vibe-welcome
     action: enable
 EOF
@@ -2036,6 +2444,10 @@ for f in /home/vibe/Desktop/*.desktop; do
     cp "$f" /etc/skel/Desktop/
   fi
 done
+# Quick Start Guide — руководство для новых пользователей
+if [[ -f /home/vibe/Desktop/GET-STARTED.html ]]; then
+  cp /home/vibe/Desktop/GET-STARTED.html /etc/skel/Desktop/
+fi
 
 # Копируем обои и autostart в /etc/skel
 mkdir -p /etc/skel/.config /etc/skel/.config/autostart
@@ -2055,11 +2467,11 @@ if [[ -f /home/vibe/.config/kickoffrc ]]; then
   cp /home/vibe/.config/kickoffrc /etc/skel/.config/
 fi
 
-# Копируем nlsh config и model в /etc/skel
-if [[ -d /home/vibe/.config/nlsh ]]; then
-  mkdir -p /etc/skel/.config/nlsh
-  cp -r /home/vibe/.config/nlsh/* /etc/skel/.config/nlsh/
-  chown -R root:root /etc/skel/.config/nlsh
+# Копируем dmsh config и model в /etc/skel
+if [[ -d /home/vibe/.config/dmsh ]]; then
+  mkdir -p /etc/skel/.config/dmsh
+  cp -r /home/vibe/.config/dmsh/* /etc/skel/.config/dmsh/
+  chown -R root:root /etc/skel/.config/dmsh
 fi
 
 # Копируем Konsole theme
@@ -2093,11 +2505,11 @@ if [[ -f /home/vibe/.config/lazygit/config.yml ]]; then
   cp /home/vibe/.config/lazygit/config.yml /etc/skel/.config/lazygit/
 fi
 
-# Копируем nlsh model в /etc/skel для новых пользователей
-if [[ -d /home/vibe/.config/nlsh/models ]]; then
-  mkdir -p /etc/skel/.config/nlsh/models
-  cp -r /home/vibe/.config/nlsh/models/* /etc/skel/.config/nlsh/models/
-  chown -R root:root /etc/skel/.config/nlsh
+# Копируем dmsh model в /etc/skel для новых пользователей
+if [[ -d /home/vibe/.config/dmsh/models ]]; then
+  mkdir -p /etc/skel/.config/dmsh/models
+  cp -r /home/vibe/.config/dmsh/models/* /etc/skel/.config/dmsh/models/
+  chown -R root:root /etc/skel/.config/dmsh
 fi
 
 chown -R root:root /etc/skel
@@ -2145,6 +2557,10 @@ echo ""
 
 # 4. Советы
 echo "── Полезные команды ──"
+echo "  AI-агенты (уже стоят):     opencode, qwen, claude, codex, crush, kimi"
+echo "  Ollama (после установки):  sudo install-ollama"
+echo "  AI-модели (после установки): sudo ai-setup"
+echo "  AI stack (после установки): sudo /opt/vibecode/scripts/ai/setup-ai-stack.sh"
 echo "  Установить пакет:          sudo pacman -S <package>"
 echo "  Обновить все пакеты:       sudo pacman -Syu"
 echo "  Discover (GUI магазин):    discover"
@@ -2178,5 +2594,14 @@ if [[ -f /usr/bin/discover ]]; then
 fi
 
 chown -R vibe:vibe /home/vibe
+
+# ── Slim ISO: чистим мусор перед сжатием squashfs ─────────────────────
+# Кэш npm после глобальных установок агентов (~650 МБ)
+rm -rf /root/.npm /home/vibe/.npm /home/builder/.npm
+# Локали: оставляем только ru/en (+ сам файл locale.alias)
+find /usr/share/locale -mindepth 1 -maxdepth 1 \
+  ! -name 'ru*' ! -name 'en*' ! -name 'locale.alias' -exec rm -rf {} +
+# Офлайн-доки (актуальны онлайн: man.archlinux.org, docs.rs)
+rm -rf /usr/share/doc/* /usr/share/gtk-doc 2>/dev/null || true
 
 echo "=== Done ==="

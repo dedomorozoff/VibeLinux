@@ -43,8 +43,6 @@ HAS_HELIX=0; echo "$EDITORS" | grep -q "helix" && HAS_HELIX=1
 HAS_ZED=0; echo "$EDITORS" | grep -q "zed" && HAS_ZED=1
 HAS_VSCODE=0; echo "$EDITORS" | grep -q "vscode\|code" && HAS_VSCODE=1
 
-HAS_AIDER=0; echo "$AGENTS" | grep -q "aider" && HAS_AIDER=1
-
 echo "Generating build script from: $CONFIG_FILE"
 echo "  Distro: $DISTRO"
 echo "  Build type: $BUILD_TYPE"
@@ -246,9 +244,6 @@ if [[ "__HAS_ZED__" == "1" ]]; then
 fi
 
 # === AI-агенты ===
-if [[ "__HAS_AIDER__" == "1" ]]; then
-  pip3 install --break-system-packages --ignore-installed aider-chat
-fi
 if [[ "__HAS_OLLAMA__" == "1" ]]; then
   curl -fsSL https://ollama.com/install.sh | sh
   systemctl enable ollama || true
@@ -287,7 +282,6 @@ if command -v whiptail >/dev/null 2>&1; then
     "zed" "Zed editor" OFF \\
     "vscode" "VS Code" OFF \\
     "neovim" "Neovim" ON \\
-    "aider" "Aider agent" OFF \\
     "ollama" "Ollama local LLM" OFF \\
     "docker" "Docker" OFF 3>&1 1>&2 2>&3) || true
   echo "Selected: \$SEL" > /tmp/vibe-wizard.log

@@ -1,0 +1,23 @@
+# VibeBSD — базовый набор (FreeBSD pkg)
+# Используется poudriere image -c. Строки # и пустые игнорируются.
+
+# Администрирование
+sudo
+bash
+curl
+wget
+rsync
+ca_root_nss
+
+# Архивация / утилиты
+unzip
+zip
+jq
+tree
+mc
+tmux
+
+# Мониторинг
+htop
+btop
+fastfetch

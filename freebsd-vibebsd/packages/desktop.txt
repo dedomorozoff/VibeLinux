@@ -1,0 +1,34 @@
+# VibeBSD — графическое окружение (KDE Plasma 6)
+
+# Xorg + драйверы
+xorg
+xorg-drivers
+xdg-utils
+
+# KMS-драйверы GPU (раскомментировать для Intel/AMD — тянет прошивки)
+# drm-kmod
+
+# KDE Plasma 6 (метапакет) + дисплей-менеджер
+plasma6-plasma
+sddm
+konsole
+dolphin
+kate
+
+# Браузер
+firefox
+
+# Терминал
+kitty
+
+# Шрифты (кодинг + локализация)
+jetbrains-mono
+fira-code
+cascadia-code
+hack-font
+noto-basic
+noto-emoji
+
+# Иконки
+hicolor-icon-theme
+papirus-icon-theme

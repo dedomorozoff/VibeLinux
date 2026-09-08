@@ -1,0 +1,13 @@
+# VibeBSD — AI-стек (локальные LLM)
+
+# Ollama — локальные LLM (сервис ставится через rc.conf: ollama_enable=YES)
+ollama
+
+# Python (если dev-стек не подключён) — база для AI-библиотек
+python
+
+# Опционально: контейнеры вместо Docker (Linux-эмуляция + ocijail)
+# podman
+
+# Остальное (transformers, langchain, open-webui, comfyui) ставится
+# post-install через pip/uv — см. scripts/setup-ai.sh

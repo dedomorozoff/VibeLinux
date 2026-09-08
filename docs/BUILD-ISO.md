@@ -2,6 +2,8 @@
 
 Этот документ фиксирует выбор стека сборки ISO и базовый сценарий запуска, соответствующий `roadmap.md` (Фаза 1) и текущей структуре `scripts/`.
 
+> **⚠️ Legacy:** документ описывает **устаревший Ubuntu-пайплайн** (`debootstrap` + `scripts/legacy/build-iso.sh`). Актуальная основная сборка дистрибутива — **Arch Linux + KDE Plasma 6** через `make arch` → `scripts/build/build-vibe-arch.sh` (профиль `archiso-vibelinux/`). Ubuntu-редакции (Full / Minimal / Lite) остаются legacy.
+
 ---
 
 ### 1. Выбор стека сборки
@@ -24,7 +26,7 @@
 
 ### 2. Точка входа сборки
 
-- Основной скрипт сборки: `scripts/build-iso.sh`.
+- Основной скрипт сборки: `scripts/legacy/build-iso.sh`.
 - Управление режимом работы — через переменную окружения `BUILD_MODE`:
   - `dry-run` (по умолчанию) — проверка зависимостей и структуры, без реальной сборки ISO.
   - `full` — зарезервировано под полноценную сборку alpha-ISO (будет реализовано после фиксации пакетных списков и слоёв Core OS).
@@ -33,26 +35,26 @@
 
 ```bash
 # Локальная проверка стека и окружения
-BUILD_MODE=dry-run ./scripts/build-iso.sh
-sudo BUILD_MODE=full ./scripts/build-iso.sh
-sudo KEEP_CHROOT=1 BUILD_MODE=full ./scripts/build-iso.sh
+BUILD_MODE=dry-run ./scripts/legacy/build-iso.sh
+sudo BUILD_MODE=full ./scripts/legacy/build-iso.sh
+sudo KEEP_CHROOT=1 BUILD_MODE=full ./scripts/legacy/build-iso.sh
 
 # Сборка МИНИМАЛЬНОГО образа (без GUI)
-sudo BUILD_MODE=full ./scripts/build-minimal-iso.sh
+sudo BUILD_MODE=full ./scripts/legacy/build-minimal-iso.sh
 ```
 
 ---
 
 ### 3. МИНИМАЛЬНЫЙ образ (VibeCode OS Minimal)
 
-Для серверных задач или слабых машин предусмотрен скрипт `scripts/build-minimal-iso.sh`.
+Для серверных задач или слабых машин предусмотрен скрипт `scripts/legacy/build-minimal-iso.sh`.
 - **Особенности:**
-  - Полностью отсутствует графический стек (X11/MATE).
+  - Полностью отсутствует графический стек (X11/KDE Plasma).
   - Только консольные инструменты (Zsh, Tmux, Git, Vim-tiny, NetworkManager).
   - Уменьшенный размер ISO.
   - Подходит для создания Docker-контейнеров или серверных инсталляций.
 
-Пакетный состав минимальной версии управляется скриптом `scripts/base/minimal-packages.sh`.
+Пакетный состав минимальной версии управляется скриптом `scripts/legacy/base/minimal-packages.sh`.
 
 ---
 
@@ -107,10 +109,10 @@ sudo apt install -y \
 1. **Bootstrap базовой системы:**
    - `debootstrap --arch=amd64 noble "$CHROOT_DIR" "$UBUNTU_MIRROR"`.
    - Настройка `sources.list`, базовой локали, hostname.
-2. **Установка Core OS и MATE в chroot:**
-   - Установка базовых CLI-утилит (см. `scripts/base/base-packages.sh` и итоговый список пакетов для alpha).
-   - Установка MATE (minimal/standard) и необходимого набора приложений.
-   - Применение cleanup-скриптов (`scripts/base/cleanup.sh`) и базового брендинга.
+2. **Установка Core OS и KDE Plasma в chroot:**
+   - Установка базовых CLI-утилит (см. `scripts/legacy/base/base-packages.sh` и итоговый список пакетов для alpha).
+   - Установка KDE Plasma (minimal/standard) и необходимого набора приложений.
+   - Применение cleanup-скриптов (`scripts/legacy/base/cleanup.sh`) и базового брендинга.
 3. **Подготовка SquashFS и структуры ISO (live-режим):**
    - `mksquashfs "$CHROOT_DIR" "$IMAGE_DIR"/casper/filesystem.squashfs`.
    - Копирование ядра, initrd и конфигурации загрузчика в структуру вида:
@@ -128,7 +130,7 @@ sudo apt install -y \
 ### 6. Live-режим vs установленная система
 
 - **Live-сессия по умолчанию:**
-  - ISO грузится в live-окружение MATE с тем же rootfs, который затем используется установщиком.
+  - ISO грузится в live-окружение KDE Plasma с тем же rootfs, который затем используется установщиком.
   - На рабочем столе (или в меню) доступен ярлык установщика Ubuntu/VibeCode OS.
 - **Установленная система:**
   - После установки пользователь получает практически тот же набор пакетов, что и в live-режиме, за вычетом специфических live-утилит.

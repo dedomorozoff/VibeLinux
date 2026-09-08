@@ -26,6 +26,7 @@ plasma-systemmonitor
 kdeconnect
 dolphin
 konsole
+kdialog
 sddm
 xorg-server
 wayland
@@ -64,13 +65,13 @@ bat
 fd
 zoxide
 btop
-htop
 
 # Dev tools
 base-devel
 python
 python-pip
 php
+composer
 go
 rustup
 nodejs
@@ -87,17 +88,32 @@ zellij
 fnm
 podman
 unzip
+zip
 zstd
 git
 lazygit
+github-cli
+openssh
+kubectl
+wl-clipboard
+tree
+clang
+cmake
+gdb
 # Editors
 zed
 helix
+neovim
 flatpak
 
 # AI tools
-ollama
+# opencode — AI coding agent (пакет в официальных репозиториях)
 opencode
+# ollama НЕ включается в live-ISO: пакет тяжёлый (~500 МБ) и всё равно требует
+# диск под модели. Ставится post-install на установленную систему:
+#   sudo ai-install → выбрать Ollama, или sudo pacman -S ollama
+# python-pipx — для глобальной установки Python-CLI на этапе сборки
+python-pipx
 
 # NVIDIA drivers (open kernel module — nvidia-open)
 nvidia-open

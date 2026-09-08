@@ -22,11 +22,17 @@ if [[ -z "${USER_HOME}" ]]; then
 fi
 BRANDING_DIR="/root/branding"
 
-export DEBIAN_FRONTEND=noninteractive
-
 echo "[setup-shell] Установка Zsh и современных CLI-утилит..."
-apt-get update -y || true
-apt-get install -y zsh curl git wget eza bat fd-find ripgrep fzf zoxide btop pipx || true
+if command -v pacman >/dev/null 2>&1; then
+  pacman -Sy --noconfirm --needed zsh curl git wget eza bat fd zoxide ripgrep fzf btop starship python-pipx
+elif command -v apt-get >/dev/null 2>&1; then
+  export DEBIAN_FRONTEND=noninteractive
+  apt-get update -y || true
+  apt-get install -y zsh curl git wget eza bat fd-find ripgrep fzf zoxide btop pipx || true
+else
+  echo "[setup-shell] Неподдерживаемый пакетный менеджер (нужен pacman или apt-get)."
+  exit 1
+fi
 
 # Исправление имен для bat и fd (в Ubuntu они называются batcat и fdfind)
 if command -v batcat >/dev/null 2>&1 && ! command -v bat >/dev/null 2>&1; then

@@ -253,14 +253,6 @@ install_agents() {
   local selected="$1"
   log "Установка AI-агентов: $selected"
 
-  # Aider
-  if echo "$selected" | grep -qi "aider"; then
-    if ! command -v aider >/dev/null 2>&1; then
-      log "Установка aider-chat..."
-      pip3 install --break-system-packages --ignore-installed aider-chat 2>/dev/null || log "Aider: ошибка установки"
-    fi
-  fi
-
   # Ollama
   if echo "$selected" | grep -qi "ollama"; then
     if ! command -v ollama >/dev/null 2>&1; then
@@ -333,7 +325,6 @@ main() {
     "rust|Rust (системный язык)" \
     "bun|Bun (JavaScript runtime)" \
     "ollama|Ollama (локальные LLM)" \
-    "aider|Aider (AI-ассистент в терминале)" \
     "docker|Docker (контейнеризация)" \
     "nvidia|NVIDIA drivers (проприетарные драйверы)")
 
@@ -363,7 +354,7 @@ main() {
     case "$comp" in
       zed|vscode|neovim|helix) editors+="$comp " ;;
       node|go|rust|bun) runtimes+="$comp " ;;
-      ollama|aider) agents+="$comp " ;;
+      ollama) agents+="$comp " ;;
       docker|nvidia) tools+="$comp " ;;
     esac
   done

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=dmsh — AI Shell Assistant
+GenericName=Natural Language Shell
+Comment=Локальный AI-ассистент для управления системой через естественный язык
+Exec=dmsh
+Icon=dmsh
+Terminal=true
+Categories=Development;Utility;AI;
+Keywords=ai;llm;shell;assistant;local;
+StartupNotify=false

@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+#
+# vinstall — текстовый инсталлятор VibeLinux Minimal
+#
+# Движок: archinstall (официальный TUI-инсталлятор Arch Linux).
+# Обёртка добавляет фирменные настройки VibeLinux (локаль ru, хостнейм,
+# брендинг) и запускает интерактивный guided-режим — остаётся выбрать
+# только диск, файловую систему и пользователя.
+#
+# Запуск:
+#   vinstall              — обычная установка (guided TUI archinstall)
+#   vinstall --en        — обычная установка, английская локаль
+#   vinstall --minimal   — минимальная автоматическая установка archinstall
+#   vinstall --help      — справка
+#
+set -euo pipefail
+
+BRAND="\033[1;36m"
+NC="\033[0m"
+RED="\033[1;31m"
+
+SHARE="/usr/local/share/vibelinux"
+CONFIG_EN="$SHARE/archinstall-config-en.json"
+CONFIG_RU="$SHARE/archinstall-config.json"
+
+need_root() {
+  [[ $EUID -eq 0 ]] || { echo -e "${RED}Запустите от root (клонируйте UEFI/bios, а не chroot).${NC}"; exit 1; }
+}
+
+have_archinstall() {
+  command -v archinstall >/dev/null 2>&1 || { echo -e "${RED}archinstall не найден.${NC}"; exit 1; }
+}
+
+usage() {
+  echo -e "${BRAND}VibeLinux Minimal — текстовый инсталлятор${NC}"
+  echo "  Движок: archinstall (Arch Linux TUI)"
+  echo
+  echo "  Использование:"
+  echo "    vinstall            Установка с фирменными настройками VibeLinux (локаль ru, хост vibelinux)"
+  echo "    vinstall --en       То же, но с английской локалью"
+  echo "    vinstall --minimal  Быстрая минимальная установка (archinstall --minimal)"
+  echo "    vinstall --help     Эта справка"
+  echo
+  echo "  Дополнительные флаги archinstall можно передавать как есть:"
+  echo "    vinstall -- --advanced   Начать с расширенного меню"
+  exit 0
+}
+
+main() {
+  need_root
+  have_archinstall
+
+  local config="$CONFIG_RU"
+  local extra=()
+
+  case "${1:-}" in
+    --help|-h)  usage ;;
+    --en)       config="$CONFIG_EN"; shift ;;
+    --minimal)  shift
+                echo -e "${BRAND}[vinstall]${NC} Минимальная установка archinstall..."
+                exec archinstall --minimal "$@" ;;
+    --)         shift; extra=("$@") ;;
+    -*)         extra=("$@") ;;
+    *)          : ;;
+  esac
+
+  echo -e "${BRAND}"
+  echo " ╔══════════════════════════════════════════════════╗"
+  echo " ║  VibeLinux Minimal — установка на диск           ║"
+  echo " ║  Пресет: локаль ru_RU, раскладка ru, хост: vibelinux ║"
+  echo " ╚══════════════════════════════════════════════════╝"
+  echo -e "${NC}"
+  echo "В guided-мастере укажите диск, схему разделов и пользователя."
+  echo "Всё остальное уже предзаполнено настройками VibeLinux."
+  echo
+
+  exec archinstall --config "$config" "${extra[@]}"
+}
+
+main "$@"

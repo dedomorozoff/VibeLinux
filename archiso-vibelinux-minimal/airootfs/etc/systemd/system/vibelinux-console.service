@@ -1,0 +1,14 @@
+[Unit]
+Description=VibeLinux — apply Cyrillic console font and keyboard layout
+DefaultDependencies=no
+After=systemd-vconsole-setup.service
+Before=getty@tty1.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/setfont eurlatgr
+ExecStart=/usr/bin/loadkeys ruwin_alt_sh-UTF-8
+
+[Install]
+WantedBy=sysinit.target

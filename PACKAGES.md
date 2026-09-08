@@ -6,13 +6,19 @@
 
 ## 📦 Редакции
 
-### VibeCode OS Full
+### VibeCode OS Arch (основная)
+Полноценная рабочая среда на **Arch Linux + KDE Plasma 6** — основной дистрибутив проекта.
+
+**Размер ISO:** ~3-4 ГБ
+**Размер после установки:** ~15-20 ГБ (с моделями и инструментами)
+
+### VibeCode OS Full (Ubuntu, legacy)
 Полноценная рабочая среда для разработки с GUI, AI-инструментами и полным dev-стеком.
 
 **Размер ISO:** ~3-4 ГБ
 **Размер после установки:** ~15-20 ГБ (с моделями и инструментами)
 
-### VibeCode OS Minimal
+### VibeCode OS Minimal (Ubuntu, legacy)
 Минимальная консольная система для серверов, контейнеров и развёртывания.
 
 **Размер ISO:** ~600-800 МБ (оптимизировано)
@@ -20,7 +26,34 @@
 
 ---
 
-## 🖥️ VibeCode OS Full (Ubuntu)
+## 🐉 VibeCode OS Arch (основная)
+
+### Базовая система
+
+| Компонент | Версия / Описание |
+|-----------|-------------------|
+| **База** | Arch Linux (rolling) |
+| **Окружение** | KDE Plasma 6 |
+| **Дисплей-менеджер** | SDDM (autologin) |
+| **Установщик** | Calamares |
+| **Профиль сборки** | `archiso-vibelinux/` |
+
+### Состав
+
+- **Терминалы:** Kitty, Konsole; **оболочка:** Zsh + Oh My Zsh + Starship
+- **CLI-утилиты:** eza, bat, fd, rg, fzf, zoxide, btop
+- **Языки:** Python (pyenv), Node.js (nvm), Rust (rustup), Go, Java (SDKMAN!), PHP
+- **Редакторы:** VS Code, Zed, Neovim (AstroNvim), Kate
+- **AI-стек:** opencode, qwen-code, claude-code, codex, kilo, mimo, continue, crush, kimi, sourcecraft, koda (предустановлены), dmsh, Ollama (post-install), Python AI-библиотеки (post-install)
+- **Инструменты:** Git, lazygit, Docker + docker-compose
+- **Графика:** Pinta, Spectacle, Flameshot; **API:** Bruno; **БД:** sqlite3 + sqliteman
+- **Браузер:** Firefox; **AUR:** yay, zed-editor-bin, visual-studio-code-bin, bruno-bin, calamares
+
+Подробный состав: [BUILD-INSTRUCTIONS.md](BUILD-INSTRUCTIONS.md)
+
+---
+
+## 🖥️ VibeCode OS Full (Ubuntu, legacy)
 
 ### Базовая система
 
@@ -28,8 +61,8 @@
 |-----------|-------------------|
 | **База** | Ubuntu 24.04 LTS (Noble Numbat) |
 | **Ядро** | linux-image-generic (6.8+) |
-| **Окружение** | MATE Desktop Environment |
-| **Дисплей-менеджер** | LightDM |
+| **Окружение** | KDE Plasma |
+| **Дисплей-менеджер** | SDDM |
 | **Установщик** | Ubiquity |
 
 ### Терминал и оболочка
@@ -116,10 +149,11 @@
 | **Ollama** | Запуск локальных LLM |
 | **Open WebUI** | Веб-интерфейс для Ollama (порт 3000) |
 | **ai-chat** | Терминальный AI-чат (Ollama) |
-| **aider** | AI-парное программирование (pre-installed) |
 | **opencode** | Open-source AI coding agent (TUI) |
 | **qwen-code** | Qwen AI coding agent (npm global) |
-| **nlsh** | Natural Language Shell (offline AI assistant) |
+| **sourcecraft** | SourceCraft Code Assistant CLI (Яндекс, npm/install.sh) |
+| **koda** | Koda CLI — AI coding assistant (ООО «Кода», форк gemini-cli, npm) |
+| **dmsh** | Natural Language Shell (offline AI assistant) |
 
 #### Модели Ollama (по умолчанию)
 
@@ -179,7 +213,7 @@
 
 | Утилита | Назначение |
 |---------|------------|
-| htop | Монитор процессов |
+| btop | Монитор процессов |
 | neofetch | Информация о системе |
 | curl | Загрузка файлов |
 | wget | Загрузка файлов |
@@ -205,7 +239,7 @@
 
 | Компонент | Описание |
 |-----------|----------|
-| **Темы GTK** | Фирменная тема VibeCode OS |
+| **Темы KDE (KVantum) / GTK** | Фирменная тема VibeCode OS |
 | **Иконки** | Кастомные иконки |
 | **Обои** | Подборка обоев в стиле VibeCode |
 | **Plymouth** | Анимация загрузки |
@@ -213,7 +247,7 @@
 
 ---
 
-## 🖥️ VibeCode OS Minimal
+## 🖥️ VibeCode OS Minimal (Ubuntu, legacy)
 
 ### Базовая система
 
@@ -232,7 +266,7 @@
 | **Tmux** | Терминальный мультиплексор |
 | **Nano** | Текстовый редактор |
 | **Vim-tiny** | Текстовый редактор |
-| **htop** | Монитор процессов |
+| **btop** | Монитор процессов |
 | **curl** | Загрузка файлов (HTTP/HTTPS) |
 | **wget** | Загрузка файлов |
 | **unzip** | Распаковка ZIP |
@@ -246,7 +280,7 @@
 
 ### Опциональные пакеты
 
-Могут быть добавлены раскомментированием в `scripts/base/minimal-packages.sh`:
+Могут быть добавлены раскомментированием в `scripts/legacy/base/minimal-packages.sh`:
 
 | Пакет | Назначение | Размер |
 |-------|------------|--------|
@@ -265,9 +299,9 @@
 
 ## 📋 Сравнение редакций
 
-| Пакет / Программа | Full | Minimal (базовый) | Minimal (опционально) |
-|-------------------|------|-------------------|----------------------|
-| MATE Desktop | ✅ | ❌ | ❌ |
+| Пакет / Программа | Full (Ubuntu, legacy) | Minimal (базовый) | Minimal (опционально) |
+|-------------------|----------------------|-------------------|----------------------|
+| KDE Plasma | ✅ | ❌ | ❌ |
 | Kitty | ✅ | ❌ | ❌ |
 | Zsh | ✅ | ✅ | ✅ |
 | Oh My Zsh | ✅ | ❌ | ❌ |
@@ -298,7 +332,7 @@
 | Tmux | ✅ | ✅ | ✅ |
 | Nano | ✅ | ✅ | ✅ |
 | Vim-tiny | ✅ | ✅ | ✅ |
-| htop | ✅ | ✅ | ✅ |
+| btop | ✅ | ✅ | ✅ |
 | MC | ✅ | ❌ | ✅ |
 | tree | ✅ | ❌ | ✅ |
 | build-essential | ✅ | ❌ | ✅ |
@@ -327,7 +361,7 @@
 | **Терминал и оболочка** | Kitty, Zsh, Oh My Zsh, Starship, eza, bat, fd, ripgrep, fzf, zoxide, btop |
 | **Языки** | Python, Node.js/npm/nvm, Rust/rustup, Go, Java (SDKMAN!), PHP, pyenv |
 | **Редакторы** | VS Code, Zed, Neovim + AstroNvim, Kate |
-| **AI-стек** | Ollama, opencode, qwen-code, aider, Python AI-библиотеки (/opt/vibecode/ai-venv: torch, transformers, accelerate, langchain-core, llama-index, chromadb) |
+| **AI-стек** | opencode, qwen-code, claude-code, codex, kilo, mimo, continue, crush, kimi, sourcecraft, koda — **все CLI-агенты предустановлены в ISO**; Ollama — post-install (`install-ollama`); Python AI-библиотеки post-install (`setup-ai-stack.sh`) |
 | **Графические приложения** | Pinta, Bruno, Spectacle, Ark, Flameshot |
 | **Базы данных** | sqlite3, sqliteman (GUI) |
 | **Контейнеры** | Docker, docker-compose |
@@ -382,4 +416,4 @@
 3. **Расширения VSCodium** устанавливаются автоматически при первом запуске
 4. **Python AI-библиотеки** предустановлены в `/opt/vibecode/ai-venv`, запуск: `python-ai`
 5. **ComfyUI** требует дополнительной загрузки моделей Stable Diffusion
-6. **Minimal → Full:** Используйте мастер доустановки `sudo make upgrade` для доустановки компонентов
+6. **Minimal → Full:** Используйте мастер доустановки `sudo make legacy-upgrade` для доустановки компонентов
