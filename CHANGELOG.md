@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Fixed
+- **KDE Plasma: пропадало оформление окон (нет рамок, кнопок закрытия/сворачивания) в live-сессии и после установки:**
+  - Начиная с Plasma 6.7 пакет `kwin` больше не тянет X11-бэкенд транзитивно, а `kwin-x11` (содержит `/usr/bin/kwin_x11`) в `packages.x86_64` не был указан
+  - Без `kwin_x11` сессия `plasma-x11` стартует без оконного менеджера → окна без декораций
+  - Фикс: `kwin-x11` добавлен в `archiso-vibelinux/packages.x86_64`
+
 ### Changed
 - **nlsh переименован в dmsh** (апстрим: `github.com/dedomorozoff/dmsh`, v0.2.6+)
   - Бинарник: `nlsh` → `dmsh` (`/usr/bin/dmsh`), конфиг: `~/.config/nlsh/` → `~/.config/dmsh/`

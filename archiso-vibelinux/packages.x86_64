@@ -20,6 +20,10 @@ edk2-shell
 # KDE Plasma Desktop
 plasma-desktop
 plasma-workspace
+# kwin-x11 НЕ тянется транзитивно с Plasma 6.7+ (kwin собран без X11-бэкенда
+# по умолчанию, только Wayland). Без него startplasma-x11 не находит kwin_x11 —
+# окна остаются без оформления/кнопок закрытия и сворачивания.
+kwin-x11
 plasma-nm
 plasma-pa
 plasma-systemmonitor
