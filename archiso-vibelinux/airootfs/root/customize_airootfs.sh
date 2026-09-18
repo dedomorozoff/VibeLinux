@@ -439,6 +439,7 @@ NPM_AGENTS=(
   "@continuedev/cli:cn"
   "@moonshot-ai/kimi-code:kimi"
   "@kodadev/koda-cli:koda"
+  "cline:cline"
 )
 for entry in "${NPM_AGENTS[@]}"; do
   pkg="${entry%%:*}"; bin="${entry##*:}"
@@ -510,7 +511,7 @@ if ! command -v gemini >/dev/null 2>&1; then
 fi
 
 # Обёртки для агентов: кэш и tmp в /tmp (tmpfs), чтобы не забивать overlay
-for agent_bin in claude kilo mimo qwen codex opencode dmsh crush kimi src sourcecraft koda gemini; do
+for agent_bin in claude kilo mimo qwen codex opencode dmsh crush kimi src sourcecraft koda gemini cline; do
   REAL_BIN="$(type -p "$agent_bin" 2>/dev/null || true)"
   if [[ -z "$REAL_BIN" || -f "${REAL_BIN}.real" ]]; then
     continue
@@ -782,6 +783,25 @@ echo "Continue.dev installed! Config: $CONFIG_DIR/config.json"
 CONTINUEEOF
 chmod +x /usr/local/bin/install-continue
 
+# Cline CLI installer
+cat > /usr/local/bin/install-cline << 'CLINEEOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "Installing Cline CLI..."
+if ! command -v npm >/dev/null 2>&1; then
+  echo "npm not found. Install Node.js first."
+  exit 1
+fi
+if npm install -g cline; then
+  echo "Cline installed! Run: cline"
+else
+  echo "Failed to install Cline. Check: https://github.com/cline/cline"
+  exit 1
+fi
+CLINEEOF
+chmod +x /usr/local/bin/install-cline
+
 # MCP servers installer
 cat > /usr/local/bin/install-mcp-servers << 'MCPEOF'
 #!/usr/bin/env bash
@@ -844,6 +864,7 @@ fi
 
 echo "── Предустановленные AI-агенты (работают сразу) ──"
 echo "  opencode      — Open source AI coding agent ($(status opencode))"
+echo "  Cline         — Autonomous AI coding agent ($(status cline))"
 echo "  SourceCraft   — Яндекс Code Assistant CLI ($(status src))"
 echo "  Koda          — Koda CLI (Яндекс/Кода) ($(status koda))"
 echo "  qwen-code     — Qwen AI coding agent ($(status qwen))"
@@ -1354,7 +1375,7 @@ echo "  Welcome to VibeLinux!"
 echo "  Linux for vibe coding and AI development"
 echo "  ========================================="
 echo ""
-echo "  AI-агенты уже предустановлены: opencode, src (SourceCraft), koda, qwen, claude, codex, crush, kimi, gemini"
+echo "  AI-агенты уже предустановлены: opencode, cline, src (SourceCraft), koda, qwen, claude, codex, crush, kimi, gemini"
 echo "  Ollama (локальные LLM) ставится после установки на диск: sudo install-ollama"
 echo ""
 if [[ -d /run/archiso/bootmnt ]]; then
@@ -1488,6 +1509,7 @@ cat > /home/vibe/Desktop/GET-STARTED.html << 'EOF'
 <h2>AI Tools (предустановлены)</h2>
 <ul>
   <li><strong>opencode</strong> — <code>opencode</code> (AI coding agent)</li>
+  <li><strong>Cline</strong> — <code>cline</code> (Autonomous AI coding agent CLI)</li>
   <li><strong>SourceCraft CLI</strong> — <code>src</code> (Яндекс Code Assistant)</li>
   <li><strong>Koda CLI</strong> — <code>koda</code> (Яндекс/Кода, форк gemini-cli)</li>
   <li><strong>qwen-code</strong> — <code>qwen</code> (Alibaba coding agent)</li>
@@ -1509,6 +1531,7 @@ cat > /home/vibe/Desktop/GET-STARTED.html << 'EOF'
 <span class="cmd">bat</span> file  <span class="sep">—</span> cat with syntax highlighting
 <span class="cmd">lazygit</span>  <span class="sep">—</span> git TUI
 <span class="cmd">opencode</span> <span class="sep">—</span> AI coding agent
+<span class="cmd">cline</span>    <span class="sep">—</span> Cline AI coding agent
 <span class="cmd">claude</span>   <span class="sep">—</span> Claude Code (Anthropic)
 <span class="cmd">codex</span>    <span class="sep">—</span> OpenAI Codex CLI
 <span class="cmd">ai-setup</span> <span class="sep">—</span> download AI models (post-install)</pre>
@@ -1516,7 +1539,7 @@ cat > /home/vibe/Desktop/GET-STARTED.html << 'EOF'
 <h2>First Steps</h2>
 <ol>
   <li>Open <strong>Konsole</strong> (or Kitty)</li>
-  <li>Run <code>opencode</code> / <code>claude</code> / <code>codex</code> — all pre-installed</li>
+  <li>Run <code>opencode</code> / <code>cline</code> / <code>claude</code> / <code>codex</code> — all pre-installed</li>
   <li>Install VibeLinux to disk, then run <code>install-ollama</code> + <code>ai-setup</code> for local LLM models</li>
   <li>Run <code>sudo /opt/vibecode/scripts/ai/setup-ai-stack.sh</code> for WebUI/ComfyUI/Python-стек</li>
   <li>Open <strong>Zed</strong> and start coding</li>
@@ -1546,6 +1569,7 @@ cat > /usr/local/bin/ai-launcher << 'LAUNCHEOF'
 # возвращается в меню; завершение — пункт «Выход» или Ctrl+D.
 AGENTS=(
   "opencode:OpenCode"
+  "cline:Cline"
   "src:SourceCraft CLI"
   "koda:Koda CLI"
   "claude:Claude Code"
@@ -1722,7 +1746,9 @@ NLSCONF
   chown -R vibe:vibe "$DMSH_CONFIG_DIR"
 
   if [[ -f /root/dmsh/dmsh.svg ]]; then
+    mkdir -p /usr/share/pixmaps /usr/share/icons/hicolor/scalable/apps
     cp /root/dmsh/dmsh.svg /usr/share/pixmaps/dmsh.svg
+    cp /root/dmsh/dmsh.svg /usr/share/icons/hicolor/scalable/apps/dmsh.svg
   fi
 
   cat > /home/vibe/Desktop/dmsh.desktop << 'EOF'
@@ -1876,32 +1902,13 @@ if ls /root/far2l/far2l-*.pkg.tar.zst 2>/dev/null | head -1; then
 else
   echo "WARNING: far2l pre-built packages not found"
 fi
-# Pinta — lightweight image editor (AppImage, прямой download вместо AUR)
-PINTA_URL="https://github.com/pkgforge-dev/Pinta-AppImage/releases/latest/download/Pinta-3.1.2-1-anylinux-x86_64.AppImage"
-if [[ ! -f /opt/pinta/pinta.AppImage ]]; then
-  mkdir -p /opt/pinta
-  echo "Downloading Pinta AppImage..."
-  curl -sL "$PINTA_URL" -o /opt/pinta/pinta.AppImage 2>/dev/null || true
-  if [[ -s /opt/pinta/pinta.AppImage ]]; then
-    chmod +x /opt/pinta/pinta.AppImage
-    ln -sf /opt/pinta/pinta.AppImage /usr/local/bin/pinta
-    cat > /usr/share/applications/pinta.desktop << 'PINTADESK'
-[Desktop Entry]
-Name=Pinta
-Comment=Simple GTK Paint Program
-Exec=/opt/pinta/pinta.AppImage
-Icon=pinta
-Type=Application
-Categories=Graphics;2DGraphics;RasterGraphics;GTK;
-StartupNotify=false
-MimeType=image/bmp;image/gif;image/jpeg;image/jpg;image/png;image/tiff;image/x-xcf;
-X-AppImage-Version=3.1.2
-PINTADESK
-    echo "OK: Pinta installed from AppImage"
-  else
-    echo "WARNING: Pinta download failed, skipping"
-    rm -f /opt/pinta/pinta.AppImage
-  fi
+# Pinta — lightweight image editor (из официального репозитория extra)
+if ! command -v pinta &>/dev/null; then
+  echo "Installing Pinta from official Arch repos..."
+  pacman -S --noconfirm pinta 2>/dev/null || echo "WARNING: Pinta installation failed"
+fi
+if command -v pinta &>/dev/null; then
+  echo "OK: Pinta installed from official repos"
 fi
 
 # Calamares built from AUR source — no Python/Boost dependencies
@@ -2583,7 +2590,7 @@ echo ""
 
 # 4. Советы
 echo "── Полезные команды ──"
-echo "  AI-агенты (уже стоят):     opencode, qwen, claude, codex, crush, kimi, gemini"
+echo "  AI-агенты (уже стоят):     opencode, cline, qwen, claude, codex, crush, kimi, gemini"
 echo "  Ollama (после установки):  sudo install-ollama"
 echo "  AI-модели (после установки): sudo ai-setup"
 echo "  AI stack (после установки): sudo /opt/vibecode/scripts/ai/setup-ai-stack.sh"

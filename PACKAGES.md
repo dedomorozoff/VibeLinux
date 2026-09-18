@@ -44,10 +44,10 @@
 - **CLI-утилиты:** eza, bat, fd, rg, fzf, zoxide, btop
 - **Языки:** Python (pyenv), Node.js (nvm), Rust (rustup), Go, Java (SDKMAN!), PHP
 - **Редакторы:** VS Code, Zed, Neovim (AstroNvim), Kate
-- **AI-стек:** opencode, qwen-code, claude-code, codex, kilo, mimo, continue, crush, kimi, sourcecraft, koda (предустановлены), dmsh, Ollama (post-install), Python AI-библиотеки (post-install)
+- **AI-стек:** opencode, cline, qwen-code, claude-code, codex, kilo, mimo, continue, crush, kimi, sourcecraft, koda (предустановлены), dmsh, Ollama (post-install), Python AI-библиотеки (post-install)
 - **Инструменты:** Git, lazygit, Docker + docker-compose
-- **Графика:** Pinta, Spectacle, Flameshot; **API:** Bruno; **БД:** sqlite3 + sqliteman
-- **Браузер:** Firefox; **AUR:** yay, zed-editor-bin, visual-studio-code-bin, bruno-bin, calamares
+- **Графика:** Pinta, Spectacle, Flameshot; **БД:** sqlite3 + sqliteman
+- **Браузер:** Firefox; **AUR:** yay, zed-editor-bin, visual-studio-code-bin, calamares
 
 Подробный состав: [BUILD-INSTRUCTIONS.md](BUILD-INSTRUCTIONS.md)
 
@@ -200,7 +200,6 @@
 | Приложение | Назначение |
 |------------|------------|
 | **Pinta** | Лёгкий графический редактор (аналог Paint.NET) |
-| **Bruno** | API-клиент для тестирования REST/GraphQL (аналог Postman, open-source) |
 
 ### Работа с базами данных
 
@@ -325,7 +324,6 @@
 | Aider | ✅ | ❌ | ❌ |
 | ComfyUI | ✅ | ❌ | ❌ |
 | Pinta | ✅ | ❌ | ❌ |
-| Bruno | ✅ | ❌ | ❌ |
 | SQLite3 + DB Browser | ✅ | ❌ | ❌ |
 | Python AI-библиотеки | ✅ | ❌ | ❌ |
 | Шрифты (JetBrains Mono, Fira Code) | ✅ | ❌ | ❌ |
@@ -361,8 +359,8 @@
 | **Терминал и оболочка** | Kitty, Zsh, Oh My Zsh, Starship, eza, bat, fd, ripgrep, fzf, zoxide, btop |
 | **Языки** | Python, Node.js/npm/nvm, Rust/rustup, Go, Java (SDKMAN!), PHP, pyenv |
 | **Редакторы** | VS Code, Zed, Neovim + AstroNvim, Kate |
-| **AI-стек** | opencode, qwen-code, claude-code, codex, kilo, mimo, continue, crush, kimi, sourcecraft, koda — **все CLI-агенты предустановлены в ISO**; Ollama — post-install (`install-ollama`); Python AI-библиотеки post-install (`setup-ai-stack.sh`) |
-| **Графические приложения** | Pinta, Bruno, Spectacle, Ark, Flameshot |
+| **AI-стек** | opencode, cline, qwen-code, claude-code, codex, kilo, mimo, continue, crush, kimi, sourcecraft, koda — **все CLI-агенты предустановлены в ISO**; Ollama — post-install (`install-ollama`); Python AI-библиотеки post-install (`setup-ai-stack.sh`) |
+| **Графические приложения** | Pinta, Spectacle, Ark, Flameshot |
 | **Базы данных** | sqlite3, sqliteman (GUI) |
 | **Контейнеры** | Docker, docker-compose |
 | **Браузер** | Firefox |

@@ -36,6 +36,7 @@
 - Установлен в `/usr/local/bin/ai-chat`.
 
 **Современные agentic CLI**
+- **Cline CLI** — `cline` (Autonomous AI coding agent, multi-provider)
 - **Codex CLI** — `codex` (OpenAI)
 - **Claude Code** — `claude` (Anthropic)
 - **Qwen Code** — `qwen` (Alibaba)

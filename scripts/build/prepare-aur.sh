@@ -17,9 +17,7 @@ warn() { printf "\033[1;33m[!]\033[0m %s\n" "$*"; }
 
 AUR_PACKAGES=(
   "yay-bin"
-  "bruno-bin"
   "calamares"
-  "pinta-appimage"
 )
 
 mkdir -p "$AUR_DIR" "$REPO_DIR"

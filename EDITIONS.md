@@ -42,10 +42,10 @@ Ubuntu-редакции (Full / Lite) поддерживаются в стату
 - CLI-утилиты (eza, bat, fd, rg, fzf, zoxide, btop)
 - Языки: Python (pyenv), Node.js (nvm), Rust (rustup), Go, Java (SDKMAN!), PHP
 - Редакторы: VS Code, Zed, Neovim (AstroNvim), Kate
-- AI-стек: opencode, qwen-code, claude-code, codex, kilo, mimo, continue, crush, kimi (предустановлены), dmsh, Ollama (post-install), Python AI-библиотеки (post-install)
+- AI-стек: opencode, cline, qwen-code, claude-code, codex, kilo, mimo, continue, crush, kimi (предустановлены), dmsh, Ollama (post-install), Python AI-библиотеки (post-install)
 - Инструменты: Git, lazygit, Docker + docker-compose
-- Графика: Pinta, Spectacle, Flameshot; API: Bruno; БД: sqlite3 + sqliteman
-- Браузер: Firefox; AUR-пакеты: yay, zed-editor-bin, visual-studio-code-bin, bruno-bin, calamares
+- Графика: Pinta, Spectacle, Flameshot; БД: sqlite3 + sqliteman
+- Браузер: Firefox; AUR-пакеты: yay, zed-editor-bin, visual-studio-code-bin, calamares
 - Брендинг: темы, обои, иконки, Plymouth, KDE-тема
 
 **Сборка:**

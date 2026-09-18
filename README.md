@@ -58,7 +58,7 @@ make legacy-lite       # Ubuntu 24.04 Lite (CLI-only, legacy)
 - **Docker** + **Docker Compose** — контейнеризация
 
 **AI-стек (в ISO, предустановлен — работает и в live, и на установленной системе):**
-- **opencode**, **qwen-code**, **Claude Code**, **Codex**, **Kilo**, **MiMo**, **Continue**, **Crush**, **Kimi** — все CLI-агенты запечены в образ
+- **opencode**, **Cline**, **qwen-code**, **Claude Code**, **Codex**, **Kilo**, **MiMo**, **Continue**, **Crush**, **Kimi** — все CLI-агенты запечены в образ
 - **dmsh** — Natural Language Shell (AI-ассистент в терминале)
 
 **Ollama и тяжёлый AI-стек (post-install, после установки на диск):**
@@ -69,7 +69,6 @@ make legacy-lite       # Ubuntu 24.04 Lite (CLI-only, legacy)
 
 **Графические приложения:**
 - **Pinta** — графический редактор
-- **Bruno** — API-клиент (REST/GraphQL)
 - **Spectacle**, **Flameshot** — скриншоты
 - **DB Browser for SQLite** — GUI для баз данных
 

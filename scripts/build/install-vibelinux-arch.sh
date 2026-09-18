@@ -132,7 +132,7 @@ else
       noto-fonts noto-fonts-cjk noto-fonts-emoji noto-fonts-extra \
       ttf-fira-code ttf-jetbrains-mono ttf-jetbrains-mono-nerd \
       ttf-cascadia-code ttf-hack ttf-dejavu ttf-liberation \
-      spectacle ark flameshot gparted sqlite3 sqlitebrowser \
+      pinta spectacle ark flameshot gparted sqlite3 sqlitebrowser \
       virtualbox-guest-utils
 
   if [[ "${INSTALL_DEV}" -eq 1 ]]; then
@@ -193,11 +193,7 @@ if [[ "${INSTALL_AUR}" -eq 1 ]]; then
     AUR=""
   fi
 
-  if [[ -n "${AUR:-}" ]]; then
-    log "Установка AUR-пакетов (bruno, pinta)..."
-    runuser -u "${TARGET_USER}" -- "${AUR}" -S --noconfirm --needed \
-      bruno-bin pinta 2>/dev/null || warn "Не удалось установить AUR-пакеты (возможно, уже установлены)."
-  fi
+  # AUR packages: pinta is now in extra repo; add user-specific AUR packages here if needed
 fi
 
 # ---------- Настройка оболочки ----------
@@ -308,6 +304,11 @@ if [[ "${INSTALL_AI}" -eq 1 ]] && [[ "${MINIMAL}" -eq 0 ]]; then
     run_as_user 'npm install -g @kodadev/koda-cli' 2>/dev/null || warn "Koda CLI не установился (проверьте npm)"
   fi
 
+  if command -v npm >/dev/null 2>&1 && ! command -v cline >/dev/null 2>&1; then
+    log "Установка Cline CLI (AI coding agent)..."
+    run_as_user 'npm install -g cline' 2>/dev/null || warn "Cline CLI не установился (проверьте npm)"
+  fi
+
   log "Установка ai-chat (терминальный AI-чат)..."
   cat > /usr/local/bin/ai-chat << 'AICHATEOF'
 #!/usr/bin/env bash
@@ -384,6 +385,7 @@ log "  fastfetch   — информация о системе"
 log "  ai-chat     — чат с локальной LLM (после ai-setup)"
 log "  ai-setup    — скачать модели Ollama"
 log "  opencode    — AI coding agent"
+log "  cline       — Cline AI coding agent CLI"
 log "  sourcecraft — SourceCraft Code Assistant (Яндекс)"
 log "  koda        — Koda CLI (AI coding assistant)"
 log "  qwen        — Qwen AI coding agent"
@@ -395,5 +397,6 @@ log "  ./scripts/ai/install-ollama-models.sh — модели Ollama"
 log "  ./scripts/ai/install-open-webui.sh    — Open WebUI"
 log "  ./scripts/ai/setup-python-ai-stack.sh — Python AI-стек"
 log "  ./scripts/ai/install-qwen-code.sh     — qwen-code"
+log "  ./scripts/ai/install-cline.sh         — cline"
 log ""
 log "Перезапустите терминал или выполните: source ~/.zshrc"

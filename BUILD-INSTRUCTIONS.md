@@ -72,13 +72,12 @@ make legacy-mini    # legacy (Ubuntu, CLI-only)
 - **CLI утилиты:** eza, bat, fd, rg, fzf, zoxide, btop
 - **Языки:** Python + pyenv, Node.js + nvm, Rust + rustup, Go, Java (SDKMAN!), PHP
 - **Редакторы:** VS Code, Zed, Neovim + AstroNvim, Kate
-- **AI:** opencode, qwen-code, claude-code, codex, kilo, mimo, continue, crush, kimi (предустановлены), Ollama (post-install через `install-ollama`), Python AI-библиотеки (post-install через `setup-ai-stack.sh`)
+- **AI:** opencode, cline, qwen-code, claude-code, codex, kilo, mimo, continue, crush, kimi (предустановлены), Ollama (post-install через `install-ollama`), Python AI-библиотеки (post-install через `setup-ai-stack.sh`)
 - **Графика:** Pinta, Spectacle, Flameshot
-- **API:** Bruno
 - **БД:** sqlite3 + sqliteman
 - **Контейнеры:** Docker + docker-compose
 - **Браузер:** Firefox
-- **AUR-пакеты:** yay, zed-editor-bin, visual-studio-code-bin, bruno-bin, calamares
+- **AUR-пакеты:** yay, zed-editor-bin, visual-studio-code-bin, calamares
 
 **Размер ISO:** ~3-4 ГБ
 

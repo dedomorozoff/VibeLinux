@@ -201,20 +201,6 @@ apt-get install -y pinta
 # SQLite3 CLI + DB Browser for SQLite (лёгкий GUI для БД)
 apt-get install -y sqlite3 sqlitebrowser
 
-# Bruno — API-клиент (альтернатива Postman)
-echo "[full-chroot] Установка Bruno..."
-if curl -sf --connect-timeout 5 https://api.github.com >/dev/null 2>&1; then
-  BRUNO_DEB=$(curl -sL "https://api.github.com/repos/usebruno/bruno/releases/latest" | grep -oP '"browser_download_url": "\K[^"]*amd64\.deb' | head -1)
-  if [[ -n "$BRUNO_DEB" ]]; then
-    curl -sL "$BRUNO_DEB" -o /tmp/bruno.deb
-    apt-get install -y /tmp/bruno.deb || echo "[full-chroot] WARNING: Bruno install failed"
-    rm -f /tmp/bruno.deb
-  else
-    echo "[full-chroot] WARNING: Bruno .deb not found in latest release"
-  fi
-else
-  echo "[full-chroot] Пропуск Bruno — нет сети"
-fi
 
 # === НАСТРОЙКА ЛОКАЛИ ===
 echo "[full-chroot] Настройка локали..."
