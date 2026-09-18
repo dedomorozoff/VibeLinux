@@ -28,7 +28,7 @@ cat > /etc/motd << 'EOF'
 
  ── AI-агенты (уже предустановлены) ─────────────────────────
    claude, codex, qwen, kimi, kilo, mimo, cn, koda, src (SourceCraft)
-   dmed, dmsh, crush, opencode            запуск: <имя> --help
+   dmed, dmsh, crush, opencode, gemini    запуск: <имя> --help
    terminal AI chat:  ai-chat
 
  Доустановка AI-стека (после установки на диск):
@@ -284,6 +284,16 @@ if [[ -n "$CRUSH_AA" ]]; then
 fi
 npm uninstall -g "@charmland/crush" >/dev/null 2>&1 || true
 
+# Google Gemini CLI — официальный installer от Google (antigravity)
+if ! command -v gemini >/dev/null 2>&1; then
+  echo "Installing Google Gemini CLI..."
+  if curl -fsSL --retry 3 https://antigravity.google/cli/install.sh | bash; then
+    echo "OK: gemini installed"
+  else
+    echo "WARNING: gemini install failed (offline?)"
+  fi
+fi
+
 # dmsh — extract local package directly (pacman -U fails in archiso chroot)
 if compgen -G "/root/dmsh/*.pkg.tar.zst" >/dev/null; then
   mkdir -p /tmp/dmsh-extract
@@ -301,7 +311,7 @@ else
 fi
 
 # Wrapper scripts: redirect cache/tmp to /tmp (tmpfs) to avoid filling overlay
-for agent_bin in claude kilo mimo qwen codex opencode dmsh crush kimi dmed src sourcecraft koda; do
+for agent_bin in claude kilo mimo qwen codex opencode dmsh crush kimi dmed src sourcecraft koda gemini; do
   REAL_BIN="$(type -p "$agent_bin" 2>/dev/null || true)"
   if [[ -z "$REAL_BIN" || -f "${REAL_BIN}.real" ]]; then
     continue

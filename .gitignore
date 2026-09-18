@@ -1,65 +1,10 @@
-# Общие артефакты и временные файлы
-.DS_Store
-Thumbs.db
-*.log
-*.tmp
-*.swp
-*.swo
-
-# Python
-__pycache__/
-*.pyc
-.venv/
-venv/
-
-# Node / фронтенд
-node_modules/
-dist/
-
-# Build artifacts (но не scripts/build/ — там скрипты сборки)
-build/
-!scripts/build/
-
-# IDE
-.idea/
-.vscode/
-*.iml
-
-# ISO и образы
-*.iso
-*.img
-*.qcow2
-
-# Временные директории
-temp/
-soft/
-
-# Сгенерированная копия scripts/ai в профиле (создаётся build-vibe-arch.sh)
-archiso-vibelinux/airootfs/opt/
-# AUR package cache (seeds from /srv/vibe-aur-cache, created by build-vibe-arch.sh)
-archiso-vibelinux/airootfs/root/aur-cache/
-# dmsh artifacts copied into profile by build-vibe-arch.sh (canonical: soft/dmsh/)
-archiso-vibelinux/airootfs/root/dmsh/*.pkg.tar.zst
-archiso-vibelinux/airootfs/root/dmsh/dmsh
-!soft/dmsh/dmsh.desktop
-!soft/dmsh/dmsh.svg
-
-# Mini-профиль: dmsh-пакет и dmed-бинарник кладёт build-vibe-arch-minimal.sh
-# (canonical: soft/dmsh/, soft/dmed/)
-archiso-vibelinux-minimal/airootfs/root/dmsh/*.pkg.tar.zst
-archiso-vibelinux-minimal/airootfs/root/dmsh/dmsh
-archiso-vibelinux-minimal/airootfs/usr/local/
-
-# Koda Desktop пакет скачивает build-vibe-arch.sh (download.kodacode.ru)
-archiso-vibelinux/airootfs/root/koda/koda-app-*.pacman
-archiso-vibelinux/airootfs/root/koda/koda-app-*.pkg.tar.zst
-
-# AI assistants
-.junie/
-.qwen/
-.qoder/
-
-# Прочее
-/.env
-/.env.local
-
+# Сборочные артефакты (скачиваются/копируются при сборке ISO)
+/archiso-vibelinux/airootfs/root/dmed/
+/archiso-vibelinux/airootfs/root/dmsh/*.pkg.tar.zst
+/archiso-vibelinux/airootfs/root/aur-cache/
+/archiso-vibelinux/airootfs/root/koda/
+/archiso-vibelinux/airootfs/opt/
+/archiso-vibelinux-minimal/airootfs/root/dmsh/
+/archiso-vibelinux-minimal/airootfs/usr/
+/out/
+/scripts/legacy/build/

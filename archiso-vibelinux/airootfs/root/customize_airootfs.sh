@@ -243,6 +243,20 @@ When = PostTransaction
 Exec = /usr/local/bin/vibe-finalize-boot
 HOOK
 
+# X11-сессия для SDDM: в пакетах Plasma 6 нет /usr/share/xsessions/plasma-x11.desktop
+# (есть только wayland-sessions/plasma.desktop), поэтому создаём свой entry,
+# иначе Session=plasma-x11.desktop не находится и автологин не срабатывает.
+mkdir -p /usr/share/xsessions
+cat > /usr/share/xsessions/plasma-x11.desktop << 'PX11EOF'
+[Desktop Entry]
+Name=Plasma (X11)
+Comment=KDE Plasma session (X11) — VibeLinux
+Exec=/usr/bin/startplasma-x11
+TryExec=/usr/bin/startplasma-x11
+Type=XSession
+DesktopNames=KDE
+PX11EOF
+
 # SDDM autologin (X11 — VirtualBox совместимость; Wayland падает без 3D)
 mkdir -p /etc/sddm.conf.d
 cat > /etc/sddm.conf.d/autologin.conf << EOF
@@ -485,8 +499,18 @@ if [[ -n "$CRUSH_AA" ]]; then
 fi
 npm uninstall -g "@charmland/crush" >/dev/null 2>&1 || true
 
+# Google Gemini CLI — официальный installer от Google (antigravity)
+if ! command -v gemini >/dev/null 2>&1; then
+  echo "Installing Google Gemini CLI..."
+  if curl -fsSL --retry 3 https://antigravity.google/cli/install.sh | bash; then
+    echo "OK: gemini установлен"
+  else
+    echo "WARNING: gemini install failed (offline?)"
+  fi
+fi
+
 # Обёртки для агентов: кэш и tmp в /tmp (tmpfs), чтобы не забивать overlay
-for agent_bin in claude kilo mimo qwen codex opencode dmsh crush kimi src sourcecraft koda; do
+for agent_bin in claude kilo mimo qwen codex opencode dmsh crush kimi src sourcecraft koda gemini; do
   REAL_BIN="$(type -p "$agent_bin" 2>/dev/null || true)"
   if [[ -z "$REAL_BIN" || -f "${REAL_BIN}.real" ]]; then
     continue
@@ -828,6 +852,7 @@ echo "  Codex         — OpenAI terminal AI ($(status codex))"
 echo "  Kilo Code     — Open source AI coding agent ($(status kilo))"
 echo "  MiMo Code     — Xiaomi terminal AI ($(status mimo))"
 echo "  Continue.dev  — AI coding CLI ($(status cn))"
+echo "  Gemini        — Google terminal AI ($(status gemini))"
 echo ""
 echo "── Дополнительные действия ──"
 echo "  [1] Cursor Agent — Cursor terminal agent ($(status agent))"
@@ -1329,7 +1354,7 @@ echo "  Welcome to VibeLinux!"
 echo "  Linux for vibe coding and AI development"
 echo "  ========================================="
 echo ""
-echo "  AI-агенты уже предустановлены: opencode, src (SourceCraft), koda, qwen, claude, codex, crush, kimi"
+echo "  AI-агенты уже предустановлены: opencode, src (SourceCraft), koda, qwen, claude, codex, crush, kimi, gemini"
 echo "  Ollama (локальные LLM) ставится после установки на диск: sudo install-ollama"
 echo ""
 if [[ -d /run/archiso/bootmnt ]]; then
@@ -1468,6 +1493,7 @@ cat > /home/vibe/Desktop/GET-STARTED.html << 'EOF'
   <li><strong>qwen-code</strong> — <code>qwen</code> (Alibaba coding agent)</li>
   <li><strong>Claude Code</strong> — <code>claude</code> (Anthropic)</li>
   <li><strong>Codex</strong> — <code>codex</code> (OpenAI)</li>
+  <li><strong>Gemini</strong> — <code>gemini</code> (Google)</li>
   <li><strong>Kilo / MiMo / Continue / Crush / Kimi</strong> — <code>kilo</code>, <code>mimo</code>, <code>cn</code>, <code>crush</code>, <code>kimi</code></li>
   <li><strong>dmsh</strong> — offline AI shell (model included)</li>
 </ul>
@@ -2557,7 +2583,7 @@ echo ""
 
 # 4. Советы
 echo "── Полезные команды ──"
-echo "  AI-агенты (уже стоят):     opencode, qwen, claude, codex, crush, kimi"
+echo "  AI-агенты (уже стоят):     opencode, qwen, claude, codex, crush, kimi, gemini"
 echo "  Ollama (после установки):  sudo install-ollama"
 echo "  AI-модели (после установки): sudo ai-setup"
 echo "  AI stack (после установки): sudo /opt/vibecode/scripts/ai/setup-ai-stack.sh"
