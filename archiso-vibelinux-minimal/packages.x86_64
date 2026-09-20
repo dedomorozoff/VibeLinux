@@ -69,6 +69,12 @@ ripgrep
 fd
 bat
 
+# Dev runtimes
+go
+php
+composer
+sqlite
+
 # USB / storage
 usbutils
 

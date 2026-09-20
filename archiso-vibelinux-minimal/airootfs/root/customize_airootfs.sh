@@ -38,6 +38,7 @@ cat > /etc/motd << 'EOF'
  ── Инструменты ────────────────────────────────────────────
    btop (монитор), mc (файловый менеджер), tmux (мультиплексор)
    rg, fd, bat, jq | fish (шелл) | vim/nano (редакторы)
+   go, php, composer, sqlite3 (sqlite CLI)
 
    Информация о системе: fastfetch
 EOF
