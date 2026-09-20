@@ -50,6 +50,27 @@ elif [[ -d "$WORKDIR" ]]; then
           "$WORKDIR"/iso._build_iso_image
 fi
 
+# 3aa) Freshness checks: mkarchiso's _run_once() only checks marker EXISTENCE,
+#      not freshness. If packages.x86_64 / pacman.conf / profiledef.sh changed
+#      since the last build, drop the corresponding marker, otherwise the step
+#      (e.g. pacstrap with the new package list) is silently skipped and the
+#      ISO gets the OLD package set.
+if [[ -f "$PROFILE_DIR/packages.x86_64" && -f "$WORKDIR/base._make_packages" \
+      && "$PROFILE_DIR/packages.x86_64" -nt "$WORKDIR/base._make_packages" ]]; then
+    rm -f "$WORKDIR/base._make_packages" "$WORKDIR/base._make_pkglist"
+    log "packages.x86_64 changed → re-running pacstrap"
+fi
+if [[ -f "$PROFILE_DIR/pacman.conf" && -f "$WORKDIR/base._make_pacman_conf" \
+      && "$PROFILE_DIR/pacman.conf" -nt "$WORKDIR/base._make_pacman_conf" ]]; then
+    rm -f "$WORKDIR/base._make_pacman_conf"
+    log "pacman.conf changed → regenerating pacman.conf"
+fi
+if [[ -f "$PROFILE_DIR/profiledef.sh" && -f "$WORKDIR/base._make_version" \
+      && "$PROFILE_DIR/profiledef.sh" -nt "$WORKDIR/base._make_version" ]]; then
+    rm -f "$WORKDIR/base._make_version"
+    log "profiledef.sh changed → regenerating version"
+fi
+
 # 3a) Unmount leftover chroot mounts
 if grep -qs "$WORKDIR" /proc/mounts; then
     log "Unmounting leftover chroot mounts in $WORKDIR..."
