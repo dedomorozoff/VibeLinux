@@ -181,7 +181,7 @@ sudo vibecode-upgrade
 | **Python + pyenv** | ❌ | ✅ |
 | **Node.js + nvm** | ❌ | ✅ |
 | **Rust + rustup** | ❌ | ✅ |
-| **Go** | ❌ | ✅ |
+| **Go** | ✅ | ✅ |
 | **Java + SDKMAN!** | ❌ | ✅ |
 | **VSCodium** | ❌ | ✅ |
 | **VS Code** | ❌ | ✅ |
