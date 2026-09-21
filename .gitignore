@@ -1,5 +1,6 @@
 # Сборочные артефакты (скачиваются/копируются при сборке ISO)
-/archiso-vibelinux/airootfs/root/dmed/
+/archiso-vibelinux/airootfs/root/dmed/*
+!/archiso-vibelinux/airootfs/root/dmed/dmed.png
 /archiso-vibelinux/airootfs/root/dmsh/*.pkg.tar.zst
 /archiso-vibelinux/airootfs/root/aur-cache/
 /archiso-vibelinux/airootfs/root/koda/

@@ -1798,6 +1798,30 @@ fi
 
 if [[ $DMED_INSTALLED -eq 1 ]]; then
   echo "dmed installed"
+
+  # dmed icon (PNG в pixmaps + hicolor) и ярлык на рабочем столе
+  if [[ -f /root/dmed/dmed.png ]]; then
+    mkdir -p /usr/share/pixmaps /usr/share/icons/hicolor/128x128/apps
+    cp /root/dmed/dmed.png /usr/share/pixmaps/dmed.png
+    cp /root/dmed/dmed.png /usr/share/icons/hicolor/128x128/apps/dmed.png
+    echo "OK: dmed icon installed"
+  fi
+
+  cat > /home/vibe/Desktop/dmed.desktop << 'EOF'
+[Desktop Entry]
+Type=Application
+Name=dmed
+GenericName=Terminal AI Editor
+Comment=AI-редактор для терминала (Go)
+Exec=konsole --hold -e dmed
+Icon=dmed
+Terminal=false
+Categories=Development;Utility;AI;
+Keywords=ai;editor;terminal;go;
+StartupNotify=false
+EOF
+  chmod 755 /home/vibe/Desktop/dmed.desktop
+  echo "OK: dmed desktop shortcut created"
 else
   echo "WARNING: dmed not found in /root/dmed/"
 fi
