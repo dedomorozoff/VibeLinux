@@ -9,4 +9,5 @@
 /archiso-vibelinux-minimal/airootfs/usr/
 /out/
 /scripts/legacy/build/
-.qwen/
+.qwen//freebsd-vibebsd/.pkglist.merged
+/*.core

@@ -23,7 +23,7 @@ kitty
 
 # Шрифты (кодинг + локализация)
 jetbrains-mono
-fira-code
+firacode
 cascadia-code
 hack-font
 noto-basic

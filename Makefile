@@ -25,7 +25,7 @@
 .PHONY: arch arch-mini arch-mini-keep generate wizard \
         legacy-full legacy-full-keep legacy-mini legacy-mini-keep \
         legacy-lite legacy-full-vibe legacy-check legacy-check-mini legacy-upgrade \
-        bsd bsd-setup bsd-customize bsd-build \
+        bsd bsd-setup bsd-customize bsd-packages bsd-build \
         clean help \
         full full-keep mini mini-keep lite full-vibe check check-mini upgrade
 
@@ -123,27 +123,33 @@ legacy-upgrade:
 # FreeBSD: VibeBSD (экспериментальная редакция)
 # ============================================================
 
-# Полная сборка: setup → customize → ISO
+# Полная сборка: setup → customize → пакеты → ISO
 bsd:
-	@echo "🚀 VibeBSD: полная сборка (setup + customize + ISO)..."
-	sudo sh $(ПУТЬ)/freebsd-vibebsd/scripts/00-setup-poudriere.sh
-	sudo sh $(ПУТЬ)/freebsd-vibebsd/scripts/10-customize-rootfs.sh
-	sudo sh $(ПУТЬ)/freebsd-vibebsd/scripts/20-build-iso.sh
+	@echo "🚀 VibeBSD: полная сборка (setup + customize + пакеты + ISO)..."
+	sh $(ПУТЬ)/freebsd-vibebsd/scripts/00-setup-poudriere.sh
+	sh $(ПУТЬ)/freebsd-vibebsd/scripts/10-customize-rootfs.sh
+	sh $(ПУТЬ)/freebsd-vibebsd/scripts/15-install-packages.sh
+	sh $(ПУТЬ)/freebsd-vibebsd/scripts/20-build-iso.sh
 
 # Установка Poudriere + создание jail/портов
 bsd-setup:
 	@echo "🧱 VibeBSD: установка Poudriere + jail..."
-	sudo sh $(ПУТЬ)/freebsd-vibebsd/scripts/00-setup-poudriere.sh
+	sh $(ПУТЬ)/freebsd-vibebsd/scripts/00-setup-poudriere.sh
 
 # Кастомизация rootfs (брендинг, пользователь, конфиги)
 bsd-customize:
 	@echo "🎨 VibeBSD: кастомизация rootfs..."
-	sudo sh $(ПУТЬ)/freebsd-vibebsd/scripts/10-customize-rootfs.sh
+	sh $(ПУТЬ)/freebsd-vibebsd/scripts/10-customize-rootfs.sh
+
+# Установка бинарных пакетов в jail (официальный репозиторий FreeBSD)
+bsd-packages:
+	@echo "📦 VibeBSD: установка пакетов в jail..."
+	sh $(ПУТЬ)/freebsd-vibebsd/scripts/15-install-packages.sh
 
 # Сборка загрузочного ISO
 bsd-build:
 	@echo "📀 VibeBSD: сборка ISO..."
-	sudo sh $(ПУТЬ)/freebsd-vibebsd/scripts/20-build-iso.sh
+	sh $(ПУТЬ)/freebsd-vibebsd/scripts/20-build-iso.sh
 
 # ============================================================
 # Старые имена (deprecated алиасы legacy-целей)

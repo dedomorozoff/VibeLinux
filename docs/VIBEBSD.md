@@ -21,6 +21,7 @@ freebsd-vibebsd/
 └── scripts/
     ├── 00-setup-poudriere.sh   # poudriere + jail + порты
     ├── 10-customize-rootfs.sh  # брендинг, пользователь, конфиги
+    ├── 15-install-packages.sh  # бинарные пакеты в jail (офиц. репозиторий)
     ├── 20-build-iso.sh         # poudriere image -t iso
     └── setup-ai.sh             # AI-стек post-install (без Docker)
 ```
@@ -31,7 +32,7 @@ freebsd-vibebsd/
 00-setup-poudriere.sh
   ├─ pkg install poudriere
   └─ poudriere jail -c -j vibebsd -v 15.1-RELEASE -m http
-     poudriere ports -c -p vibebsd-ports
+     poudriere ports -c -p vibebsdports
 
 10-customize-rootfs.sh  (редактирует каталог jail напрямую)
   ├─ копирует branding/ в /usr/local/share/vibebsd
@@ -39,10 +40,17 @@ freebsd-vibebsd/
   ├─ создаёт пользователя vibebsd (SDDM autologin, session=plasma)
   └─ раскладывает etc/{zshrc,starship,kitty}
 
+15-install-packages.sh  (чroot pkg в jail, официальный бинарный репозиторий)
+  └─ объединяет packages/*.txt → pkg install (Plasma6, dev/AI-стек)
+
 20-build-iso.sh
-  ├─ объединяет packages/*.txt → pkglist.txt
-  └─ poudriere image -j vibebsd -p vibebsd-ports -t iso -c pkglist.txt -o out
+  └─ poudriere image -j vibebsd -t iso -n vibebsd -o out
 ```
+
+> Продакшн-путь — свой репозиторий через `poudriere bulk -j vibebsd -f pkglist`
+> и image с `-p vibebsdports` (как у GhostBSD); для прототипа используются
+> бинарные пакеты FreeBSD — это часы vs сутки сборки. Пакеты, отсутствующие
+> в репозитории (`nvm`), вынесены в post-install.
 
 Результат: `out/vibebsd-live-YYYYMMDD.iso` (загрузка UEFI+BIOS, FS UFS).
 
@@ -78,6 +86,7 @@ Open WebUI и ComfyUI работают «напрямую» (uv/pip), Docker н�
 make bsd            # полная сборка
 make bsd-setup      # только шаг 0
 make bsd-customize  # только шаг 1
+make bsd-packages   # только установка пакетов в jail
 make bsd-build      # только шаг 2
 ```
 

@@ -10,7 +10,7 @@
 set -eu
 
 JAIL_NAME="${1:-vibebsd}"
-PORTS_NAME="${2:-vibebsd-ports}"
+PORTS_NAME="${2:-vibebsdports}"
 BASE_DIR="$(dirname "$(realpath "$0")")/.."
 WORKDIR="/tmp/vibebsd-image"
 OUTDIR="$PWD/out"
@@ -24,7 +24,7 @@ if [ "$(id -u)" -ne 0 ]; then
     exit 1
 fi
 
-# 1) Объединение пакетных списков
+# 1) Объединение пакетных списков (только для отчёта; установка — на шаге 15)
 log "Merging package lists..."
 mkdir -p "$WORKDIR" "$OUTDIR"
 cat "$BASE_DIR"/packages/*.txt \
@@ -33,13 +33,12 @@ cat "$BASE_DIR"/packages/*.txt \
     | sort -u > "$PKGLIST"
 log "Total packages: $(wc -l < "$PKGLIST")"
 
-# 2) Сборка ISO
+# 2) Сборка ISO (rootfs = jail c установленными пакетами)
 log "Building ISO via poudriere image..."
 poudriere image \
     -j "$JAIL_NAME" \
-    -p "$PORTS_NAME" \
     -t iso \
-    -c "$PKGLIST" \
+    -n vibebsd \
     -o "$OUTDIR"
 
 # 3) Переименование результата

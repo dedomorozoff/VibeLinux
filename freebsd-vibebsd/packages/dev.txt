@@ -2,7 +2,7 @@
 
 # Shell
 zsh
-oh-my-zsh
+ohmyzsh
 starship
 
 # Редакторы
@@ -23,9 +23,8 @@ eza
 # Языки и менеджеры версий
 python
 node
-rust
 go
 pyenv
-nvm
 gmake
 pkgconf
+# rust — намеренно post-install (pkg install rust): >1.3 ГБ

@@ -26,7 +26,10 @@ sudo ./freebsd-vibebsd/scripts/00-setup-poudriere.sh 15.1-RELEASE
 # 2) Кастомизация rootfs (брендинг, пользователь vibebsd, конфиги)
 sudo ./freebsd-vibebsd/scripts/10-customize-rootfs.sh
 
-# 3) Сборка ISO
+# 3) Установка бинарных пакетов в jail (Plasma6, dev/AI-стек)
+sudo ./freebsd-vibebsd/scripts/15-install-packages.sh
+
+# 4) Сборка ISO
 sudo ./freebsd-vibebsd/scripts/20-build-iso.sh
 # Результат: out/vibebsd-live-YYYYMMDD.iso
 ```
@@ -39,9 +42,10 @@ make bsd
 
 ### Что делает каждый шаг
 
-- **00-setup-poudriere.sh** — ставит `poudriere`, создаёт jail (`vibebsd`) и portstree (`vibebsd-ports`).
+- **00-setup-poudriere.sh** — ставит `poudriere`, создаёт jail (`vibebsd`) и portstree (`vibebsdports`).
 - **10-customize-rootfs.sh** — копирует брендинг, пишет `rc.conf` (sddm, dbus, ollama), создаёт пользователя `vibebsd` (autologin в Plasma), раскладывает конфиги Zsh/Starship/Kitty, настраивает passwordless sudo для wheel.
-- **20-build-iso.sh** — объединяет `packages/*.txt` и собирает загрузочный ISO через `poudriere image -t iso`.
+- **15-install-packages.sh** — устанавливает все пакеты из `packages/*.txt` в jail через чroot `pkg` из официального бинарного репозитория FreeBSD.
+- **20-build-iso.sh** — собирает загрузочный ISO из готового jail через `poudriere image -t iso`.
 
 ## Пакетные списки
 

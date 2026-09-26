@@ -12,7 +12,7 @@ set -eu
 JAIL_NAME="${1:-vibebsd}"
 JAIL="/usr/local/poudriere/jails/$JAIL_NAME"
 BASE_DIR="$(dirname "$(realpath "$0")")/.."
-BRANDING_DIR="$(cd "$BASE_DIR/../../branding" && pwd)"
+BRANDING_DIR="$(cd "$BASE_DIR/../branding" && pwd)"
 CONF_DIR="$BASE_DIR/etc"
 USER_NAME="vibebsd"
 USER_SHELL="/usr/local/bin/zsh"

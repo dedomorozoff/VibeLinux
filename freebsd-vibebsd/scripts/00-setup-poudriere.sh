@@ -14,7 +14,7 @@ set -eu
 
 FREEBSD_VERSION="${1:-15.1-RELEASE}"
 JAIL_NAME="vibebsd"
-PORTS_NAME="vibebsd-ports"
+PORTS_NAME="vibebsdports"
 BASE_DIR="$(dirname "$(realpath "$0")")/.."
 
 log() { printf '\033[1;34m[vibebsd]\033[0m %s\n' "$*"; }
@@ -32,7 +32,8 @@ if ! command -v poudriere >/dev/null 2>&1; then
 fi
 
 # 2) Минимальная конфигурация poudriere
-if [ ! -f /usr/local/etc/poudriere.conf ]; then
+# (пакет poudriere кладёт шаблон poudriere.conf без ZPOOL — перечитываем, если он неполный)
+if [ ! -f /usr/local/etc/poudriere.conf ] || ! grep -q '^ZPOOL=' /usr/local/etc/poudriere.conf; then
     log "Generating /usr/local/etc/poudriere.conf..."
     ZPOOL="$(zpool list -H -o name 2>/dev/null | head -1 || true)"
     if [ -n "$ZPOOL" ]; then
