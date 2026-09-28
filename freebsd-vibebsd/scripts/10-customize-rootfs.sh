@@ -12,7 +12,7 @@ set -eu
 JAIL_NAME="${1:-vibebsd}"
 JAIL="/usr/local/poudriere/jails/$JAIL_NAME"
 BASE_DIR="$(dirname "$(realpath "$0")")/.."
-BRANDING_DIR="$(cd "$BASE_DIR/../branding" && pwd)"
+BRANDING_DIR="$(cd "$BASE_DIR/../branding" 2>/dev/null && pwd || true)"
 CONF_DIR="$BASE_DIR/etc"
 USER_NAME="vibebsd"
 USER_SHELL="/usr/local/bin/zsh"
@@ -98,6 +98,8 @@ chmod 440 "$JAIL/usr/local/etc/sudoers.d/vibebsd"
 
 log "Writing /usr/local/etc/sddm.conf (autologin)..."
 mkdir -p "$JAIL/usr/local/etc"
+# Session=plasma — желаемое имя; фактическое проверяется в 15-install-packages.sh
+# по файлам /usr/local/share/xsessions/plasma*.desktop
 cat > "$JAIL/usr/local/etc/sddm.conf" <<EOF
 [Autologin]
 User=$USER_NAME
@@ -116,9 +118,9 @@ if [ -d "$CONF_DIR" ]; then
     UHOME="$JAIL/home/$USER_NAME"
     mkdir -p "$UHOME/.config/kitty" "$UHOME/.config/starship"
 
-    [ -f "$CONF_DIR/zshrc" ]       && cp "$CONF_DIR/zshrc"       "$UHOME/.zshrc"
-    [ -f "$CONF_DIR/starship.toml" ] && cp "$CONF_DIR/starship.toml" "$UHOME/.config/starship/starship.toml"
-    [ -f "$CONF_DIR/kitty.conf" ]  && cp "$CONF_DIR/kitty.conf"  "$UHOME/.config/kitty/kitty.conf"
+    [ -f "$CONF_DIR/zshrc" ]         && cp "$CONF_DIR/zshrc"         "$UHOME/.zshrc" || true
+    [ -f "$CONF_DIR/starship.toml" ] && cp "$CONF_DIR/starship.toml" "$UHOME/.config/starship/starship.toml" || true
+    [ -f "$CONF_DIR/kitty.conf" ]    && cp "$CONF_DIR/kitty.conf"    "$UHOME/.config/kitty/kitty.conf" || true
     [ -n "$UID_N" ] && chown -R "${UID_N}:${GID_N}" "$UHOME" 2>/dev/null || true
 fi
 
@@ -139,4 +141,4 @@ echo "  uv pip install --system transformers langchain llama-index torch"
 EOF
 chmod +x "$JAIL/usr/local/bin/vibebsd-firstrun"
 
-log "Done. Next: ./20-build-iso.sh"
+log "Done. Next: ./15-install-packages.sh"

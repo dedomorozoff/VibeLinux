@@ -10,4 +10,9 @@
 /out/
 /scripts/legacy/build/
 .qwen//freebsd-vibebsd/.pkglist.merged
+/freebsd-vibebsd/.work/
+/freebsd-vibebsd/.pkglist.merged
 /*.core
+
+# Локальные сборки (soft/*.pkg) — артефакты, не в git
+/soft/*.pkg

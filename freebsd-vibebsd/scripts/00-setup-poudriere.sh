@@ -9,6 +9,11 @@
 # Использование:
 #   ./00-setup-poudriere.sh [FREEBSD_VERSION]
 #     FREEBSD_VERSION — ветка для jail (default: 15.1-RELEASE)
+#
+# Переменные окружения:
+#   VIBEBSD_PORTS=1   создать portstree (2–4 ГБ). Нужна только для
+#                     продакшн-сборки через `poudriere bulk`; прототип
+#                     (бинарные пакеты + poudriere image) обходится без неё.
 
 set -eu
 
@@ -69,19 +74,31 @@ else
     poudriere jail -u -j "$JAIL_NAME"
 fi
 
-# 4) Portstree (нужен poudriere image -p)
-if ! poudriere ports -l | grep -q "^$PORTS_NAME"; then
-    log "Creating portstree $PORTS_NAME..."
-    poudriere ports -c -p "$PORTS_NAME"
+# 4) Portstree — только когда планируется `poudriere bulk` (нужен -p и -f)
+if [ "${VIBEBSD_PORTS:-0}" = "1" ]; then
+    if ! poudriere ports -l | grep -q "^$PORTS_NAME"; then
+        log "Creating portstree $PORTS_NAME (2-4 GB on disk)..."
+        poudriere ports -c -p "$PORTS_NAME"
+    else
+        log "Portstree $PORTS_NAME already exists — updating..."
+        poudriere ports -u -p "$PORTS_NAME"
+    fi
 else
-    log "Portstree $PORTS_NAME already exists — updating..."
-    poudriere ports -u -p "$PORTS_NAME"
+    log "Portstree skipped (VIBEBSD_PORTS=1 to create — нужен для bulk)"
 fi
 
-# 5) Проверка: пакеты в списках разрешаются
-log "Resolving package list (base/dev/desktop/ai)..."
+# 5) Проверка: списки пакетов непустые и без путей портов
+log "Checking package lists..."
+TOTAL=0
 for f in "$BASE_DIR/packages"/*.txt; do
-    log "  -- $(basename "$f")"
+    n="$(grep -v '^[[:space:]]*#' "$f" | grep -v '^[[:space:]]*$' | wc -l | tr -d ' ')"
+    log "  $(basename "$f"): ${n} пакетов"
+    TOTAL=$((TOTAL + n))
 done
+[ "$TOTAL" -gt 0 ] || { err "No packages in packages/*.txt"; exit 1; }
+if grep -h '/' "$BASE_DIR/packages"/*.txt | grep -v '^[[:space:]]*#' | grep -q .; then
+    err "In packages/*.txt found category/port paths — pkg expects plain package names"
+    exit 1
+fi
 
 log "Done. Next: ./10-customize-rootfs.sh"

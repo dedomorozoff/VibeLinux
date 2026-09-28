@@ -2,6 +2,30 @@
 
 ## [Unreleased]
 
+### Added
+- **VibeBSD: свои сборки AI-инструментов в образе** — новый шаг `freebsd-vibebsd/scripts/18-install-soft.sh` (+ цель `make bsd-soft`) ставит в jail все `*.pkg` из каталога `soft/`:
+  - `opencode` 0.0.0.20260805 (MIT) — уже был подготовлен, теперь автоматически попадает в образ
+  - `dmcode` 0.1.3 (MIT) — терминальный агент на `google/adk-go` + Bubble Tea, собран из исходников на хосте: `GOTOOLCHAIN=auto gmake build-freebsd-amd64`, статический Go, 36 МБ
+  - `dmed` 0.8.3 (BSD-3-Clause) — dmEd, редактор кода, где AI-агенты первоклассные участники: `CGO_ENABLED=0 GOOS=freebsd gmake build-freebsd-amd64`, 17 МБ
+  - `dmsh` 0.4.0 (MIT) — Direct Model Shell с вшитым llama.cpp: сабмодуль `third_party/llama.cpp` собран cmake-ом (`BUILD_SHARED_LIBS=OFF`, GGML без SIMD-флагов), Go-линковка через CGO. Апстримную сборку пришлось обойти: в `internal/llm/engine_ldflags_cpu.go` есть `linux`/`darwin`/`windows`, но нет `freebsd`, а Makefile ждёт библиотеки в `build/lib` (они лежат в `build/src` и `build/ggml/src`), плюс нужен `-lomp`, а не `-lgomp`
+  - Итого ≈120 МБ в jail (≈60 МБ в ISO), шаг идёт последним перед сборкой образа, чтобы clean-фильтры не трогали бинари
+  - Шаг сверяет ABI пакета с веткой jail, проверяет регистрацию в БД jail и наличие исполняемого в `/usr/local/bin`; `VIBEBSD_SOFT_OPTIONAL=1` превращает пустой `soft/` в предупреждение
+  - `pkg add` требует `-M` (`--accept-missing`): `libc++`/`libcxxrt`/`libexecinfo` приезжают в jail файлами из base-сета и pkg-пакетами не являются, поэтому без `-M` установка `opencode` падала с `Missing shlib libc++.so.1`
+  - `soft/` не в git (`.gitignore`): там `README.md` с контрактом пакетов, инструкциями пересборки и `mkfreebsd-pkg.sh` для упаковки бинаря в `.pkg`
+- **VibeBSD: замер DE-стеков на каталоге FreeBSD 15** (`pkg install --dry-run` + сумма flatsize): `plasma6-plasma` + konsole/dolphin/kate — 762 пакета / 7726 MiB, `cinnamon` + nemo/mate-terminal — 554 / 6091 MiB. Решено оставить KDE, но из стеков Plasma выкидываются `plasma6-plasma-workspace-wallpapers` (217 MiB) и `kate` (тянет `qt6-webengine`, 291 MiB) — минус ~0.6 ГиБ без смены DE
+
+### Fixed
+- **`make` на хосте FreeBSD собирал мусор из путей:** переменная `ПУТЬ` (кириллица) и `$(CURDIR)` — это GNU make, на FreeBSD `make` — это bmake, где `$(CURDIR)` пустой, а имя переменной с не-ASCII не резолвится. Итог: `make bsd` / `make arch` / `make legacy-*` вызывали `/scripts/...` вместо `/home/.../VibeLinux/scripts/...` (в CI не ловилось — там Ubuntu и GNU make). Переменная переименована в `ROOT` и считается как `$(CURDIR)$(.CURDIR)` (работает и в bmake, и в GNU make), `$(shell …)` заменён на `!=` (иначе bmake ругается на строку 46), в определении ОС добавлена ветка `freebsd`
+- **VibeBSD: пайплайн сборки ISO на poudriere был нерабочим** (разбор по исходникам poudriere 3.4.8, `share/poudriere/{image,jail}.sh`):
+  - `15-install-packages.sh` делал `chroot $JAIL pkg install` — в jail, созданном `poudriere jail -m http`, нет `/usr/bin/pkg` (собирается из base-сета релиза). Статус ошибки маскировался пайпом в `tee` под `set -e`, поэтому шаг «успешно» ничего не ставил. Теперь пакеты ставятся бинарником хоста через `pkg -r vibebsd install` (так же делает сам poudriere), добавлены определение ABI jail по `newvers.sh`, запись `/usr/local/etc/pkg/repos` при его отсутствии, проверка «запрошено ↔ установлено» с ненулевым кодом возврата и починка `Session=` в `sddm.conf` по фактическим `xsessions/plasma*.desktop`
+  - `20-build-iso.sh` не передавал `-h vibebsd`, и poudriere подставлял в `/etc/rc.conf` готового образа `hostname="poudriere-image"`, затирая брендинг
+  - Шаги `16-slim-rootfs.sh` / `17-drop-postinstall.sh` не вызывались из `make bsd` — образ был тяжелее на ~3.5 ГБ; также их порядок был обратным (утоньшение до удаления тяжёлых пакетов), из-за чего чистилась документация удаляемого rust
+  - `16-slim-rootfs.sh`: падал на `set -e`, если каталогов локалей нет (`cd … && [ -d … ] && {…}`); путь Python был зашит как `python3.12`; не вырезались man-страницы; `rm -rf $JAIL/rescue` без проверки mountpoint
+  - `15-install-packages.sh` и `16-*` использовали `chroot`/`pkg clean` в jail, где нет `pkg`; `20-build-iso.sh` брал результат через `ls -t *.iso` (мог переименовать ISO из прошлого прогона) и писал в `$PWD/out` в зависимости от текущего каталога
+  - `00-setup-poudriere.sh` всегда создавал portstree (2–4 ГБ), которая прототипу не нужна — теперь только при `VIBEBSD_PORTS=1`; «проверка» списков пакетов ничего не проверяла — теперь считает пакеты и отсекает пути вида `category/port`
+  - Шаги 16/17 переименованы по порядку: `16-drop-postinstall.sh`, `17-slim-rootfs.sh`; добавлены цели `make bsd-drop`, `make bsd-slim`, `bsd-packages` в `make help`, синхронизированы `docs/VIBEBSD.md`, `freebsd-vibebsd/README.md`, `roadmap.md`
+  - `20-build-iso.sh`: добавлен preflight (`boot/kernel/kernel` обязателен для `iso_check`, `boot/loader.efi`, свободное место) и поддержка `VIBEBSD_IMAGE_TYPE=hybridiso` (GPT+ESP — загрузка по UEFI с `dd`-образа на USB)
+
 ### Fixed
 - **Инкрементальная пересборка ISO молча пропускала новые пакеты** (`php`, `go`, `composer`, `sqlite` в минимальном Arch-профиле не попадали в образ):
   - mkarchiso использует маркеры `_run_once` и проверяет только их наличие, не свежесть
@@ -37,7 +61,7 @@
   - Кастомизация: брендинг, пользователь `vibebsd` (SDDM autologin), rc.conf (dbus/sddm/ollama)
   - Конфиги Zsh/Starship/Kitty, адаптированные под FreeBSD (`/usr/local`, Podman-алиасы)
   - Пост-установочный AI-стек без Docker (`uv`, Open WebUI, ComfyUI) — `scripts/setup-ai.sh`
-  - Makefile-цели: `make bsd`, `bsd-setup`, `bsd-customize`, `bsd-build`
+  - Makefile-цели: `make bsd`, `bsd-setup`, `bsd-customize`, `bsd-packages`, `bsd-drop`, `bsd-slim`, `bsd-build`
   - Документация: `freebsd-vibebsd/README.md`, `docs/VIBEBSD.md`, раздел в `roadmap.md`
 
 ### Changed

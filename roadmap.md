@@ -141,14 +141,17 @@
 *   **Цель:** Проверить порт концепции VibeCode OS на FreeBSD 15 (KDE Plasma 6) — как альтернативу для тех, кому важны стабильность, ZFS и BSD-лицензии.
 *   **Что реализовано (`freebsd-vibebsd/`):**
     - ✅ Пакетные списки: `base` / `desktop` / `dev` / `ai` (проверены по FreshPorts: `plasma6-plasma`, `ollama`, `zed-editor`, `podman`)
-    - ✅ Пайплайн сборки на **Poudriere**: jail → кастомизация rootfs → `poudriere image -t iso`
+    - ✅ Пайплайн сборки на **Poudriere**: jail → кастомизация rootfs → бинарные пакеты → чистка → `poudriere image -t iso`
+    - ✅ Пайплайн вычитан по исходникам poudriere 3.4.8 и починен: установка пакетов через `pkg -r jail` (в http-jail нет `pkg`), preflight ядра/загрузчика, `-h vibebsd` (иначе poudrière затирает hostname), шаги утоньшения подключены к `make bsd`
     - ✅ Кастомизация: брендинг, пользователь `vibebsd` (SDDM autologin), rc.conf (dbus/sddm/ollama), конфиги Zsh/Starship/Kitty
-    - ✅ Makefile-цели: `make bsd`, `bsd-setup`, `bsd-customize`, `bsd-build`
+    - ✅ Makefile-цели: `make bsd`, `bsd-setup`, `bsd-customize`, `bsd-packages`, `bsd-drop`, `bsd-slim`, `bsd-soft`, `bsd-build`
+    - ✅ Свои сборки в образе: `18-install-soft.sh` ставит в jail пакеты из `soft/` — `opencode`, `dmcode` 0.1.3, `dmed` 0.8.3, `dmsh` 0.4.0 (llama.cpp через CGO), все пересобраны из исходников под FreeBSD/amd64
     - ✅ Пост-установочный AI-стек без Docker: `uv` + transformers/langchain/llama-index/torch, Open WebUI, ComfyUI
 *   **Задачи (backlog):**
-    1.  Собрать первый ISO на реальном FreeBSD-хосте, smoke-тест в bhyve/VirtualBox
-    2.  Сборка в CI (GitHub Actions `freebsd-latest` runner)
-    3.  Установщик: live-образ → кастомный сценарий на базе `bsdinstall` (аналог Calamares)
-    4.  Podman-интеграция: `linux_enable` + `ocijail`, перенос docker-compose-сценариев (Open WebUI)
-    5.  NVIDIA: Vulkan-бэкенд Ollama, драйверы
-*   **Ограничения:** нет Docker (Podman/LL), поддержка свежего железа хуже Linux, Ollama — amd64.
+    1.  **RAM-оверлей в live-сессии (блокер):** `-t iso` даёт root на cd9660 `ro` + `tmpfs /tmp` — писать в `/var` и `/home` нельзя. Нужен `rc.d`-скрипт с `mdconfig -t malloc` + `mount -t union` поверх `/` (до старта dbus/sddm). Вариант `iso+mfs` не подходит: MFS ограничен ~256 МБ. Бьёт не только по Plasma: `opencode`, `dmsh` и `dmed` из `soft/` пишут в `$HOME` и без оверлея не запустятся
+    2.  Собрать первый ISO на реальном FreeBSD-хосте, smoke-тест в bhyve/VirtualBox
+    3.  Сборка в CI (GitHub Actions `freebsd-latest` runner)
+    4.  Установщик: live-образ → кастомный сценарий на базе `bsdinstall` (аналог Calamares)
+    5.  Podman-интеграция: `linux_enable` + `ocijail`, перенос docker-compose-сценариев (Open WebUI)
+    6.  NVIDIA: Vulkan-бэкенд Ollama, драйверы
+*   **Ограничения:** root в образе read-only (см. backlog 1), нет Docker (Podman/LL), поддержка свежего железа хуже Linux, Ollama — amd64.
