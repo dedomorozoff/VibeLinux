@@ -7,6 +7,10 @@
 #   - rust (1.3 ГБ)                 → ставится post-install (pkg install rust)
 #   - postgresqlNN-client (25 МБ)   → нужен только PG-драйверу gdal, в live нет
 #   - sambaNN (100+ МБ)             → нужен только для smb:// в kioslave
+#   - plasma6-plasma-workspace-wallpapers (217 МБ) → обои Plasma не нужны,
+#     свои лежат в branding/ (шаг 10 копирует их в /usr/local/share/wallpapers).
+#     Пакет — жёсткая зависимость plasma6-plasma, из packages/desktop.txt его
+#     не убрать, поэтому выкидываем здесь (через -f).
 #
 # Остальное (go, node, python, ollama, Plasma) остаётся в образе.
 #
@@ -39,7 +43,7 @@ log "Jail size before: ${BEFORE} MB"
 
 # Шаблоны имён: версии между релизами меняются (samba416 → samba417,
 # postgresql18-client → postgresql19-client), поэтому globs, а не хардкод.
-DROP_PATTERNS="rust postgresql.*-client samba.*"
+DROP_PATTERNS="rust postgresql.*-client samba.* plasma6-plasma-workspace-wallpapers"
 
 drop_pattern() {
     pat="$1"

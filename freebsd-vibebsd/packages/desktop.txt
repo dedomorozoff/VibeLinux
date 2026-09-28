@@ -9,11 +9,11 @@ xdg-utils
 # drm-kmod
 
 # KDE Plasma 6 (метапакет) + дисплей-менеджер
+# kate убран: редактирование закрывают neovim и zed-editor из dev.txt
 plasma6-plasma
 sddm
 konsole
 dolphin
-kate
 
 # Браузер
 firefox

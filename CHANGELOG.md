@@ -12,7 +12,13 @@
   - Шаг сверяет ABI пакета с веткой jail, проверяет регистрацию в БД jail и наличие исполняемого в `/usr/local/bin`; `VIBEBSD_SOFT_OPTIONAL=1` превращает пустой `soft/` в предупреждение
   - `pkg add` требует `-M` (`--accept-missing`): `libc++`/`libcxxrt`/`libexecinfo` приезжают в jail файлами из base-сета и pkg-пакетами не являются, поэтому без `-M` установка `opencode` падала с `Missing shlib libc++.so.1`
   - `soft/` не в git (`.gitignore`): там `README.md` с контрактом пакетов, инструкциями пересборки и `mkfreebsd-pkg.sh` для упаковки бинаря в `.pkg`
-- **VibeBSD: замер DE-стеков на каталоге FreeBSD 15** (`pkg install --dry-run` + сумма flatsize): `plasma6-plasma` + konsole/dolphin/kate — 762 пакета / 7726 MiB, `cinnamon` + nemo/mate-terminal — 554 / 6091 MiB. Решено оставить KDE, но из стеков Plasma выкидываются `plasma6-plasma-workspace-wallpapers` (217 MiB) и `kate` (тянет `qt6-webengine`, 291 MiB) — минус ~0.6 ГиБ без смены DE
+- **VibeBSD: замер DE-стеков на каталоге FreeBSD 15** (`pkg install --dry-run` + сумма flatsize): `plasma6-plasma` + konsole/dolphin/kate — 762 пакета / 7726 MiB, `cinnamon` + nemo/mate-terminal — 554 / 6091 MiB. Решено оставить KDE и ужать стек Plasma (см. Changed ниже)
+
+### Changed
+- **VibeBSD: из стека KDE Plasma выкинуты `kate` и штатные обои Plasma (минус ~217 МиБ гарантированно, минус ~0.5 ГиБ с `qt6-webengine`)**
+  - `kate` убран из `freebsd-vibebsd/packages/desktop.txt` — редактирование в образе закрывают `neovim` и `zed-editor` из `dev.txt`
+  - `plasma6-plasma-workspace-wallpapers` (217 МиБ) — жёсткая зависимость `plasma6-plasma`, из списка пакетов её убрать нельзя, поэтому добавлена в `DROP_PATTERNS` шага `16-drop-postinstall.sh` (удаляется через `-f`, как и `rust`/`samba`). Свои обои приходят из `branding/` — шаг 10 копирует их в `/usr/local/share/wallpapers`
+  - Поправка к прошлой записи в changelog: `qt6-webengine` (291 МиБ) тянется не `kate`, а `plasma6-kdeplasma-addons` и `plasma6-libksysguard` (проверено `pkg rquery -e '%n = "qt6-webengine"' '%rn'`), поэтому выигрыш от удаления `kate` ограничен его собственными зависимостями, а не 291 МиБ
 
 ### Fixed
 - **`make` на хосте FreeBSD собирал мусор из путей:** переменная `ПУТЬ` (кириллица) и `$(CURDIR)` — это GNU make, на FreeBSD `make` — это bmake, где `$(CURDIR)` пустой, а имя переменной с не-ASCII не резолвится. Итог: `make bsd` / `make arch` / `make legacy-*` вызывали `/scripts/...` вместо `/home/.../VibeLinux/scripts/...` (в CI не ловилось — там Ubuntu и GNU make). Переменная переименована в `ROOT` и считается как `$(CURDIR)$(.CURDIR)` (работает и в bmake, и в GNU make), `$(shell …)` заменён на `!=` (иначе bmake ругается на строку 46), в определении ОС добавлена ветка `freebsd`
