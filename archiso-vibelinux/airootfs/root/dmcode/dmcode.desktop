@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=dmcode — AI Coding Assistant
+GenericName=AI Coding CLI
+Comment=Терминальный AI-агент для кодинга
+Exec=dmcode
+Icon=dmcode
+Terminal=true
+Categories=Development;Utility;AI;
+Keywords=ai;llm;code;assistant;local;
+StartupNotify=false

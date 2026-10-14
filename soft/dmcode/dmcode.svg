@@ -1,0 +1,12 @@
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <!-- dmcode — AI coding CLI. Палитра и стиль как у dmsh: #171F2A / #F59B0F -->
+  <rect x="6" y="6" width="116" height="116" rx="26" fill="rgb(23,31,42)"/>
+  <!-- окошко терминала: три «кнопки» -->
+  <circle cx="26" cy="28" r="4.5" fill="rgb(245,155,15)"/>
+  <circle cx="42" cy="28" r="4.5" fill="rgb(245,155,15)"/>
+  <circle cx="58" cy="28" r="4.5" fill="rgb(245,155,15)"/>
+  <!-- код: </> -->
+  <path d="M 46 58 L 28 76 L 46 94" fill="none" stroke="rgb(245,155,15)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 74 48 L 54 104" fill="none" stroke="rgb(245,155,15)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 82 58 L 100 76 L 82 94" fill="none" stroke="rgb(245,155,15)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

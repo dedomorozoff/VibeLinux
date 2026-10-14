@@ -153,7 +153,59 @@ else
     warn "dmed unavailable (no network and none in soft/dmed/) — skipping"
 fi
 
-# 3b3) Fetch Koda Desktop (.pacman) into airootfs.
+# 3b3) Fetch dmcode into airootfs.
+# Primary source — pre-built Arch package from GitHub releases
+# (https://github.com/dedomorozoff/dmcode), always the latest stable version.
+# Local soft/dmcode/* kept as an offline fallback (pkg.tar.zst preferred, raw binary fallback).
+DMCODE_RELEASES_API="https://api.github.com/repos/dedomorozoff/dmcode/releases/latest"
+DMCODE_DST="$PROFILE_DIR/airootfs/root/dmcode"
+SOFT_DIR="$(cd "$(dirname "$(readlink -f "$0")")/../../soft" 2>/dev/null && pwd || true)"
+log "Fetching dmcode into airootfs..."
+mkdir -p "$DMCODE_DST"
+# Вычищаем старые пакеты/бинарники
+rm -f "$DMCODE_DST"/*.pkg.tar.zst "$DMCODE_DST/dmcode"
+
+DMCODE_OK=0
+DMCODE_JSON="$(curl -fsSL --retry 3 "$DMCODE_RELEASES_API" 2>/dev/null || true)"
+# grep -v debug — иначе первым может попасться dmcode-debug-*-x86_64.pkg.tar.zst
+DMCODE_URL="$(grep -o 'https://[^"]*x86_64\.pkg\.tar\.zst' <<<"$DMCODE_JSON" | grep -v debug | head -1 || true)"
+if [[ -n "$DMCODE_URL" ]]; then
+    if curl -fsSL --retry 3 "$DMCODE_URL" -o "$DMCODE_DST/$(basename "$DMCODE_URL")"; then
+        DMCODE_OK=1
+        log "dmcode downloaded from GitHub releases: $(basename "$DMCODE_URL")"
+    else
+        warn "dmcode download failed: $DMCODE_URL"
+    fi
+else
+    warn "dmcode release info unavailable (network?) — trying local fallback"
+fi
+
+if [[ $DMCODE_OK -eq 0 && -d "$SOFT_DIR/dmcode" ]]; then
+    if compgen -G "$SOFT_DIR/dmcode/*.pkg.tar.zst" >/dev/null; then
+        cp "$SOFT_DIR"/dmcode/*.pkg.tar.zst "$DMCODE_DST/"
+        DMCODE_OK=1
+        log "Using local pre-built dmcode package from soft/dmcode/"
+    elif [[ -f "$SOFT_DIR/dmcode/dmcode" ]]; then
+        cp -f "$SOFT_DIR/dmcode/dmcode" "$DMCODE_DST/dmcode"
+        chmod +x "$DMCODE_DST/dmcode"
+        DMCODE_OK=1
+        log "Using local pre-built dmcode binary from soft/dmcode/"
+    fi
+fi
+
+# Иконка и .desktop в релизы не входят — берём из soft/dmcode, если есть
+if [[ -d "$SOFT_DIR/dmcode" ]]; then
+    [[ -f "$SOFT_DIR/dmcode/dmcode.svg" ]] && cp "$SOFT_DIR/dmcode/dmcode.svg" "$DMCODE_DST/"
+    [[ -f "$SOFT_DIR/dmcode/dmcode.desktop" ]] && cp "$SOFT_DIR/dmcode/dmcode.desktop" "$DMCODE_DST/"
+fi
+
+if [[ $DMCODE_OK -eq 1 ]]; then
+    log "dmcode ready in airootfs/root/dmcode/"
+else
+    warn "dmcode unavailable (no network and none in soft/dmcode/) — skipping"
+fi
+
+# 3b4) Fetch Koda Desktop (.pacman) into airootfs.
 # Источник — https://download.kodacode.ru (ООО «Кода», AI coding assistant).
 # Устанавливается в customize_airootfs.sh через pacman -U (с fallback на bsdtar).
 KODA_DST="$PROFILE_DIR/airootfs/root/koda"

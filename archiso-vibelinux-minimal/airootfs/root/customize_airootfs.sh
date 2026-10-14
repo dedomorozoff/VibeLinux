@@ -301,9 +301,8 @@ if compgen -G "/root/dmsh/*.pkg.tar.zst" >/dev/null; then
   bsdtar -xf /root/dmsh/*.pkg.tar.zst -C /tmp/dmsh-extract
   cp -a /tmp/dmsh-extract/. / 2>/dev/null
   rm -rf /tmp/dmsh-extract
-  # register in pacman db so it shows up in -Q
   mkdir -p /var/lib/pacman/local
-  DMSH_VER="$(ls /root/dmsh/*.pkg.tar.zst | grep -oP '\d+\.\d+\.\d+-\d+' | head -1)"
+  DMSH_VER="$(ls /root/dmsh/*.pkg.tar.zst | grep -oP '\d+\.\d+\.\d+-\d+' | head -1 || echo 0.0.0-1)"
   mkdir -p "/var/lib/pacman/local/dmsh-${DMSH_VER}"
   echo -e "DESC=dmsh\nNAME=dmsh\nVERSION=${DMSH_VER}\nBASE=dmsh\nDEPENDS=\nPROVIDES=\nCONFLICTS=\nREPLACES=\nGROUPS=\nINSTALLDATE=$(date +%s)\nSIZE=11707392\nLICENSE=MIT\nARCH=x86_64\nBUILDDATE=$(date +%s)\nPACKAGER=VibeLinux\nDESCRIPTION=dmsh — AI agent CLI" > "/var/lib/pacman/local/dmsh-${DMSH_VER}/desc"
   echo "OK: dmsh ${DMSH_VER} installed"
@@ -311,8 +310,29 @@ else
   echo "WARNING: dmsh package not found in /root/dmsh/"
 fi
 
+# dmcode — extract local package directly
+if compgen -G "/root/dmcode/*.pkg.tar.zst" >/dev/null; then
+  mkdir -p /tmp/dmcode-extract
+  bsdtar -xf /root/dmcode/*.pkg.tar.zst -C /tmp/dmcode-extract
+  cp -a /tmp/dmcode-extract/. / 2>/dev/null
+  rm -rf /tmp/dmcode-extract
+  mkdir -p /var/lib/pacman/local
+  DMCODE_VER="$(ls /root/dmcode/*.pkg.tar.zst | grep -oP '\d+\.\d+\.\d+-\d+' | head -1 || echo 0.0.0-1)"
+  mkdir -p "/var/lib/pacman/local/dmcode-${DMCODE_VER}"
+  echo -e "DESC=dmcode\nNAME=dmcode\nVERSION=${DMCODE_VER}\nBASE=dmcode\nDEPENDS=\nPROVIDES=\nCONFLICTS=\nREPLACES=\nGROUPS=\nINSTALLDATE=$(date +%s)\nSIZE=8388608\nLICENSE=MIT\nARCH=x86_64\nBUILDDATE=$(date +%s)\nPACKAGER=VibeLinux\nDESCRIPTION=dmcode — AI coding CLI" > "/var/lib/pacman/local/dmcode-${DMCODE_VER}/desc"
+  echo "OK: dmcode ${DMCODE_VER} installed"
+elif [[ -f /root/dmcode/dmcode ]]; then
+  install -Dm755 /root/dmcode/dmcode /usr/local/bin/dmcode
+  mkdir -p /var/lib/pacman/local
+  mkdir -p "/var/lib/pacman/local/dmcode-0.0.0-1"
+  echo -e "DESC=dmcode\nNAME=dmcode\nVERSION=0.0.0-1\nBASE=dmcode\nDEPENDS=\nPROVIDES=\nCONFLICTS=\nREPLACES=\nGROUPS=\nINSTALLDATE=$(date +%s)\nSIZE=8388608\nLICENSE=MIT\nARCH=x86_64\nBUILDDATE=$(date +%s)\nPACKAGER=VibeLinux\nDESCRIPTION=dmcode — AI coding CLI" > "/var/lib/pacman/local/dmcode-0.0.0-1/desc"
+  echo "OK: dmcode installed from raw binary"
+else
+  echo "WARNING: dmcode package not found in /root/dmcode/"
+fi
+
 # Wrapper scripts: redirect cache/tmp to /tmp (tmpfs) to avoid filling overlay
-for agent_bin in claude kilo mimo qwen codex opencode dmsh crush kimi dmed src sourcecraft koda gemini; do
+for agent_bin in claude kilo mimo qwen codex opencode dmsh dmcode crush kimi dmed src sourcecraft koda gemini; do
   REAL_BIN="$(type -p "$agent_bin" 2>/dev/null || true)"
   if [[ -z "$REAL_BIN" || -f "${REAL_BIN}.real" ]]; then
     continue

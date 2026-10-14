@@ -77,6 +77,11 @@ sudo ./setup-ai-stack.sh
 - Qwen Code
 - Системные зависимости ставятся через `pacman` или `apt-get`
 
+**install-cline.sh**
+- Cline CLI (Autonomous AI coding agent)
+- Системные зависимости ставятся через `pacman` или `apt-get`
+- Быстрый старт: `cline`
+
 **install-crush.sh**
 - Crush (Charm — AI coding agent с LSP + MCP)
 - Системные зависимости ставятся через `pacman` или `apt-get`

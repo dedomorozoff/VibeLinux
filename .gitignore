@@ -2,6 +2,9 @@
 /archiso-vibelinux/airootfs/root/dmed/*
 !/archiso-vibelinux/airootfs/root/dmed/dmed.png
 /archiso-vibelinux/airootfs/root/dmsh/*.pkg.tar.zst
+# dmcode: тянутся из GitHub-релизов при сборке; .desktop/.svg коммитим
+/archiso-vibelinux/airootfs/root/dmcode/*.pkg.tar.zst
+/archiso-vibelinux/airootfs/root/dmcode/dmcode
 /archiso-vibelinux/airootfs/root/aur-cache/
 /archiso-vibelinux/airootfs/root/koda/
 /archiso-vibelinux/airootfs/opt/

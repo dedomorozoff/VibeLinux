@@ -511,7 +511,7 @@ if ! command -v gemini >/dev/null 2>&1; then
 fi
 
 # Обёртки для агентов: кэш и tmp в /tmp (tmpfs), чтобы не забивать overlay
-for agent_bin in claude kilo mimo qwen codex opencode dmsh crush kimi src sourcecraft koda gemini cline; do
+for agent_bin in claude kilo mimo qwen codex opencode dmsh dmcode crush kimi src sourcecraft koda gemini cline; do
   REAL_BIN="$(type -p "$agent_bin" 2>/dev/null || true)"
   if [[ -z "$REAL_BIN" || -f "${REAL_BIN}.real" ]]; then
     continue
@@ -1685,17 +1685,11 @@ DMSH_INSTALLED=0
 # Берём самый свежий пакет по mtime (в /root/dmsh может лежать несколько)
 DMSH_PKG="$(ls -t /root/dmsh/dmsh-*.pkg.tar.zst 2>/dev/null | head -1 || true)"
 if [[ -n "$DMSH_PKG" ]]; then
-  # Pre-built Arch package — installs /usr/bin/dmsh
-  # Post-transaction hooks (PackageKit/DBus) can fail inside the chroot;
-  # tolerate that and verify the binary instead of the pacman exit code.
   DMSH_TGT=/usr/bin/dmsh
-  # Сносим предыдущую инсталляцию (иначе даунгрейд/битая база мешают -U)
   pacman -Rdd --noconfirm dmsh >/dev/null 2>&1 || true
   rm -f "$DMSH_TGT" "$DMSH_TGT.real"
   pacman -U --noconfirm "$DMSH_PKG" >/dev/null 2>&1 || true
   if [[ ! -x "$DMSH_TGT" ]]; then
-    # pacman -U может упасть в chroot из-за нехватки места (как far2l);
-    # извлекаем файлы пакета напрямую — /usr/bin/dmsh попадает на место.
     tar -I zstd -xf "$DMSH_PKG" -C / 2>/dev/null || true
   fi
   if [[ -x "$DMSH_TGT" ]]; then
@@ -1708,6 +1702,30 @@ elif [[ -f /root/dmsh/dmsh ]]; then
   cp /root/dmsh/dmsh /usr/local/bin/dmsh
   chmod +x /usr/local/bin/dmsh
   DMSH_INSTALLED=1
+fi
+
+# dmcode — CLI agent
+echo "Installing dmcode..."
+DMCODE_INSTALLED=0
+DMCODE_PKG="$(ls -t /root/dmcode/*.pkg.tar.zst 2>/dev/null | head -1 || true)"
+if [[ -n "$DMCODE_PKG" ]]; then
+  DMCODE_TGT=/usr/bin/dmcode
+  pacman -Rdd --noconfirm dmcode >/dev/null 2>&1 || true
+  rm -f "$DMCODE_TGT" "$DMCODE_TGT.real"
+  pacman -U --noconfirm "$DMCODE_PKG" >/dev/null 2>/dev/null || true
+  if [[ ! -x "$DMCODE_TGT" ]]; then
+    tar -I zstd -xf "$DMCODE_PKG" -C / 2>/dev/null || true
+  fi
+  if [[ -x "$DMCODE_TGT" ]]; then
+    DMCODE_INSTALLED=1
+    echo "OK: dmcode installed from pre-built package ($(basename "$DMCODE_PKG"))"
+  else
+    echo "ERROR: dmcode package installation failed"
+  fi
+elif [[ -f /root/dmcode/dmcode ]]; then
+  cp /root/dmcode/dmcode /usr/local/bin/dmcode
+  chmod +x /usr/local/bin/dmcode
+  DMCODE_INSTALLED=1
 fi
 
 if [[ $DMSH_INSTALLED -eq 1 ]]; then
@@ -1768,6 +1786,30 @@ EOF
   echo "dmsh installed with llama.cpp engine + offline model"
 else
   echo "WARNING: dmsh not found in /root/dmsh/ (no binary, no pre-built package)"
+fi
+
+# dmcode desktop/icons if installed separately via raw binary
+if [[ $DMCODE_INSTALLED -eq 1 ]]; then
+  if [[ -f /root/dmcode/dmcode.svg ]]; then
+    mkdir -p /usr/share/pixmaps /usr/share/icons/hicolor/scalable/apps
+    cp /root/dmcode/dmcode.svg /usr/share/pixmaps/dmcode.svg
+    cp /root/dmcode/dmcode.svg /usr/share/icons/hicolor/scalable/apps/dmcode.svg
+  fi
+  cat > /home/vibe/Desktop/dmcode.desktop << 'EOF'
+[Desktop Entry]
+Type=Application
+Name=dmcode — AI Coding Assistant
+GenericName=AI Coding CLI
+Comment=Терминальный AI-агент для кодинга
+Exec=konsole --hold -e dmcode
+Icon=dmcode
+Terminal=false
+Categories=Development;Utility;AI;
+Keywords=ai;llm;code;assistant;local;
+StartupNotify=false
+EOF
+  chmod 755 /home/vibe/Desktop/dmcode.desktop
+  echo "dmcode desktop shortcut created"
 fi
 
 # dmed — terminal-native AI editor (Go)
