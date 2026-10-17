@@ -2197,7 +2197,9 @@ PRIMARY_KERNEL=""
 for d in /usr/lib/modules/*/; do
   kver="${d%/}"
   kver="${kver##*/}"
-  [ "$kver" = "extramodules" ] || [ "$kver" = "extramessages" ] && continue
+  case "$kver" in
+    extramodules|extramessages) continue ;;
+  esac
 
   if [ -f "${d}vmlinuz" ]; then
     # Определяем имя ядра из pkgbase
