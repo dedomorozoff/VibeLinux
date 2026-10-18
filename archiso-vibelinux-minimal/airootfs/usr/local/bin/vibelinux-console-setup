@@ -17,18 +17,27 @@ CONSOLEFONTS=/usr/share/kbd/consolefonts
 VCONSOLE=/etc/vconsole.conf
 FALLBACK=ter-u16b
 
-# Высота активного фреймбуфера. Пусто/0 — фреймбуфера нет (vgacon).
+# Высота фреймбуфера. На машинах с двумя GPU фреймбуферов бывает несколько
+# (fb0/fb1) — берём максимальную высоту: крупный шрифт читаем на любом экране,
+# а слишком крупный (3 строки на экран) — уже нет.
 fb_height() {
-    local f=/sys/class/graphics/fb0/virtual_size v
-    if [[ -r $f ]]; then
+    local f v best=0
+    for f in /sys/class/graphics/fb*/virtual_size; do
+        [[ -r $f ]] || continue
         v="$(tr -d '\n' <"$f")"
-        printf '%s\n' "${v#*,}"
-        return
+        v="${v#*,}"
+        [[ $v =~ ^[0-9]+$ ]] || continue
+        (( v > best )) && best=$v
+    done
+    if (( best == 0 )); then
+        for f in /sys/class/graphics/fb*/modes; do
+            [[ -r $f ]] || continue
+            v="$(sed -n '1{s/.*x\([0-9]\{3,\}\)[a-z].*/\1/p}' "$f")"
+            [[ $v =~ ^[0-9]+$ ]] || continue
+            (( v > best )) && best=$v
+        done
     fi
-    f=/sys/class/graphics/fb0/modes
-    if [[ -r $f ]]; then
-        sed -n '1{s/.*x\([0-9]\{3,\}\)[a-z].*/\1/p}' "$f"
-    fi
+    (( best )) && printf '%s\n' "$best"
 }
 
 # Шрифт под высоту экрана. Высоты 18/20/28/32 проходят только на фреймбуфере:

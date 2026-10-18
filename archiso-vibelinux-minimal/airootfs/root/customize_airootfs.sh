@@ -220,11 +220,20 @@ fi
 # ("failed to detect root filesystem"), из-за чего initramfs собирается
 # неполностью (только модули, без /init и live-хуков) и ISO не загружается.
 # archiso hook обязателен для монтирования squashfs airootfs.
+#
+# `kms` — обязательно (в штатном профиле Arch он тоже есть). Без него
+# DRM-драйвер (i915/amdgpu/nouveau/vmwgfx) грузится уже после switch_root,
+# происходит смена fbcon, и консоль сбрасывается на дефолтный шрифт 8x16 в
+# режиме 80x25: отсюда «мелко и без кириллицы». С `kms` драйвер поднимается
+# в initramfs — консоль сразу нативная, срезов fbcon больше нет.
+# `keymap` + `consolefont` тянут в initramfs раскладку и FONT из
+# /etc/vconsole.conf, чтобы кириллица и нормальный размер были с первых
+# секунд загрузки, а не только после старта сервиса настройки консоли.
 cat > /etc/mkinitcpio.conf << 'EOF'
 MODULES=()
 BINARIES=()
 FILES=()
-HOOKS=(base udev modconf block filesystems keyboard fsck archiso)
+HOOKS=(base udev modconf kms keyboard keymap consolefont block filesystems fsck archiso)
 COMPRESSION="zstd"
 COMPRESSION_OPTIONS=(-15)
 EOF
