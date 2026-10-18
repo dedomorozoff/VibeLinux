@@ -86,11 +86,13 @@ make arch
 **Состав:**
 - Arch Linux (rolling release)
 - Ядро: linux, linux-firmware
-- Консольные утилиты: btop, mc, nano, vim, tmux, zsh
+- Консольные утилиты: btop, mc, nano, vim, tmux, fish
+- Консоль по-человечески: кириллица (UTF-8 + Unicode-шрифт Terminus, размер подбирается под разрешение), раскладка RU/EN по **Alt+Shift**, мышь в TTY (gpm: выделение, вставка, клики в mc)
 - Сеть: curl, wget, git, NetworkManager, openssh
 - Архиваторы: unzip, zip, p7zip, zstd
-- Установщик: archinstall (TUI)
-- **Скрипт доустановки:** `/usr/local/bin/vibecode-upgrade`
+- Установщик: archinstall (TUI) + обёртка `vinstall`
+- AI-агенты из коробки: `claude`, `codex`, `qwen`, `kimi`, `kilo`, `mimo`, `cn`, `koda`, `src`, `dmed`, `dmsh`, `dmcode`, `crush`, `opencode`, `agy`
+- **Доустановка AI-стека:** `/opt/vibecode/scripts/ai/setup-ai-stack.sh`
 
 ---
 

@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# VibeLinux — запуск gpm (сервер мыши в текстовой консоли).
+#
+# Зачем обёртка: штатный gpm.service жёстко ждёт /dev/input/mice и стартует
+# строго с протоколом imps2. На тачпадах/некоторых мышах imps2 не подходит, а
+# если устройство появляется позже — юнит вообще пропускался по
+# ConditionPathExists. Здесь ждём устройство и перебираем протоколы.
+set -u
+
+DEV=/dev/input/mice
+
+for _ in $(seq 20); do
+    [[ -e $DEV ]] && break
+    sleep 0.15
+done
+
+if [[ ! -e $DEV ]]; then
+    echo "vibelinux-gpm: $DEV не найден — мышь в консоли недоступна" >&2
+    exit 0
+fi
+
+for proto in imps2 synps2 ps2 exps2 ms3; do
+    /usr/bin/gpm -m "$DEV" -t "$proto" >/dev/null 2>&1 || true
+    sleep 0.3
+    if [[ -e /dev/gpmctl ]]; then
+        echo "vibelinux-gpm: запущен (протокол $proto, устройство $DEV)"
+        exit 0
+    fi
+done
+
+echo "vibelinux-gpm: ни один протокол не подошёл для $DEV" >&2
+exit 0

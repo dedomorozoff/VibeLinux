@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# VibeLinux — настройка текстовой консоли (TTY): шрифт + раскладка.
+#
+# Зачем отдельный скрипт, если есть systemd-vconsole-setup: тот применяет
+# FONT/KEYMAP из /etc/vconsole.conf один раз и очень рано, когда консоль ещё
+# может быть на vgacon (он принимает не любую высоту шрифта). Плюс в UTF-8
+# консоли нужен именно Unicode-вариант шрифта. Здесь мы:
+#   * подбираем размер шрифта под текущее разрешение (1080p/1440p/4K и т.д.),
+#     чтобы TTY не был ни микроскопическим, ни на 3 строки;
+#   * берём Unicode-вариант (ter-u*), иначе блоки, рамки, греческий и
+#     диакритика в UTF-8 консоли превращаются в мусор;
+#   * применяем ко всем VT и никогда не «падаем» (юнит не должен становиться
+#     failed из-за того, что консоль ещё не готова).
+set -u
+
+CONSOLEFONTS=/usr/share/kbd/consolefonts
+VCONSOLE=/etc/vconsole.conf
+FALLBACK=ter-u16b
+
+# Высота активного фреймбуфера. Пусто/0 — фреймбуфера нет (vgacon).
+fb_height() {
+    local f=/sys/class/graphics/fb0/virtual_size v
+    if [[ -r $f ]]; then
+        v="$(tr -d '\n' <"$f")"
+        printf '%s\n' "${v#*,}"
+        return
+    fi
+    f=/sys/class/graphics/fb0/modes
+    if [[ -r $f ]]; then
+        sed -n '1{s/.*x\([0-9]\{3,\}\)[a-z].*/\1/p}' "$f"
+    fi
+}
+
+# Шрифт под высоту экрана. Высоты 18/20/28/32 проходят только на фреймбуфере:
+# vgacon принимает лишь 8/16/20/24/32 (480/высота должно быть целым).
+pick_font() {
+    local h="$1"
+    if   (( h >= 1300 )); then printf 'ter-u32b\n'
+    elif (( h >= 1000 )); then printf 'ter-u28b\n'
+    elif (( h >= 760  )); then printf 'ter-u20b\n'
+    elif (( h >= 560  )); then printf 'ter-u18b\n'
+    else                       printf '%s\n' "$FALLBACK"
+    fi
+}
+
+apply_font() {
+    local font="$1" dev ok=0
+    for dev in /dev/tty1 /dev/tty2 /dev/tty3 /dev/tty4 /dev/tty5 /dev/tty6 /dev/tty0; do
+        [[ -c $dev ]] || continue
+        setfont -C "$dev" "$font" 2>/dev/null && ok=1
+    done
+    (( ok ))
+}
+
+apply_keymap() {
+    local keymap
+    keymap="$(sed -n 's/^KEYMAP=//p' "$VCONSOLE" 2>/dev/null | head -1 | tr -d '"')"
+    [[ -n $keymap ]] || return 0
+    loadkeys "$keymap" 2>/dev/null || true
+}
+
+font="$(pick_font "$(fb_height)")"
+[[ -f $CONSOLEFONTS/$font.psf.gz ]] || font="$FALLBACK"
+
+if ! apply_font "$font"; then
+    # Консоль не приняла выбранный шрифт (например, vgacon + «неудобная»
+    # высота) — пробуем безопасный 16px, он проходит везде.
+    [[ $font == "$FALLBACK" ]] || apply_font "$FALLBACK" || true
+fi
+apply_keymap
+
+exit 0

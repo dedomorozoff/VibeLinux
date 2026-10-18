@@ -1,10 +1,13 @@
-# VibeLinux — применить кириллическую локаль и консольный шрифт в интерактивной сессии.
-# Нужно, т.к. автологин в TTY может не получить LANG из locale.conf, из-за чего
-# вывод русских программ транслитом/латиницей.
+# VibeLinux — локаль и консоль для интерактивной сессии fish.
+#
+# 1) Шрифт/раскладка: делегируем в vibelinux-console-setup (единая логика с
+#    systemd-юнитом — подбор Unicode-шрифта под разрешение). Нужно, потому что
+#    fbcon может сбросить шрифт на дефолтный уже после загрузки KMS.
+# 2) Локаль: автологин в TTY может не получить LANG из locale.conf, из-за чего
+#    вывод русских программ идёт транслитом/латиницей.
 if status is-interactive
-    if command -v setfont >/dev/null 2>&1
-        set -l font (string trim (grep '^FONT=' /etc/vconsole.conf 2>/dev/null | cut -d= -f2-))
-        test -n "$font"; and setfont "$font" 2>/dev/null
+    if test -x /usr/local/bin/vibelinux-console-setup
+        command /usr/local/bin/vibelinux-console-setup >/dev/null 2>&1
     end
 end
 

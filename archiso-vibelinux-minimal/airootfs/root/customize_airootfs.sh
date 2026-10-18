@@ -28,8 +28,13 @@ cat > /etc/motd << 'EOF'
 
  ── AI-агенты (уже предустановлены) ─────────────────────────
    claude, codex, qwen, kimi, kilo, mimo, cn, koda, src (SourceCraft)
-   dmed, dmsh, crush, opencode, gemini    запуск: <имя> --help
+   dmed, dmsh, dmcode, crush, opencode, agy (Gemini CLI)
+   запуск любого: <имя> --help
    terminal AI chat:  ai-chat
+
+ ── Консоль ────────────────────────────────────────────────
+   Мышь в TTY: выделение + вставка (средняя кнопка), клики в mc
+   Раскладка RU/EN: Alt+Shift. Шрифт подбирается под разрешение.
 
  Доустановка AI-стека (после установки на диск):
    sudo /opt/vibecode/scripts/ai/setup-ai-stack.sh
@@ -92,15 +97,20 @@ EOF
 # Console (TTY): крупный кириллический шрифт + русская раскладка с переключением
 # на EN по Alt+Shift. UTF-8 везде (см. локаль выше), поэтому в имени keymap
 # суффикс -UTF-8 обязателен — иначе кириллица в консоли будет кракозябрами.
-#   FONT=ter-v22b   — крупный Terminus 22px с кириллицей (пакет terminus-font)
+#   FONT=ter-u20b   — Unicode-вариант Terminus (u!), а не legacy ter-v*:
+#                     у v-вариантов нет Unicode-таблицы, из-за чего блоки,
+#                     рамки, греческий и диакритика в UTF-8 консоли — мусор.
 #   KEYMAP=ruwin_alt_sh-UTF-8 — русская раскладка; Alt+Shift переключает ru/en
+# Точный размер шрифта подбирается под разрешение в
+# vibelinux-console.service → /usr/local/bin/vibelinux-console-setup.
 cat > /etc/vconsole.conf << 'EOF'
 KEYMAP=ruwin_alt_sh-UTF-8
-FONT=ter-v22b
+FONT=ter-u20b
 EOF
 
 # Гарантированно применяем кириллический шрифт и раскладку при загрузке
-# (systemd-vconsole-setup не всегда отрабатывает в live до getty).
+# (systemd-vconsole-setup не всегда отрабатывает в live до getty, а на
+# фреймбуфере шрифт слетает после инициализации KMS).
 systemctl enable vibelinux-console.service 2>/dev/null || true
 
 # Default shell (fish)
@@ -172,7 +182,10 @@ sed -i 's/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/' /etc/sudoers
 systemctl enable NetworkManager || true
 systemctl enable systemd-timesyncd || true
 systemctl enable sshd || true
-# Мышь в текстовой консоли (копипаст/выделение в TTY)
+# Мышь в текстовой консоли (выделение/вставка в TTY, клики в mc).
+# Штатный gpm.service жёстко ждёт /dev/input/mice и знает только imps2 —
+# обёртка vibelinux-gpm ждёт устройство и перебирает протоколы (в т.ч. для
+# тачпадов), см. gpm.service.d/vibelinux.conf.
 systemctl enable gpm || true
 
 # Getty autologin on tty1 for vibe
@@ -287,15 +300,19 @@ if [[ -n "$CRUSH_AA" ]]; then
 fi
 npm uninstall -g "@charmland/crush" >/dev/null 2>&1 || true
 
-# Google Gemini CLI — официальный installer от Google (antigravity)
-if ! command -v gemini >/dev/null 2>&1; then
-  echo "Installing Google Gemini CLI..."
-  if curl -fsSL --retry 3 https://antigravity.google/cli/install.sh | bash; then
-    echo "OK: gemini installed"
+# Antigravity / Gemini CLI. Установщик по умолчанию кладёт бинарник (agy) в
+# $HOME/.local/bin — оттуда его не видит пользователь vibe, а сам файл весит
+# 200+ МБ и просто раздувает образ. Просим ставить сразу в /usr/local/bin.
+if ! command -v agy >/dev/null 2>&1; then
+  echo "Installing Antigravity/Gemini CLI (agy)..."
+  if curl -fsSL --retry 3 https://antigravity.google/cli/install.sh | bash -s -- -d /usr/local/bin; then
+    echo "OK: agy установлен в /usr/local/bin"
   else
-    echo "WARNING: gemini install failed (offline?)"
+    echo "WARNING: agy install failed (offline?)"
   fi
 fi
+# Чистим возможные остатки установки в $HOME (мимо PATH и мимо смысла)
+rm -rf /root/.local/bin
 
 # dmsh — extract local package directly (pacman -U fails in archiso chroot)
 if compgen -G "/root/dmsh/*.pkg.tar.zst" >/dev/null; then
@@ -334,7 +351,7 @@ else
 fi
 
 # Wrapper scripts: redirect cache/tmp to /tmp (tmpfs) to avoid filling overlay
-for agent_bin in claude kilo mimo qwen codex opencode dmsh dmcode crush kimi dmed src sourcecraft koda gemini; do
+for agent_bin in claude kilo mimo qwen codex opencode dmsh dmcode crush kimi dmed src sourcecraft koda agy gemini; do
   REAL_BIN="$(type -p "$agent_bin" 2>/dev/null || true)"
   if [[ -z "$REAL_BIN" || -f "${REAL_BIN}.real" ]]; then
     continue

@@ -135,6 +135,43 @@ if [[ $DMED_COPIED -eq 0 ]]; then
     warn "dmed binary unavailable (no soft/dmed, no PATH, offline, no Go) — skipping"
 fi
 
+# 3b2) dmsh / dmcode — «свои» AI-утилиты, те же, что и в полной редакции
+#      (archiso-vibelinux). Мини-сборка их раньше не тянула, поэтому в образе
+#      их не было, хотя MOTD их рекламирует. Ставим Arch-пакеты из
+#      GitHub-релизов; офлайн-фоллбек — soft/<tool>/*.pkg.tar.zst.
+#      Кладём в airootfs/root/<tool>/, откуда их разворачивает
+#      customize_airootfs.sh (pacman -U в archiso-chroot не работает).
+SOFT_DIR="$(cd "$(dirname "$(readlink -f "$0")")/../../soft" 2>/dev/null && pwd || true)"
+
+fetch_vibe_pkg() {
+    local tool="$1" repo="$2"
+    local dst="$PROFILE_DIR/airootfs/root/$1" url
+    mkdir -p "$dst"
+    rm -f "$dst"/*.pkg.tar.zst "$dst/$tool"
+
+    if command -v curl >/dev/null 2>&1; then
+        # grep -v debug — иначе первым может попасться <tool>-debug-*.pkg.tar.zst
+        url="$(curl -fsSL --retry 3 "https://api.github.com/repos/${repo}/releases/latest" 2>/dev/null \
+            | grep -o 'https://[^"]*x86_64\.pkg\.tar\.zst' | grep -v -- '-debug' | head -1 || true)"
+        if [[ -n "$url" ]] && curl -fsSL --retry 3 "$url" -o "$dst/$(basename "$url")"; then
+            log "$tool: $(basename "$url") ← GitHub release"
+            return 0
+        fi
+    fi
+
+    if [[ -n "$SOFT_DIR" ]] && compgen -G "$SOFT_DIR/$tool/*.pkg.tar.zst" >/dev/null; then
+        cp "$SOFT_DIR/$tool"/*.pkg.tar.zst "$dst/"
+        log "$tool: локальный пакет ← soft/$tool/"
+        return 0
+    fi
+
+    warn "$tool недоступен (нет сети и нет soft/$tool/) — пропускаю"
+    return 1
+}
+
+fetch_vibe_pkg dmsh   dedomorozoff/dmsh   || true
+fetch_vibe_pkg dmcode dedomorozoff/dmcode || true
+
 # 3c2) vinstall — текстовый инсталлятор (обёртка над archinstall)
 #     Источник: scripts/build/installer/. Копируем в airootfs (попадает в
 #     /usr/local/bin и /usr/local/share установленной live-системы).

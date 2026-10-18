@@ -9,7 +9,15 @@
 /archiso-vibelinux/airootfs/root/koda/
 /archiso-vibelinux/airootfs/opt/
 /archiso-vibelinux-minimal/airootfs/root/dmsh/
-/archiso-vibelinux-minimal/airootfs/usr/
+/archiso-vibelinux-minimal/airootfs/root/dmcode/*.pkg.tar.zst
+/archiso-vibelinux-minimal/airootfs/root/dmcode/dmcode
+/archiso-vibelinux-minimal/airootfs/root/dmed/
+# airootfs/usr держим в git (там лежат vibelinux-console-setup / vibelinux-gpm),
+# игнорируем только то, что приносит сборка
+/archiso-vibelinux-minimal/airootfs/usr/local/bin/dmed
+/archiso-vibelinux-minimal/airootfs/usr/local/bin/dmed.real
+/archiso-vibelinux-minimal/airootfs/usr/local/bin/vinstall
+/archiso-vibelinux-minimal/airootfs/usr/local/share/vibelinux/
 /out/
 /scripts/legacy/build/
 .qwen//freebsd-vibebsd/.pkglist.merged
