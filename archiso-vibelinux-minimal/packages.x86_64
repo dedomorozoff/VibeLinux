@@ -14,6 +14,10 @@ edk2-shell
 mkinitcpio
 mkinitcpio-archiso
 
+# Console (TTY): крупный шрифт с кириллицей + мышь в консоли
+terminus-font
+gpm
+
 # Network
 networkmanager
 iwd

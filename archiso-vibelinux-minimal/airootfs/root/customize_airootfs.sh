@@ -89,14 +89,14 @@ LC_MEASUREMENT=ru_RU.UTF-8
 LC_IDENTIFICATION=ru_RU.UTF-8
 EOF
 
-# Console (TTY): кириллический шрифт + русская раскладка с переключением на EN
-# по Alt+Shift. Всё из базового пакета kbd (терминальные шрифты + keymaps),
-# поэтому отдельные пакеты не нужны.
-#   FONT=cyr-sun16   — современный консольный шрифт с кириллицей и латиницей
+# Console (TTY): крупный кириллический шрифт + русская раскладка с переключением
+# на EN по Alt+Shift. UTF-8 везде (см. локаль выше), поэтому в имени keymap
+# суффикс -UTF-8 обязателен — иначе кириллица в консоли будет кракозябрами.
+#   FONT=ter-v22b   — крупный Terminus 22px с кириллицей (пакет terminus-font)
 #   KEYMAP=ruwin_alt_sh-UTF-8 — русская раскладка; Alt+Shift переключает ru/en
 cat > /etc/vconsole.conf << 'EOF'
 KEYMAP=ruwin_alt_sh-UTF-8
-FONT=cyr-sun16
+FONT=ter-v22b
 EOF
 
 # Гарантированно применяем кириллический шрифт и раскладку при загрузке
@@ -172,6 +172,8 @@ sed -i 's/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/' /etc/sudoers
 systemctl enable NetworkManager || true
 systemctl enable systemd-timesyncd || true
 systemctl enable sshd || true
+# Мышь в текстовой консоли (копипаст/выделение в TTY)
+systemctl enable gpm || true
 
 # Getty autologin on tty1 for vibe
 mkdir -p /etc/systemd/system/getty@tty1.service.d

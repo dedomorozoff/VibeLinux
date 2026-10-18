@@ -7,7 +7,7 @@ Before=getty@tty1.service
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/usr/bin/setfont eurlatgr
+ExecStart=/usr/bin/setfont ter-v22b
 ExecStart=/usr/bin/loadkeys ruwin_alt_sh-UTF-8
 
 [Install]
