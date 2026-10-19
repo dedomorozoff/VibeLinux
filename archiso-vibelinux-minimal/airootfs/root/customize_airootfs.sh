@@ -97,9 +97,12 @@ EOF
 # Console (TTY): крупный кириллический шрифт + русская раскладка с переключением
 # на EN по Alt+Shift. UTF-8 везде (см. локаль выше), поэтому в имени keymap
 # суффикс -UTF-8 обязателен — иначе кириллица в консоли будет кракозябрами.
-#   FONT=ter-u20b   — Unicode-вариант Terminus (u!), а не legacy ter-v*:
-#                     у v-вариантов нет Unicode-таблицы, из-за чего блоки,
-#                     рамки, греческий и диакритика в UTF-8 консоли — мусор.
+#   FONT=ter-u20b   — Terminus с маппингом KOI8-U: вся русская кириллица
+#                     (64+32), полублоки и все двойные рамки ╔═╗║╚╝.
+#                     ter-v* (маппинг xos4) выглядит «юникоднее», но на 512
+#                     глифов теряет ходовые русские буквы (А, В, Г, Е, З, К,
+#                     М, Н, О, Р, С, Т, Х и строчные а, е, к, о, п, р, с, у,
+#                     х) — в UTF-8 консоли они выводятся мусором.
 #   KEYMAP=ruwin_alt_sh-UTF-8 — русская раскладка; Alt+Shift переключает ru/en
 # Точный размер шрифта подбирается под разрешение в
 # vibelinux-console.service → /usr/local/bin/vibelinux-console-setup.
@@ -111,7 +114,16 @@ EOF
 # Гарантированно применяем кириллический шрифт и раскладку при загрузке
 # (systemd-vconsole-setup не всегда отрабатывает в live до getty, а на
 # фреймбуфере шрифт слетает после инициализации KMS).
+# Включение делаем руками: в archiso-chroot `systemctl enable` может тихо
+# не сработать (нет dbus), и тогда в образе не будет ни одного симлинка —
+# юнит не запустится вообще. Симлинки создаём напрямую, а enable оставляем
+# на случай, если он всё-таки работает (ошибку глушим, дубли не страшны).
 systemctl enable vibelinux-console.service 2>/dev/null || true
+for _target in sysinit multi-user; do
+  mkdir -p "/etc/systemd/system/${_target}.target.wants"
+  ln -sf /etc/systemd/system/vibelinux-console.service \
+         "/etc/systemd/system/${_target}.target.wants/vibelinux-console.service"
+done
 
 # Default shell (fish)
 # usermod -s ставит shell напрямую (без валидации /etc/shells и PAM-лока,

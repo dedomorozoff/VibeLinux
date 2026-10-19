@@ -1,13 +1,15 @@
 # VibeLinux — локаль и консоль для интерактивной сессии fish.
 #
-# 1) Шрифт/раскладка: делегируем в vibelinux-console-setup (единая логика с
-#    systemd-юнитом — подбор Unicode-шрифта под разрешение). Нужно, потому что
-#    fbcon может сбросить шрифт на дефолтный уже после загрузки KMS.
+# 1) Шрифт: повторно применяем vibelinux-console-setup (единая логика с
+#    systemd-юнитом — подбор шрифта под разрешение). Нужно, потому что fbcon
+#    может сбросить шрифт на дефолтный уже после загрузки KMS. Флаг --font-only
+#    обязателен: иначе сбрасывалась бы текущая группа раскладки (RU/EN).
+#    Сам скрипт при запуске не от root перезапускается через sudo -n.
 # 2) Локаль: автологин в TTY может не получить LANG из locale.conf, из-за чего
 #    вывод русских программ идёт транслитом/латиницей.
 if status is-interactive
     if test -x /usr/local/bin/vibelinux-console-setup
-        command /usr/local/bin/vibelinux-console-setup >/dev/null 2>&1
+        command /usr/local/bin/vibelinux-console-setup --font-only >/dev/null 2>&1
     end
 end
 

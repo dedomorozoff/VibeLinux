@@ -7,15 +7,36 @@
 # консоли нужен именно Unicode-вариант шрифта. Здесь мы:
 #   * подбираем размер шрифта под текущее разрешение (1080p/1440p/4K и т.д.),
 #     чтобы TTY не был ни микроскопическим, ни на 3 строки;
-#   * берём Unicode-вариант (ter-u*), иначе блоки, рамки, греческий и
-#     диакритика в UTF-8 консоли превращаются в мусор;
+#   * берём ter-u* (маппинг KOI8-U): в нём есть вся русская кириллица
+#     (64 заглавных + 32 строчных), полублоки и все двойные рамки ╔═╗║╚╝.
+#     У ter-v* (маппинг xos4) на 512 глифов не хватает ходовых русских букв
+#     (А, В, Г, Е, З, К, М, Н, О, Р, С, Т, Х и строчных а, е, к, о, п, р, с,
+#     у, х) — в UTF-8 консоли они выводятся мусором;
 #   * применяем ко всем VT и никогда не «падаем» (юнит не должен становиться
 #     failed из-за того, что консоль ещё не готова).
+#
+# Флаги:
+#   --font-only  только шрифт, без раскладки (для повторного применения из
+#                shell: иначе каждый запуск fish сбрасывал бы группу на RU).
 set -u
 
 CONSOLEFONTS=/usr/share/kbd/consolefonts
 VCONSOLE=/etc/vconsole.conf
 FALLBACK=ter-u16b
+
+# setfont/loadkeys меняют консоль через KDFONTOP/KDSKBMODE, а их ядро пускает
+# только с CAP_SYS_TTY_CONFIG — то есть от root. Из-под пользователя (например,
+# из fish при входе в TTY) сами по себе они молча ничего не сделают, поэтому
+# перезапускаемся через sudo -n (в live у vibe NOPASSWD).
+if (( EUID != 0 )); then
+    command -v sudo >/dev/null 2>&1 || exit 0
+    exec sudo -n "$(readlink -f "$0")" "$@"
+fi
+
+font_only=0
+for arg in "$@"; do
+    [[ $arg == --font-only ]] && font_only=1
+done
 
 # Высота фреймбуфера. На машинах с двумя GPU фреймбуферов бывает несколько
 # (fb0/fb1) — берём максимальную высоту: крупный шрифт читаем на любом экране,
@@ -62,10 +83,14 @@ apply_font() {
 }
 
 apply_keymap() {
-    local keymap
+    local keymap dev
     keymap="$(sed -n 's/^KEYMAP=//p' "$VCONSOLE" 2>/dev/null | head -1 | tr -d '"')"
     [[ -n $keymap ]] || return 0
-    loadkeys "$keymap" 2>/dev/null || true
+    # -C на каждый VT: без него loadkeys правит только активную консоль
+    for dev in /dev/tty1 /dev/tty2 /dev/tty3 /dev/tty4 /dev/tty5 /dev/tty6 /dev/tty0; do
+        [[ -c $dev ]] || continue
+        loadkeys -C "$dev" "$keymap" 2>/dev/null || true
+    done
 }
 
 font="$(pick_font "$(fb_height)")"
@@ -76,6 +101,6 @@ if ! apply_font "$font"; then
     # высота) — пробуем безопасный 16px, он проходит везде.
     [[ $font == "$FALLBACK" ]] || apply_font "$FALLBACK" || true
 fi
-apply_keymap
+(( font_only )) || apply_keymap
 
 exit 0
