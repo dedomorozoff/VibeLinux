@@ -56,11 +56,12 @@ install_agent "Qwen Code"          install-qwen-code.sh
 install_agent "Kimi Code CLI"      install-kimi.sh
 install_agent "GitHub Copilot CLI" install-github-copilot-cli.sh
 install_agent "Crush"              install-crush.sh
+install_agent "Antigravity CLI"    install-antigravity.sh
 install_agent "OpenAI CLI"         install-openai-cli.sh
 install_agent "Terminal AI (ai-chat)" install-terminal-ai.sh
 
 log "Итог:"
-for cmd in claude codex qwen kimi copilot crush ai-chat; do
+for cmd in claude codex qwen kimi copilot crush agy ai-chat; do
   if command -v "${cmd}" >/dev/null 2>&1; then
     log "  ✓ ${cmd} -> $(command -v ${cmd})"
   else

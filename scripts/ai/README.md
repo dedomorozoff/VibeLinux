@@ -55,6 +55,15 @@ sudo ./setup-ai-stack.sh
 - Запускает ComfyUI
 - Веб-интерфейс на http://localhost:8188
 
+### Fine-tuning
+
+**setup-unsloth.sh**
+- Устанавливает Unsloth Studio (https://unsloth.ai)
+- Web UI для fine-tuning LLM (LoRA, QLoRA, GRPO RL)
+- Запуск: `unsloth studio -H 0.0.0.0 -p 8888`
+- Веб-интерфейс на http://localhost:8888
+- Работает в Arch и Debian/Ubuntu (`pacman` или `apt-get`)
+
 ### Проприетарные инструменты (опционально)
 
 **install-openai-cli.sh**
@@ -99,6 +108,11 @@ sudo ./setup-ai-stack.sh
 - Koda CLI (ООО «Кода», AI coding assistant, форк gemini-cli)
 - Требует Node.js 20+, ставится через npm
 - Быстрый старт: `koda`
+
+**install-antigravity.sh**
+- Google Antigravity CLI (agy)
+- Нативный бинарник, официальный установщик, самообновляется
+- Быстрый старт: `agy`
 
 **install-terminal-ai.sh**
 - Дополнительные терминальные AI-утилиты

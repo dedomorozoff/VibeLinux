@@ -148,6 +148,7 @@ sudo ./scripts/ai/setup-ai-stack.sh
 | `install-qwen-code.sh` | Qwen Code (опционально) |
 | `install-crush.sh` | Crush — AI coding agent (опционально) |
 | `install-kimi.sh` | Kimi Code CLI (опционально) |
+| `install-antigravity.sh` | Google Antigravity CLI — agy (опционально) |
 | `install-terminal-ai.sh` | Терминальные AI-утилиты |
 
 ### Драйверы (`drivers/`)

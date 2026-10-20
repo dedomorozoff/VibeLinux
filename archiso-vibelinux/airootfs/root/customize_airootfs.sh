@@ -500,8 +500,24 @@ if [[ -n "$CRUSH_AA" ]]; then
 fi
 npm uninstall -g "@charmland/crush" >/dev/null 2>&1 || true
 
-# Google Gemini CLI — официальный installer от Google (antigravity)
-if ! command -v gemini >/dev/null 2>&1; then
+# Antigravity CLI (Google) — нативный бинарник `agy`, официальный установщик.
+# Ставим сразу в /usr/local/bin: по умолчанию установщик кладёт 200+ МБ в
+# $HOME/.local/bin — мимо PATH пользователя vibe и впустую в образ.
+# Самообновляется при запуске (зарезервировано за установщиком).
+if ! command -v agy >/dev/null 2>&1; then
+  echo "Installing Antigravity CLI (agy)..."
+  if curl -fsSL --retry 3 https://antigravity.google/cli/install.sh | bash -s -- --dir /usr/local/bin; then
+    echo "OK: antigravity (agy) установлен в /usr/local/bin"
+  else
+    echo "WARNING: antigravity install failed (offline?)"
+  fi
+fi
+
+# Google Gemini CLI — официальный installer от Google (antigravity).
+# Резервный проход: тот же установщик, что и для `agy` (он умеет только
+# `-d/--dir` и создаёт бинарник `agy`), поэтому гоняем его только если `agy`
+# так и не появился — иначе за одну сборку качали бы бинарник дважды.
+if ! command -v gemini >/dev/null 2>&1 && ! command -v agy >/dev/null 2>&1; then
   echo "Installing Google Gemini CLI..."
   if curl -fsSL --retry 3 https://antigravity.google/cli/install.sh | bash; then
     echo "OK: gemini установлен"
@@ -509,9 +525,12 @@ if ! command -v gemini >/dev/null 2>&1; then
     echo "WARNING: gemini install failed (offline?)"
   fi
 fi
+# Остатки установки в $HOME/.local/bin — мимо PATH пользователя vibe и впустую
+# в образ (200+ МБ), чистим после обоих проходов — как в мини-редакции
+rm -rf /root/.local/bin
 
 # Обёртки для агентов: кэш и tmp в /tmp (tmpfs), чтобы не забивать overlay
-for agent_bin in claude kilo mimo qwen codex opencode dmsh dmcode crush kimi src sourcecraft koda gemini cline; do
+for agent_bin in claude kilo mimo qwen codex opencode dmsh dmcode crush kimi src sourcecraft koda agy gemini cline; do
   REAL_BIN="$(type -p "$agent_bin" 2>/dev/null || true)"
   if [[ -z "$REAL_BIN" || -f "${REAL_BIN}.real" ]]; then
     continue
@@ -534,8 +553,9 @@ if [[ -d /opt/vibecode/scripts/ai ]]; then
   echo "OK: /opt/vibecode/scripts/ai готов (setup-ai-stack.sh для post-install)"
 fi
 
-# Тяжёлый AI-стек (Python venv / WebUI / ComfyUI) устанавливается ПОСЛЕ установки на диск:
+# Тяжёлый AI-стек (Python venv, WebUI, ComfyUI, Unsloth Studio) устанавливается ПОСЛЕ установки на диск:
 #   sudo /opt/vibecode/scripts/ai/setup-ai-stack.sh
+#   sudo /opt/vibecode/scripts/ai/setup-unsloth.sh
 
 cat > /usr/local/bin/ai-setup << 'AISETUPEOF'
 #!/usr/bin/env bash
@@ -659,6 +679,24 @@ install -Dm 755 "$CRUSH_TMP/crush_${CRUSH_VER#v}_Linux_${CRUSH_AA}/crush" /usr/l
 echo "Crush ${CRUSH_VER} installed! Run: crush"
 CRUSHEOF
 chmod +x /usr/local/bin/install-crush
+
+# Antigravity CLI installer (official, native binary `agy`)
+cat > /usr/local/bin/install-antigravity << 'ANTIGRAVITYEOF'
+#!/usr/bin/env bash
+set -euo pipefail
+if command -v agy >/dev/null 2>&1; then
+  echo "Antigravity CLI already installed: $(agy --version 2>/dev/null || echo '?')"
+  exit 0
+fi
+echo "Installing Antigravity CLI (agy)..."
+if curl -fsSL https://antigravity.google/cli/install.sh | bash -s -- --dir /usr/local/bin; then
+  echo "Antigravity CLI installed! Run: agy"
+else
+  echo "Failed to install Antigravity CLI. Check: https://antigravity.google/cli/install.sh"
+  exit 1
+fi
+ANTIGRAVITYEOF
+chmod +x /usr/local/bin/install-antigravity
 
 # Kimi Code CLI installer
 cat > /usr/local/bin/install-kimi << 'KIMIEOF'
@@ -870,6 +908,7 @@ echo "  Koda          — Koda CLI (Яндекс/Кода) ($(status koda))"
 echo "  qwen-code     — Qwen AI coding agent ($(status qwen))"
 echo "  Claude Code   — Anthropic terminal AI ($(status claude))"
 echo "  Codex         — OpenAI terminal AI ($(status codex))"
+echo "  Antigravity   — Google Antigravity CLI ($(status agy))"
 echo "  Kilo Code     — Open source AI coding agent ($(status kilo))"
 echo "  MiMo Code     — Xiaomi terminal AI ($(status mimo))"
 echo "  Continue.dev  — AI coding CLI ($(status cn))"
@@ -882,6 +921,7 @@ echo "  [3] MCP servers   — Model Context Protocol (filesystem, github)"
 echo "  [4] Ollama        — Local LLM runtime ($(status ollama))"
 echo "  [5] AI модели     — базовые Ollama-модели (ai-setup)"
 echo "  [6] AI stack      — WebUI + Python-стек + ComfyUI (setup-ai-stack)"
+echo "  [7] Unsloth Studio — Fine-tuning LLM (web UI, unsloth.ai)"
 echo ""
 if is_live; then
   echo "Дальше: установите VibeLinux на диск (Install VibeLinux), затем:"
@@ -891,8 +931,9 @@ fi
 echo "  sudo install-ollama                                 # рантайм локальных LLM"
 echo "  sudo ai-setup                                       # базовые Ollama-модели"
 echo "  sudo /opt/vibecode/scripts/ai/setup-ai-stack.sh     # WebUI + Python-стек + ComfyUI"
+echo "  sudo /opt/vibecode/scripts/ai/setup-unsloth.sh      # Unsloth Studio (fine-tuning)"
 echo ""
-read -rp "Выберите [1-6] или Enter для выхода: " choice
+read -rp "Выберите [1-7] или Enter для выхода: " choice
 case "$choice" in
   1) live_blocked || install-cursor ;;
   2) live_blocked || install-kiro ;;
@@ -907,6 +948,16 @@ case "$choice" in
       sudo /opt/vibecode/scripts/ai/setup-ai-stack.sh
     else
       echo "setup-ai-stack.sh не найден в образе."
+    fi
+    ;;
+  7)
+    if is_live; then
+      echo "Unsloth Studio — тяжёлый компонент (Python + ML-стек)."
+      echo "В live-сессии нет места — запустите после установки на диск."
+    elif [[ -x /opt/vibecode/scripts/ai/setup-unsloth.sh ]]; then
+      sudo /opt/vibecode/scripts/ai/setup-unsloth.sh
+    else
+      echo "setup-unsloth.sh не найден в образе."
     fi
     ;;
   *) echo "Happy coding!" ;;
@@ -1375,7 +1426,7 @@ echo "  Welcome to VibeLinux!"
 echo "  Linux for vibe coding and AI development"
 echo "  ========================================="
 echo ""
-echo "  AI-агенты уже предустановлены: opencode, cline, src (SourceCraft), koda, qwen, claude, codex, crush, kimi, gemini"
+echo "  AI-агенты уже предустановлены: opencode, cline, src (SourceCraft), koda, qwen, claude, codex, agy (Antigravity), crush, kimi, gemini"
 echo "  Ollama (локальные LLM) ставится после установки на диск: sudo install-ollama"
 echo ""
 if [[ -d /run/archiso/bootmnt ]]; then
@@ -1515,14 +1566,22 @@ cat > /home/vibe/Desktop/GET-STARTED.html << 'EOF'
   <li><strong>qwen-code</strong> — <code>qwen</code> (Alibaba coding agent)</li>
   <li><strong>Claude Code</strong> — <code>claude</code> (Anthropic)</li>
   <li><strong>Codex</strong> — <code>codex</code> (OpenAI)</li>
+  <li><strong>Antigravity CLI</strong> — <code>agy</code> (Google agentic coding platform)</li>
   <li><strong>Gemini</strong> — <code>gemini</code> (Google)</li>
   <li><strong>Kilo / MiMo / Continue / Crush / Kimi</strong> — <code>kilo</code>, <code>mimo</code>, <code>cn</code>, <code>crush</code>, <code>kimi</code></li>
   <li><strong>dmsh</strong> — offline AI shell (model included)</li>
 </ul>
-<p><em>Ollama и тяжёлый AI-стек (WebUI/ComfyUI/Python-venv) ставятся после установки на диск:</em></p>
+<h2>Fine-tuning</h2>
+<ul>
+  <li><strong>ComfyUI</strong> — image generation (Stable Diffusion, local)</li>
+  <li><strong>Unsloth Studio</strong> — <code>unsloth studio</code> (LoRA/GRPO fine-tuning, web UI)</li>
+  <li><strong>Python AI stack</strong> — PyTorch, Transformers, LangChain, LlamaIndex (in <code>~/.venv-ai</code>)</li>
+</ul>
+<p><em>Ollama и тяжёлый AI-стек ставятся после установки на диск:</em></p>
 <pre><span class="cmd">sudo install-ollama</span>
 <span class="cmd">sudo ai-setup</span>
-<span class="cmd">sudo /opt/vibecode/scripts/ai/setup-ai-stack.sh</span></pre>
+<span class="cmd">sudo /opt/vibecode/scripts/ai/setup-ai-stack.sh</span>
+<span class="cmd">sudo /opt/vibecode/scripts/ai/setup-unsloth.sh</span></pre>
 
 <h2>Quick Commands</h2>
 <pre><span class="cmd">fastfetch</span> <span class="sep">—</span> system info
@@ -1534,12 +1593,13 @@ cat > /home/vibe/Desktop/GET-STARTED.html << 'EOF'
 <span class="cmd">cline</span>    <span class="sep">—</span> Cline AI coding agent
 <span class="cmd">claude</span>   <span class="sep">—</span> Claude Code (Anthropic)
 <span class="cmd">codex</span>    <span class="sep">—</span> OpenAI Codex CLI
+<span class="cmd">agy</span>      <span class="sep">—</span> Google Antigravity CLI
 <span class="cmd">ai-setup</span> <span class="sep">—</span> download AI models (post-install)</pre>
 
 <h2>First Steps</h2>
 <ol>
   <li>Open <strong>Konsole</strong> (or Kitty)</li>
-  <li>Run <code>opencode</code> / <code>cline</code> / <code>claude</code> / <code>codex</code> — all pre-installed</li>
+  <li>Run <code>opencode</code> / <code>cline</code> / <code>claude</code> / <code>codex</code> / <code>agy</code> — all pre-installed</li>
   <li>Install VibeLinux to disk, then run <code>install-ollama</code> + <code>ai-setup</code> for local LLM models</li>
   <li>Run <code>sudo /opt/vibecode/scripts/ai/setup-ai-stack.sh</code> for WebUI/ComfyUI/Python-стек</li>
   <li>Open <strong>Zed</strong> and start coding</li>
@@ -1574,6 +1634,7 @@ AGENTS=(
   "koda:Koda CLI"
   "claude:Claude Code"
   "codex:Codex CLI"
+  "agy:Antigravity CLI"
   "qwen:Qwen Code"
   "kilo:Kilo Code"
   "mimo:Mimo"
@@ -2658,7 +2719,7 @@ echo ""
 
 # 4. Советы
 echo "── Полезные команды ──"
-echo "  AI-агенты (уже стоят):     opencode, cline, qwen, claude, codex, crush, kimi, gemini"
+echo "  AI-агенты (уже стоят):     opencode, cline, qwen, claude, codex, agy, crush, kimi, gemini"
 echo "  Ollama (после установки):  sudo install-ollama"
 echo "  AI-модели (после установки): sudo ai-setup"
 echo "  AI stack (после установки): sudo /opt/vibecode/scripts/ai/setup-ai-stack.sh"
