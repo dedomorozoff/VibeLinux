@@ -45,9 +45,13 @@
 - **Kilo Code / MiMo Code / Continue** — `kilo`, `mimo`, `cn`
 - **Crush** — `crush` (Charm, LSP + MCP, multi-model)
 - **Kimi Code CLI** — `kimi` (Moonshot AI)
+
 - **Qoder CLI** — `qoder` (https://qoder.com/cli, автономный AI-агент для кодинга; устанавливается через официальный installer `curl -fsSL https://qoder.com/install | bash`; скрипт `scripts/ai/install-qoder-cli.sh`)
 - **Pi CLI** — `pi` (https://pi.dev, coding agent со встроенными инструментами read/bash/edit/write и управлением сессиями; пакет `@earendil-works/pi-coding-agent`; скрипт `scripts/ai/install-pi-cli.sh`)
   - Расширение **pi-freeflow** — https://pi.dev/packages/pi-freeflow?type=extension — тонкий провайдер списка моделей OMP/Pi + dumb relay proxy; пакет `pi-freeflow`, устанавливается вместе с Pi CLI.
+
+- **Antigravity CLI** — `agy` (Google agentic coding platform, нативный бинарник, самообновляется; первый запуск — интерактивная настройка и вход через Google-аккаунт)
+
 - **В образе VibeLinux Arch все перечисленные CLI предустановлены** на этапе сборки (запечены в squashfs), поэтому работают и в live-сессии, и на установленной системе без прав root и без доустановки. Скрипты в `scripts/ai/install-*.sh` остаются для других систем (Ubuntu legacy, bare-metal).
 
 ---
@@ -80,6 +84,16 @@
 - Запуск: `sudo bash scripts/ai/start-sd.sh`
 - Веб-интерфейс: http://localhost:8188
 - Модели: `/opt/vibecode/comfyui/models/`
+
+---
+
+### **Fine-tuning**
+
+**Unsloth Studio (web UI)**
+- Установка: `sudo /opt/vibecode/scripts/ai/setup-unsloth.sh`
+- GUI для fine-tuning LLM (LoRA, QLoRA, GRPO RL)
+- Веб-интерфейс: http://localhost:8888
+- Запуск: `unsloth studio -H 0.0.0.0 -p 8888`
 
 ---
 
