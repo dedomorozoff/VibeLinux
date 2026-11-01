@@ -267,6 +267,7 @@ NPM_AGENTS=(
   "@continuedev/cli:cn"
   "@moonshot-ai/kimi-code:kimi"
   "@kodadev/koda-cli:koda"
+  "@earendil-works/pi-coding-agent:pi"
 )
 for entry in "${NPM_AGENTS[@]}"; do
   pkg="${entry%%:*}"; bin="${entry##*:}"
@@ -277,6 +278,12 @@ for entry in "${NPM_AGENTS[@]}"; do
     npm install -g "$pkg" 2>&1 | tail -3 || echo "WARNING: $pkg install failed"
   fi
 done
+
+# Pi — расширение pi-freeflow (провайдер списка моделей OMP/Pi + dumb relay proxy).
+if ! npm list -g --depth=0 2>/dev/null | grep -q 'pi-freeflow'; then
+  echo "Installing pi-freeflow (Pi extension)..."
+  npm install -g pi-freeflow@latest 2>&1 | tail -3 || echo "WARNING: pi-freeflow install failed"
+fi
 
 # Claude Code postinstall
 CLAUDE_GLOBAL="$(npm root -g)/@anthropic-ai/claude-code"
@@ -296,6 +303,17 @@ if ! command -v src >/dev/null 2>&1; then
     echo "OK: sourcecraft (src) installed to /usr/local/bin"
   else
     echo "WARNING: sourcecraft install failed (offline?)"
+  fi
+fi
+
+# Qoder CLI — автономный AI-агент для кодинга (https://qoder.com/cli).
+# Официальный установщик: curl -fsSL https://qoder.com/install | bash
+if ! command -v qoder >/dev/null 2>&1; then
+  echo "Installing Qoder CLI..."
+  if curl -fsSL --retry 3 https://qoder.com/install | bash; then
+    echo "OK: qoder CLI installed (command: qoder)"
+  else
+    echo "WARNING: qoder CLI install failed (offline?)"
   fi
 fi
 
@@ -372,7 +390,7 @@ else
 fi
 
 # Wrapper scripts: redirect cache/tmp to /tmp (tmpfs) to avoid filling overlay
-for agent_bin in claude kilo mimo qwen codex opencode dmsh dmcode crush kimi dmed src sourcecraft koda agy gemini; do
+for agent_bin in claude kilo mimo qwen codex opencode dmsh dmcode crush kimi dmed src sourcecraft koda agy gemini qoder pi; do
   REAL_BIN="$(type -p "$agent_bin" 2>/dev/null || true)"
   if [[ -z "$REAL_BIN" || -f "${REAL_BIN}.real" ]]; then
     continue

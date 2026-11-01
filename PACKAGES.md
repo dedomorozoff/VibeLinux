@@ -154,6 +154,8 @@
 | **sourcecraft** | SourceCraft Code Assistant CLI (Яндекс, npm/install.sh) |
 | **koda** | Koda CLI — AI coding assistant (ООО «Кода», форк gemini-cli, npm) |
 | **dmsh** | Natural Language Shell (offline AI assistant) |
+| **qoder** | Qoder CLI — автономный AI-агент для кодинга (https://qoder.com/cli) |
+| **pi** | Pi CLI — coding agent с инструментами read/bash/edit/write (https://pi.dev) + расширение pi-freeflow (провайдер моделей OMP/Pi) |
 
 #### Модели Ollama (по умолчанию)
 
