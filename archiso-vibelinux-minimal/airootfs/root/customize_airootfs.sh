@@ -28,7 +28,7 @@ cat > /etc/motd << 'EOF'
 
  ── AI-агенты (уже предустановлены) ─────────────────────────
    claude, codex, qwen, kimi, kilo, mimo, cn, koda, src (SourceCraft)
-   dmed, dmsh, dmcode, crush, opencode, agy (Gemini CLI)
+   dmed, dmsh, dmcode, crush, opencode, agy (Gemini CLI), freebuff
    запуск любого: <имя> --help
    terminal AI chat:  ai-chat
 
@@ -268,6 +268,7 @@ NPM_AGENTS=(
   "@moonshot-ai/kimi-code:kimi"
   "@kodadev/koda-cli:koda"
   "@earendil-works/pi-coding-agent:pi"
+  "freebuff:freebuff"
 )
 for entry in "${NPM_AGENTS[@]}"; do
   pkg="${entry%%:*}"; bin="${entry##*:}"
@@ -353,6 +354,24 @@ fi
 # Чистим возможные остатки установки в $HOME (мимо PATH и мимо смысла)
 rm -rf /root/.local/bin
 
+# dmed — extract local package directly (pacman -U fails in archiso chroot)
+if compgen -G "/root/dmed/*.pkg.tar.zst" >/dev/null; then
+  mkdir -p /tmp/dmed-extract
+  bsdtar -xf /root/dmed/*.pkg.tar.zst -C /tmp/dmed-extract
+  cp -a /tmp/dmed-extract/. / 2>/dev/null
+  rm -rf /tmp/dmed-extract
+  mkdir -p /var/lib/pacman/local
+  DMED_VER="$(ls /root/dmed/*.pkg.tar.zst | grep -oP '\d+\.\d+\.\d+-\d+' | head -1 || echo 0.0.0-1)"
+  mkdir -p "/var/lib/pacman/local/dmed-${DMED_VER}"
+  echo -e "DESC=dmed\nNAME=dmed\nVERSION=${DMED_VER}\nBASE=dmed\nDEPENDS=\nPROVIDES=\nCONFLICTS=\nREPLACES=\nGROUPS=\nINSTALLDATE=$(date +%s)\nSIZE=17825792\nLICENSE=BSD-3-Clause\nARCH=x86_64\nBUILDDATE=$(date +%s)\nPACKAGER=VibeLinux\nDESCRIPTION=dmed — terminal AI editor" > "/var/lib/pacman/local/dmed-${DMED_VER}/desc"
+  echo "OK: dmed ${DMED_VER} installed"
+elif [[ -f /root/dmed/dmed ]]; then
+  install -Dm755 /root/dmed/dmed /usr/local/bin/dmed
+  echo "OK: dmed installed from raw binary"
+else
+  echo "WARNING: dmed package not found in /root/dmed/"
+fi
+
 # dmsh — extract local package directly (pacman -U fails in archiso chroot)
 if compgen -G "/root/dmsh/*.pkg.tar.zst" >/dev/null; then
   mkdir -p /tmp/dmsh-extract
@@ -390,7 +409,7 @@ else
 fi
 
 # Wrapper scripts: redirect cache/tmp to /tmp (tmpfs) to avoid filling overlay
-for agent_bin in claude kilo mimo qwen codex opencode dmsh dmcode crush kimi dmed src sourcecraft koda agy gemini qoder pi; do
+for agent_bin in claude kilo mimo qwen codex opencode dmsh dmcode crush kimi dmed src sourcecraft koda agy gemini qoder pi freebuff; do
   REAL_BIN="$(type -p "$agent_bin" 2>/dev/null || true)"
   if [[ -z "$REAL_BIN" || -f "${REAL_BIN}.real" ]]; then
     continue

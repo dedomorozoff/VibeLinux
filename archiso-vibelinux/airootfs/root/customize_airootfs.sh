@@ -441,6 +441,7 @@ NPM_AGENTS=(
   "@kodadev/koda-cli:koda"
   "@earendil-works/pi-coding-agent:pi"
   "cline:cline"
+  "freebuff:freebuff"
 )
 for entry in "${NPM_AGENTS[@]}"; do
   pkg="${entry%%:*}"; bin="${entry##*:}"
@@ -549,11 +550,7 @@ fi
 rm -rf /root/.local/bin
 
 # Обёртки для агентов: кэш и tmp в /tmp (tmpfs), чтобы не забивать overlay
-
-for agent_bin in claude kilo mimo qwen codex opencode dmsh dmcode crush kimi src sourcecraft koda gemini cline qoder pi; do
-
-for agent_bin in claude kilo mimo qwen codex opencode dmsh dmcode crush kimi src sourcecraft koda agy gemini cline; do
-
+for agent_bin in claude kilo mimo qwen codex opencode dmsh dmcode crush kimi src sourcecraft koda agy gemini cline qoder pi freebuff; do
   REAL_BIN="$(type -p "$agent_bin" 2>/dev/null || true)"
   if [[ -z "$REAL_BIN" || -f "${REAL_BIN}.real" ]]; then
     continue
@@ -935,6 +932,7 @@ echo "  Antigravity   — Google Antigravity CLI ($(status agy))"
 echo "  Kilo Code     — Open source AI coding agent ($(status kilo))"
 echo "  MiMo Code     — Xiaomi terminal AI ($(status mimo))"
 echo "  Continue.dev  — AI coding CLI ($(status cn))"
+echo "  Freebuff      — бесплатный AI coding agent ($(status freebuff))"
 echo "  Gemini        — Google terminal AI ($(status gemini))"
 echo ""
 echo "── Дополнительные действия ──"
@@ -1592,6 +1590,7 @@ cat > /home/vibe/Desktop/GET-STARTED.html << 'EOF'
   <li><strong>Antigravity CLI</strong> — <code>agy</code> (Google agentic coding platform)</li>
   <li><strong>Gemini</strong> — <code>gemini</code> (Google)</li>
   <li><strong>Kilo / MiMo / Continue / Crush / Kimi</strong> — <code>kilo</code>, <code>mimo</code>, <code>cn</code>, <code>crush</code>, <code>kimi</code></li>
+  <li><strong>Freebuff</strong> — <code>freebuff</code> (бесплатный AI coding agent, Codebuff)</li>
   <li><strong>dmsh</strong> — offline AI shell (model included)</li>
 </ul>
 <h2>Fine-tuning</h2>
@@ -1616,6 +1615,7 @@ cat > /home/vibe/Desktop/GET-STARTED.html << 'EOF'
 <span class="cmd">cline</span>    <span class="sep">—</span> Cline AI coding agent
 <span class="cmd">claude</span>   <span class="sep">—</span> Claude Code (Anthropic)
 <span class="cmd">codex</span>    <span class="sep">—</span> OpenAI Codex CLI
+<span class="cmd">freebuff</span> <span class="sep">—</span> Freebuff AI coding agent
 <span class="cmd">agy</span>      <span class="sep">—</span> Google Antigravity CLI
 <span class="cmd">ai-setup</span> <span class="sep">—</span> download AI models (post-install)</pre>
 
@@ -1663,6 +1663,7 @@ AGENTS=(
   "mimo:Mimo"
   "crush:Crush"
   "kimi:Kimi CLI"
+  "freebuff:Freebuff"
   "dmsh:dmsh"
 )
 

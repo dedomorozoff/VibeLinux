@@ -44,7 +44,7 @@
 - **CLI-утилиты:** eza, bat, fd, rg, fzf, zoxide, btop
 - **Языки:** Python (pyenv), Node.js (nvm), Rust (rustup), Go, Java (SDKMAN!), PHP
 - **Редакторы:** VS Code, Zed, Neovim (AstroNvim), Kate
-- **AI-стек:** opencode, cline, qwen-code, claude-code, codex, kilo, mimo, continue, crush, kimi, sourcecraft, koda (предустановлены), dmsh, Ollama (post-install), Python AI-библиотеки (post-install)
+- **AI-стек:** opencode, cline, qwen-code, claude-code, codex, kilo, mimo, continue, crush, kimi, freebuff, sourcecraft, koda (предустановлены), dmsh, dmcode, dmed, Ollama (post-install), Python AI-библиотеки (post-install)
 - **Инструменты:** Git, lazygit, Docker + docker-compose
 - **Графика:** Pinta, Spectacle, Flameshot; **БД:** sqlite3 + sqliteman
 - **Браузер:** Firefox; **AUR:** yay, zed-editor-bin, visual-studio-code-bin, calamares
@@ -153,9 +153,12 @@
 | **qwen-code** | Qwen AI coding agent (npm global) |
 | **sourcecraft** | SourceCraft Code Assistant CLI (Яндекс, npm/install.sh) |
 | **koda** | Koda CLI — AI coding assistant (ООО «Кода», форк gemini-cli, npm) |
+| **freebuff** | Freebuff — бесплатный AI coding agent (npm global, Codebuff) |
 | **dmsh** | Natural Language Shell (offline AI assistant) |
 | **qoder** | Qoder CLI — автономный AI-агент для кодинга (https://qoder.com/cli) |
 | **pi** | Pi CLI — coding agent с инструментами read/bash/edit/write (https://pi.dev) + расширение pi-freeflow (провайдер моделей OMP/Pi) |
+| **dmcode** | Терминальный AI coding agent (GitHub-релиз) |
+| **dmed** | Терминальный AI-редактор (GitHub-релиз) |
 
 #### Модели Ollama (по умолчанию)
 
@@ -361,7 +364,7 @@
 | **Терминал и оболочка** | Kitty, Zsh, Oh My Zsh, Starship, eza, bat, fd, ripgrep, fzf, zoxide, btop |
 | **Языки** | Python, Node.js/npm/nvm, Rust/rustup, Go, Java (SDKMAN!), PHP, pyenv |
 | **Редакторы** | VS Code, Zed, Neovim + AstroNvim, Kate |
-| **AI-стек** | opencode, cline, qwen-code, claude-code, codex, kilo, mimo, continue, crush, kimi, sourcecraft, koda — **все CLI-агенты предустановлены в ISO**; Ollama — post-install (`install-ollama`); Python AI-библиотеки post-install (`setup-ai-stack.sh`) |
+| **AI-стек** | opencode, cline, qwen-code, claude-code, codex, kilo, mimo, continue, crush, kimi, freebuff, sourcecraft, koda, dmsh, dmcode, dmed — **все CLI-агенты предустановлены в ISO**; Ollama — post-install (`install-ollama`); Python AI-библиотеки post-install (`setup-ai-stack.sh`) |
 | **Графические приложения** | Pinta, Spectacle, Ark, Flameshot |
 | **Базы данных** | sqlite3, sqliteman (GUI) |
 | **Контейнеры** | Docker, docker-compose |

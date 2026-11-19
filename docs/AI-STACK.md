@@ -45,6 +45,7 @@
 - **Kilo Code / MiMo Code / Continue** — `kilo`, `mimo`, `cn`
 - **Crush** — `crush` (Charm, LSP + MCP, multi-model)
 - **Kimi Code CLI** — `kimi` (Moonshot AI)
+- **Freebuff** — `freebuff` (бесплатный AI coding agent, npm `freebuff`)
 
 - **Qoder CLI** — `qoder` (https://qoder.com/cli, автономный AI-агент для кодинга; устанавливается через официальный installer `curl -fsSL https://qoder.com/install | bash`; скрипт `scripts/ai/install-qoder-cli.sh`)
 - **Pi CLI** — `pi` (https://pi.dev, coding agent со встроенными инструментами read/bash/edit/write и управлением сессиями; пакет `@earendil-works/pi-coding-agent`; скрипт `scripts/ai/install-pi-cli.sh`)

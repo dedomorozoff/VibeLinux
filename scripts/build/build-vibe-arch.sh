@@ -68,39 +68,71 @@ if [[ -d "$BRANDING_DIR" ]]; then
     fi
 fi
 
-# 3b) Fetch dmsh into airootfs.
-# Primary source — pre-built Arch package from GitHub releases
-# (https://github.com/dedomorozoff/dmsh), always the latest stable version.
-# Local soft/dmsh/*.pkg.tar.zst kept as an offline fallback; icon/desktop
-# assets are still taken from soft/dmsh (they are not shipped in releases).
-DMSH_RELEASES_API="https://api.github.com/repos/dedomorozoff/dmsh/releases/latest"
-DMSH_DST="$PROFILE_DIR/airootfs/root/dmsh"
+# --- GitHub releases helpers -------------------------------------------------
+# Все «свои» AI-утилиты (dmsh, dmcode, dmed) тянутся из GitHub-релизов, а не из
+# файлов в профиле: так в ISO всегда свежая версия. api.github.com без токена
+# лимитирован (60 запросов/час на IP), поэтому при наличии GITHUB_TOKEN он
+# используется; если API всё равно недоступен — версию и ассеты берём с HTML-
+# страницы релиза (expanded_assets), чтобы сборка не зависела от лимитов.
 SOFT_DIR="$(cd "$(dirname "$(readlink -f "$0")")/../../soft" 2>/dev/null && pwd || true)"
-log "Fetching dmsh into airootfs..."
-mkdir -p "$DMSH_DST"
-# Вычищаем старые пакеты/бинарники, чтобы в профиле не копилось мусор
-# и ls не подсовывал устаревшие версии
-rm -f "$DMSH_DST"/*.pkg.tar.zst "$DMSH_DST/dmsh"
+GH_AUTH=()
+if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+    GH_AUTH=(-H "Authorization: Bearer ${GITHUB_TOKEN}")
+fi
 
-DMSH_OK=0
-DMSH_JSON="$(curl -fsSL --retry 3 "$DMSH_RELEASES_API" 2>/dev/null || true)"
-DMSH_URL="$(grep -o 'https://[^"]*x86_64\.pkg\.tar\.zst' <<<"$DMSH_JSON" | head -1 || true)"
-if [[ -n "$DMSH_URL" ]]; then
-    if curl -fsSL --retry 3 "$DMSH_URL" -o "$DMSH_DST/$(basename "$DMSH_URL")"; then
-        DMSH_OK=1
-        log "dmsh downloaded from GitHub releases: $(basename "$DMSH_URL")"
-    else
-        warn "dmsh download failed: $DMSH_URL"
+gh_latest_url() {
+    local repo="$1" pattern="$2" url tag
+    url="$(curl -fsSL --retry 3 "${GH_AUTH[@]}" \
+        "https://api.github.com/repos/${repo}/releases/latest" 2>/dev/null \
+        | grep -o 'https://[^"]*'"${pattern}" | grep -v -- '-debug' | head -1 || true)"
+    if [[ -n "$url" ]]; then
+        printf '%s\n' "$url"
+        return 0
     fi
-else
-    warn "dmsh release info unavailable (network?) — trying local fallback"
-fi
 
-if [[ $DMSH_OK -eq 0 && -d "$SOFT_DIR/dmsh" ]] && compgen -G "$SOFT_DIR/dmsh/*.pkg.tar.zst" >/dev/null; then
-    cp "$SOFT_DIR"/dmsh/*.pkg.tar.zst "$DMSH_DST/"
-    DMSH_OK=1
-    log "Using local pre-built dmsh package from soft/dmsh/"
-fi
+    # API лимитирован/недоступен: получаем тег из редиректа и парсим ассеты
+    tag="$(curl -fsSLI --retry 3 -o /dev/null -w '%{url_effective}' \
+        "https://github.com/${repo}/releases/latest" 2>/dev/null \
+        | sed -n 's#.*/tag/##p' || true)"
+    [[ -z "$tag" ]] && return 1
+    url="$(curl -fsSL --retry 3 "https://github.com/${repo}/releases/expanded_assets/${tag}" 2>/dev/null \
+        | grep -o "/${repo}/releases/download/[^\"]*${pattern}" | grep -v -- '-debug' | head -1 || true)"
+    [[ -n "$url" ]] || return 1
+    printf 'https://github.com%s\n' "$url"
+}
+
+# fetch_gh_pkg <tool> <owner/repo> <dst>
+# Кладёт свежий x86_64 .pkg.tar.zst в <dst>; офлайн-фоллбек — soft/<tool>/.
+fetch_gh_pkg() {
+    local tool="$1" repo="$2" dst="$3" url
+    mkdir -p "$dst"
+    # Вычищаем старые пакеты/бинарники, чтобы в профиле не копился мусор
+    # и ls не подсовывал устаревшие версии
+    rm -f "$dst"/*.pkg.tar.zst "$dst/$tool"
+
+    url="$(gh_latest_url "$repo" 'x86_64\.pkg\.tar\.zst' || true)"
+    if [[ -n "$url" ]] && curl -fsSL --retry 3 "$url" -o "$dst/$(basename "$url")"; then
+        log "$tool ← GitHub release: $(basename "$url")"
+        return 0
+    fi
+
+    if [[ -n "$SOFT_DIR" ]] && compgen -G "$SOFT_DIR/$tool/*.pkg.tar.zst" >/dev/null; then
+        cp "$SOFT_DIR/$tool"/*.pkg.tar.zst "$dst/"
+        log "$tool ← локальный пакет soft/$tool/"
+        return 0
+    fi
+
+    warn "$tool недоступен (GitHub недоступен и нет soft/$tool/)"
+    return 1
+}
+
+# 3b) dmsh — pre-built Arch package from GitHub releases
+# (https://github.com/dedomorozoff/dmsh). Иконка/.desktop в релизы не входят —
+# берём их из soft/dmsh, если есть.
+DMSH_DST="$PROFILE_DIR/airootfs/root/dmsh"
+log "Fetching dmsh into airootfs..."
+DMSH_OK=0
+fetch_gh_pkg dmsh dedomorozoff/dmsh "$DMSH_DST" && DMSH_OK=1
 
 # Иконка и .desktop в релизы не входят — берём из soft/dmsh, если есть
 if [[ -d "$SOFT_DIR/dmsh" ]]; then
@@ -114,31 +146,13 @@ else
     warn "dmsh package unavailable (no network and none in soft/dmsh/) — skipping"
 fi
 
-# 3b2) Fetch dmed into airootfs.
-# Primary source — pre-built Arch package from GitHub releases
-# (https://github.com/dedomorozoff/dmed), always the latest stable version.
-# Local soft/dmed/dmed kept as an offline fallback (raw binary -> /usr/local/bin).
-DMED_RELEASES_API="https://api.github.com/repos/dedomorozoff/dmed/releases/latest"
+# 3b2) dmed — pre-built Arch package from GitHub releases
+# (https://github.com/dedomorozoff/dmed). Локальный soft/dmed/dmed — офлайн-
+# фоллбек (raw binary → /usr/local/bin).
 DMED_DST="$PROFILE_DIR/airootfs/root/dmed"
-SOFT_DIR="$(cd "$(dirname "$(readlink -f "$0")")/../../soft" 2>/dev/null && pwd || true)"
 log "Fetching dmed into airootfs..."
-mkdir -p "$DMED_DST"
-# Вычищаем старые пакеты/бинарники, чтобы в профиле не копилось мусор
-rm -f "$DMED_DST"/*.pkg.tar.zst "$DMED_DST/dmed"
-
 DMED_OK=0
-DMED_JSON="$(curl -fsSL --retry 3 "$DMED_RELEASES_API" 2>/dev/null || true)"
-DMED_URL="$(grep -o 'https://[^"]*x86_64\.pkg\.tar\.zst' <<<"$DMED_JSON" | head -1 || true)"
-if [[ -n "$DMED_URL" ]]; then
-    if curl -fsSL --retry 3 "$DMED_URL" -o "$DMED_DST/$(basename "$DMED_URL")"; then
-        DMED_OK=1
-        log "dmed downloaded from GitHub releases: $(basename "$DMED_URL")"
-    else
-        warn "dmed download failed: $DMED_URL"
-    fi
-else
-    warn "dmed release info unavailable (network?) — trying local fallback"
-fi
+fetch_gh_pkg dmed dedomorozoff/dmed "$DMED_DST" && DMED_OK=1
 
 if [[ $DMED_OK -eq 0 && -f "$SOFT_DIR/dmed/dmed" ]]; then
     cp -f "$SOFT_DIR/dmed/dmed" "$DMED_DST/dmed"
@@ -153,44 +167,19 @@ else
     warn "dmed unavailable (no network and none in soft/dmed/) — skipping"
 fi
 
-# 3b3) Fetch dmcode into airootfs.
-# Primary source — pre-built Arch package from GitHub releases
-# (https://github.com/dedomorozoff/dmcode), always the latest stable version.
-# Local soft/dmcode/* kept as an offline fallback (pkg.tar.zst preferred, raw binary fallback).
-DMCODE_RELEASES_API="https://api.github.com/repos/dedomorozoff/dmcode/releases/latest"
+# 3b3) dmcode — pre-built Arch package from GitHub releases
+# (https://github.com/dedomorozoff/dmcode). Локальный soft/dmcode/* — офлайн-
+# фоллбек (pkg.tar.zst предпочтительнее, raw binary — если пакета нет).
 DMCODE_DST="$PROFILE_DIR/airootfs/root/dmcode"
-SOFT_DIR="$(cd "$(dirname "$(readlink -f "$0")")/../../soft" 2>/dev/null && pwd || true)"
 log "Fetching dmcode into airootfs..."
-mkdir -p "$DMCODE_DST"
-# Вычищаем старые пакеты/бинарники
-rm -f "$DMCODE_DST"/*.pkg.tar.zst "$DMCODE_DST/dmcode"
-
 DMCODE_OK=0
-DMCODE_JSON="$(curl -fsSL --retry 3 "$DMCODE_RELEASES_API" 2>/dev/null || true)"
-# grep -v debug — иначе первым может попасться dmcode-debug-*-x86_64.pkg.tar.zst
-DMCODE_URL="$(grep -o 'https://[^"]*x86_64\.pkg\.tar\.zst' <<<"$DMCODE_JSON" | grep -v debug | head -1 || true)"
-if [[ -n "$DMCODE_URL" ]]; then
-    if curl -fsSL --retry 3 "$DMCODE_URL" -o "$DMCODE_DST/$(basename "$DMCODE_URL")"; then
-        DMCODE_OK=1
-        log "dmcode downloaded from GitHub releases: $(basename "$DMCODE_URL")"
-    else
-        warn "dmcode download failed: $DMCODE_URL"
-    fi
-else
-    warn "dmcode release info unavailable (network?) — trying local fallback"
-fi
+fetch_gh_pkg dmcode dedomorozoff/dmcode "$DMCODE_DST" && DMCODE_OK=1
 
-if [[ $DMCODE_OK -eq 0 && -d "$SOFT_DIR/dmcode" ]]; then
-    if compgen -G "$SOFT_DIR/dmcode/*.pkg.tar.zst" >/dev/null; then
-        cp "$SOFT_DIR"/dmcode/*.pkg.tar.zst "$DMCODE_DST/"
-        DMCODE_OK=1
-        log "Using local pre-built dmcode package from soft/dmcode/"
-    elif [[ -f "$SOFT_DIR/dmcode/dmcode" ]]; then
-        cp -f "$SOFT_DIR/dmcode/dmcode" "$DMCODE_DST/dmcode"
-        chmod +x "$DMCODE_DST/dmcode"
-        DMCODE_OK=1
-        log "Using local pre-built dmcode binary from soft/dmcode/"
-    fi
+if [[ $DMCODE_OK -eq 0 && -f "$SOFT_DIR/dmcode/dmcode" ]]; then
+    cp -f "$SOFT_DIR/dmcode/dmcode" "$DMCODE_DST/dmcode"
+    chmod +x "$DMCODE_DST/dmcode"
+    DMCODE_OK=1
+    log "Using local pre-built dmcode binary from soft/dmcode/"
 fi
 
 # Иконка и .desktop в релизы не входят — берём из soft/dmcode, если есть

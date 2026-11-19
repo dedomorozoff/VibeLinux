@@ -42,7 +42,7 @@ Ubuntu-редакции (Full / Lite) поддерживаются в стату
 - CLI-утилиты (eza, bat, fd, rg, fzf, zoxide, btop)
 - Языки: Python (pyenv), Node.js (nvm), Rust (rustup), Go, Java (SDKMAN!), PHP
 - Редакторы: VS Code, Zed, Neovim (AstroNvim), Kate
-- AI-стек: opencode, cline, qwen-code, claude-code, codex, kilo, mimo, continue, crush, kimi (предустановлены), dmsh, Ollama (post-install), Python AI-библиотеки (post-install)
+- AI-стек: opencode, cline, qwen-code, claude-code, codex, kilo, mimo, continue, crush, kimi, freebuff (предустановлены), dmsh, dmcode, dmed, Ollama (post-install), Python AI-библиотеки (post-install)
 - Инструменты: Git, lazygit, Docker + docker-compose
 - Графика: Pinta, Spectacle, Flameshot; БД: sqlite3 + sqliteman
 - Браузер: Firefox; AUR-пакеты: yay, zed-editor-bin, visual-studio-code-bin, calamares
@@ -91,7 +91,7 @@ make arch
 - Сеть: curl, wget, git, NetworkManager, openssh
 - Архиваторы: unzip, zip, p7zip, zstd
 - Установщик: archinstall (TUI) + обёртка `vinstall`
-- AI-агенты из коробки: `claude`, `codex`, `qwen`, `kimi`, `kilo`, `mimo`, `cn`, `koda`, `src`, `dmed`, `dmsh`, `dmcode`, `crush`, `opencode`, `agy`
+- AI-агенты из коробки: `claude`, `codex`, `qwen`, `kimi`, `kilo`, `mimo`, `cn`, `koda`, `src`, `dmed`, `dmsh`, `dmcode`, `crush`, `opencode`, `agy`, `freebuff`
 - **Доустановка AI-стека:** `/opt/vibecode/scripts/ai/setup-ai-stack.sh`
 
 ---

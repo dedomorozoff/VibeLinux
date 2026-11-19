@@ -79,98 +79,120 @@ if grep -qs "$WORKDIR" /proc/mounts; then
     done
 fi
 
-# 3b) dmed — terminal-native AI editor (Go binary, no AUR package).
-#     Источники (по приоритету): soft/dmed/dmed → официальный GitHub release →
-#     сборка через Go. Релиз-фоллбек нужен, т.к. soft/dmed вне git и при чистой
-#     сборке/CI бинарника на хосте может не быть. Кладём в /usr/local/bin.
-DMED_DST="$PROFILE_DIR/airootfs/usr/local/bin/dmed"
-mkdir -p "$(dirname "$DMED_DST")"
-DMED_COPIED=0
-
-# Безопасно вычисляем источник (без set -e-риска от cd в отсутствующий каталог).
-DMED_DIR="$(cd "$(dirname "$(readlink -f "$0")")/../../soft/dmed" 2>/dev/null && pwd || true)"
-DMED_SRC="$DMED_DIR/dmed"
-if [[ -f "$DMED_SRC" ]]; then
-    [[ -x "$DMED_SRC" ]] || chmod +x "$DMED_SRC"
-    cp -f "$DMED_SRC" "$DMED_DST"
-    DMED_COPIED=1
-    log "dmed copied from soft/dmed/dmed -> $DMED_DST"
-elif command -v dmed >/dev/null 2>&1; then
-    cp -f "$(command -v dmed)" "$DMED_DST"
-    DMED_COPIED=1
-    log "dmed copied from PATH -> $DMED_DST"
+# --- GitHub releases helpers -------------------------------------------------
+# Свои AI-утилиты (dmed, dmsh, dmcode) ставим из GitHub-релизов, а не из файлов
+# в профиле — в ISO всегда свежая версия. api.github.com без токена лимитирован
+# (60 запросов/час на IP), поэтому при наличии GITHUB_TOKEN он используется; если
+# API недоступен — версию и ассеты берём с HTML-страницы релиза.
+SOFT_DIR="$(cd "$(dirname "$(readlink -f "$0")")/../../soft" 2>/dev/null && pwd || true)"
+GH_AUTH=()
+if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+    GH_AUTH=(-H "Authorization: Bearer ${GITHUB_TOKEN}")
 fi
 
-if [[ $DMED_COPIED -eq 0 ]] && command -v curl >/dev/null 2>&1; then
-    log "dmed binary not on host; trying official GitHub release..."
-    DMED_VER="$(curl -fsSL --retry 3 https://api.github.com/repos/dedomorozoff/dmed/releases/latest 2>/dev/null | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -1 || true)"
-    if [[ -n "$DMED_VER" ]]; then
-        DMED_TMP="$(mktemp -d)"
-        if curl -fsSL --retry 3 \
-            "https://github.com/dedomorozoff/dmed/releases/download/${DMED_VER}/dmed-linux-amd64" \
-            -o "$DMED_TMP/dmed"; then
-            chmod +x "$DMED_TMP/dmed"
-            cp -f "$DMED_TMP/dmed" "$DMED_DST"
-            DMED_COPIED=1
-            log "dmed ${DMED_VER} downloaded from GitHub -> $DMED_DST"
-        else
-            warn "dmed download failed"
-        fi
-        rm -rf "$DMED_TMP"
+gh_latest_url() {
+    local repo="$1" pattern="$2" url tag
+    url="$(curl -fsSL --retry 3 "${GH_AUTH[@]}" \
+        "https://api.github.com/repos/${repo}/releases/latest" 2>/dev/null \
+        | grep -o 'https://[^"]*'"${pattern}" | grep -v -- '-debug' | head -1 || true)"
+    if [[ -n "$url" ]]; then
+        printf '%s\n' "$url"
+        return 0
+    fi
+
+    # API лимитирован/недоступен: получаем тег из редиректа и парсим ассеты
+    tag="$(curl -fsSLI --retry 3 -o /dev/null -w '%{url_effective}' \
+        "https://github.com/${repo}/releases/latest" 2>/dev/null \
+        | sed -n 's#.*/tag/##p' || true)"
+    [[ -z "$tag" ]] && return 1
+    url="$(curl -fsSL --retry 3 "https://github.com/${repo}/releases/expanded_assets/${tag}" 2>/dev/null \
+        | grep -o "/${repo}/releases/download/[^\"]*${pattern}" | grep -v -- '-debug' | head -1 || true)"
+    [[ -n "$url" ]] || return 1
+    printf 'https://github.com%s\n' "$url"
+}
+
+# fetch_gh_pkg <tool> <owner/repo> <dst>
+# Кладёт свежий x86_64 .pkg.tar.zst в <dst>; офлайн-фоллбек — soft/<tool>/.
+fetch_gh_pkg() {
+    local tool="$1" repo="$2" dst="$3" url
+    mkdir -p "$dst"
+    rm -f "$dst"/*.pkg.tar.zst "$dst/$tool"
+
+    url="$(gh_latest_url "$repo" 'x86_64\.pkg\.tar\.zst' || true)"
+    if [[ -n "$url" ]] && curl -fsSL --retry 3 "$url" -o "$dst/$(basename "$url")"; then
+        log "$tool ← GitHub release: $(basename "$url")"
+        return 0
+    fi
+
+    if [[ -n "$SOFT_DIR" ]] && compgen -G "$SOFT_DIR/$tool/*.pkg.tar.zst" >/dev/null; then
+        cp "$SOFT_DIR/$tool"/*.pkg.tar.zst "$dst/"
+        log "$tool ← локальный пакет soft/$tool/"
+        return 0
+    fi
+
+    warn "$tool недоступен (GitHub недоступен и нет soft/$tool/)"
+    return 1
+}
+
+# 3b) dmed — terminal-native AI editor (Go).
+# Основной источник — Arch-пакет из GitHub-релизов (регистрируется в pacman-БД).
+# Если пакета нет — raw binary `dmed-linux-amd64` из того же релиза, затем
+# soft/dmed/dmed → PATH → сборка через Go.
+DMED_DST="$PROFILE_DIR/airootfs/root/dmed"
+DMED_BIN="$PROFILE_DIR/airootfs/usr/local/bin/dmed"
+log "Fetching dmed into airootfs..."
+DMED_OK=0
+if fetch_gh_pkg dmed dedomorozoff/dmed "$DMED_DST"; then
+    DMED_OK=1
+    # Пакет ставится в /usr/bin/dmed — старый raw-бинарник в профиле не нужен
+    rm -f "$DMED_BIN"
+fi
+
+if [[ $DMED_OK -eq 0 ]]; then
+    mkdir -p "$(dirname "$DMED_BIN")"
+    DMED_URL="$(gh_latest_url dedomorozoff/dmed 'dmed-linux-amd64' || true)"
+    if [[ -n "$DMED_URL" ]] && curl -fsSL --retry 3 "$DMED_URL" -o "$DMED_BIN"; then
+        chmod +x "$DMED_BIN"
+        DMED_OK=1
+        log "dmed ← GitHub binary: $(basename "$DMED_URL")"
     fi
 fi
 
-if [[ $DMED_COPIED -eq 0 ]] && command -v go >/dev/null 2>&1; then
+DMED_DIR="$SOFT_DIR/dmed"
+DMED_SRC="$DMED_DIR/dmed"
+if [[ $DMED_OK -eq 0 && -f "$DMED_SRC" ]]; then
+    [[ -x "$DMED_SRC" ]] || chmod +x "$DMED_SRC"
+    install -Dm755 "$DMED_SRC" "$DMED_BIN"
+    DMED_OK=1
+    log "dmed copied from soft/dmed/dmed -> $DMED_BIN"
+fi
+
+if [[ $DMED_OK -eq 0 ]] && command -v dmed >/dev/null 2>&1; then
+    install -Dm755 "$(command -v dmed)" "$DMED_BIN"
+    DMED_OK=1
+    log "dmed copied from PATH -> $DMED_BIN"
+fi
+
+if [[ $DMED_OK -eq 0 ]] && command -v go >/dev/null 2>&1; then
     log "dmed unavailable; building via Go..."
     if go install github.com/dedomorozoff/dmed@latest 2>/dev/null; then
-        cp -f "$(go env GOPATH)/bin/dmed" "$DMED_DST"
-        DMED_COPIED=1
-        log "dmed built from source -> $DMED_DST"
+        install -Dm755 "$(go env GOPATH)/bin/dmed" "$DMED_BIN"
+        DMED_OK=1
+        log "dmed built from source -> $DMED_BIN"
     else
         warn "dmed build failed"
     fi
 fi
 
-if [[ $DMED_COPIED -eq 0 ]]; then
-    warn "dmed binary unavailable (no soft/dmed, no PATH, offline, no Go) — skipping"
+if [[ $DMED_OK -eq 0 ]]; then
+    warn "dmed binary unavailable (no GitHub, no soft/dmed, no PATH, no Go) — skipping"
 fi
 
-# 3b2) dmsh / dmcode — «свои» AI-утилиты, те же, что и в полной редакции
-#      (archiso-vibelinux). Мини-сборка их раньше не тянула, поэтому в образе
-#      их не было, хотя MOTD их рекламирует. Ставим Arch-пакеты из
-#      GitHub-релизов; офлайн-фоллбек — soft/<tool>/*.pkg.tar.zst.
-#      Кладём в airootfs/root/<tool>/, откуда их разворачивает
-#      customize_airootfs.sh (pacman -U в archiso-chroot не работает).
-SOFT_DIR="$(cd "$(dirname "$(readlink -f "$0")")/../../soft" 2>/dev/null && pwd || true)"
-
-fetch_vibe_pkg() {
-    local tool="$1" repo="$2"
-    local dst="$PROFILE_DIR/airootfs/root/$1" url
-    mkdir -p "$dst"
-    rm -f "$dst"/*.pkg.tar.zst "$dst/$tool"
-
-    if command -v curl >/dev/null 2>&1; then
-        # grep -v debug — иначе первым может попасться <tool>-debug-*.pkg.tar.zst
-        url="$(curl -fsSL --retry 3 "https://api.github.com/repos/${repo}/releases/latest" 2>/dev/null \
-            | grep -o 'https://[^"]*x86_64\.pkg\.tar\.zst' | grep -v -- '-debug' | head -1 || true)"
-        if [[ -n "$url" ]] && curl -fsSL --retry 3 "$url" -o "$dst/$(basename "$url")"; then
-            log "$tool: $(basename "$url") ← GitHub release"
-            return 0
-        fi
-    fi
-
-    if [[ -n "$SOFT_DIR" ]] && compgen -G "$SOFT_DIR/$tool/*.pkg.tar.zst" >/dev/null; then
-        cp "$SOFT_DIR/$tool"/*.pkg.tar.zst "$dst/"
-        log "$tool: локальный пакет ← soft/$tool/"
-        return 0
-    fi
-
-    warn "$tool недоступен (нет сети и нет soft/$tool/) — пропускаю"
-    return 1
-}
-
-fetch_vibe_pkg dmsh   dedomorozoff/dmsh   || true
-fetch_vibe_pkg dmcode dedomorozoff/dmcode || true
+# 3b2) dmsh / dmcode — Arch-пакеты из GitHub-релизов (те же, что в полной
+#      редакции). Их разворачивает customize_airootfs.sh: pacman -U в
+#      archiso-chroot не работает, поэтому пакет просто распаковывается.
+fetch_gh_pkg dmsh   dedomorozoff/dmsh   "$PROFILE_DIR/airootfs/root/dmsh"   || true
+fetch_gh_pkg dmcode dedomorozoff/dmcode "$PROFILE_DIR/airootfs/root/dmcode" || true
 
 # 3c2) vinstall — текстовый инсталлятор (обёртка над archinstall)
 #     Источник: scripts/build/installer/. Копируем в airootfs (попадает в
